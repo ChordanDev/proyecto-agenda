@@ -28,13 +28,13 @@ Cada evento pertenece a uno. Cada énfasis tiene color **y forma**, para disting
 4. **Admin de asociación (con login):** ve todas las iglesias. Crea eventos de asociación (aparecen en todas las iglesias). Gestiona distritos, iglesias (con dirección/ubicación), pastores y encargados.
 
 ## Eventos
-- Campos: título, fecha y hora, lugar, descripción (opcional), énfasis (obligatorio), alcance (iglesia / compartido / distrito / asociación).
+- Campos: título, fecha y hora, lugar, descripción (opcional), énfasis (obligatorio), alcance (iglesia / distrito / asociación).
 - Pueden repetirse (semanal, mensual).
 
 ### Eventos compartidos entre iglesias
 - Al crear un evento se pueden sumar otras iglesias con un buscador que abarca toda la asociación. Sin escribir, muestra primero las 4 más cercanas; al buscar, los resultados siguen ordenados por distancia. Las elegidas quedan arriba como etiquetas.
 - El evento aparece en las iglesias sumadas con la etiqueta "Compartido con…".
-- Solo quien lo creó puede editarlo. El encargado de una iglesia sumada puede quitarlo de su calendario.
+- Solo el dueño del evento (la iglesia o el distrito al que pertenece, no la persona que lo cargó) puede editarlo o borrarlo. El encargado de una iglesia sumada puede quitarlo de su calendario.
 
 ## Chat con IA
 - Consulta: "¿Qué hay el sábado que viene?", "¿De qué se trata el congreso de jóvenes?".
@@ -60,3 +60,6 @@ Navegación inferior: Calendario · Chat · Gestión (solo pastor/admin) · Ajus
 
 ## Fuera de la primera versión
 - Nivel de unión: por ahora hay una sola asociación, pero la estructura de datos debe permitir sumar ese nivel después.
+
+## Diseño
+El diseño visual aprobado está en `diseno/` (pantallas en HTML, capturas, logo y `theme.ts`). Leé `diseno/README.md` y respetá esos valores al implementar las pantallas en React Native.
