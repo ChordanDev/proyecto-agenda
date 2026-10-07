@@ -8,7 +8,7 @@ Diseño aprobado de "Agenda de iglesia". Es la referencia visual para implementa
   - `04b-calendario-pastor.html` reutiliza `04a-calendario.html` con `rol="pastor"`: es la misma pantalla con filtro por iglesia, botón "Nuevo evento" y la pestaña Gestión.
 - `capturas/` — PNG de cada pantalla (exportar desde el lienzo de diseño: Share › Export).
 - `logo-iglesia.svg` — logo vectorizado, sin color fijo (`currentColor`). Es una aproximación calcada; reemplazar por el SVG oficial cuando esté disponible.
-- `theme.ts` — tokens del tema (colores, degradado, categorías con forma y color, tipografías, radios, tamaños mínimos). Usar siempre estos valores.
+- `theme.ts` — tokens del tema (colores, degradado, categorías con forma y color, tipografías, radios, tamaños mínimos). Usar siempre estos valores. La app los importa desde `src/shared/theme.ts`, que reexporta este archivo.
 
 ## Librerías que hacen falta en RN
 - Degradado de fondo: `expo-linear-gradient`

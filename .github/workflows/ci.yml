@@ -1,0 +1,72 @@
+name: CI
+
+# The four checks below are required to merge a pull request into develop.
+# Their names are referenced by the branch protection rule: do not rename them.
+on:
+  pull_request:
+    branches: [develop]
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  types:
+    name: Types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+
+  style:
+    name: Style
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # ESLint and Prettier.
+      - run: npm run lint
+
+  domain-tests:
+    name: Domain tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test -- --ci
+
+  permission-tests:
+    name: Permission tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          # Keep in sync with the `supabase` dev dependency in package.json.
+          version: 2.120.0
+      # Starts an empty local database and applies every migration from scratch.
+      - run: supabase db start
+      - run: supabase test db
+      - name: Check that the generated types match the schema
+        run: |
+          supabase gen types typescript --local > src/shared/database.types.ts
+          if ! git diff --exit-code src/shared/database.types.ts; then
+            echo "::error file=src/shared/database.types.ts::The generated types are out of date. Run 'npm run db:types' and commit the result."
+            exit 1
+          fi

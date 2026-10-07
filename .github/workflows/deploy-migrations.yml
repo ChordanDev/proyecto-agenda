@@ -1,0 +1,35 @@
+name: Deploy migrations
+
+# Applies pending migrations to the DEVELOPMENT Supabase project when they
+# reach develop. Production migrations are applied by hand on each release.
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'supabase/migrations/**'
+
+# Never run two pushes against the same database at once.
+concurrency:
+  group: deploy-migrations-develop
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Apply migrations to development
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          # Keep in sync with the `supabase` dev dependency in package.json.
+          version: 2.120.0
+      - run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+      # The seed is simulated data for local development: it is not pushed.
+      - run: supabase db push --yes
