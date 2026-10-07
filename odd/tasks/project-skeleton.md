@@ -39,7 +39,7 @@ Out of scope: events, login, the approved screens, offline cache persistence, th
 - [x] **T2 — Database structure.** `supabase init`, migration, RLS, seed (one asociación, several distritos and iglesias, one excluded church), pgTAP test with one allowed and one rejected case, generated types. Route: delegated. Checks: `npx supabase db reset`, `npx supabase test db`.
 - [x] **T3 — Real data on screen.** Supabase client in `src/shared`, `iglesias/datos` query, first domain rule with its Jest test written first, `iglesias/interfaz` screen wired from a route. Route: delegated. Checks: `npm run typecheck`, `npm run lint`, `npm test`.
 - [x] **T4 — Continuous integration.** Workflow with four jobs (types, style, domain tests, permission tests on a local Supabase from scratch) on pull requests to `develop`; workflow that pushes migrations to the development Supabase on push to `develop`; README with setup steps. Route: delegated. Checks: workflow YAML parses; commands match the npm scripts.
-- [ ] **T5 — Development build.** Build and run on the iOS simulator and on the Android phone; confirm the screen shows seeded data. Route: inline (per-action). Checks: observed screen.
+- [ ] **T5 — Development build (iOS verified, Android pending).** Build and run on the iOS simulator and on the Android phone; confirm the screen shows seeded data. Route: inline (per-action). Checks: observed screen.
 
 ## Acceptance criteria
 
@@ -67,3 +67,9 @@ Branch `feat/18-project-skeleton`.
 ## Next step
 
 T5 (development build on the iOS simulator and the Android phone), then the items under "Needs a person".
+
+## T5 evidence and review
+
+- iOS: `npx expo run:ios` built with 0 errors and installed on the iPhone 17 simulator; the screen listed the seeded churches with district and locality. CocoaPods needs `LANG=en_US.UTF-8` on this machine, otherwise `pod install` fails with a Ruby encoding error.
+- Android: not built. This machine has JDK 11 and no Android Studio; a person must run `npx expo run:android` on the phone.
+- Native review of the branch (lineage `review-51f5617dbe67e0ef`, high risk, four lenses): approved and acknowledged. Advisory, non-blocking follow-ups worth taking: ignore `.env` and `.env.*` besides `.env*.local`; pin the `supabase` dev dependency to the exact version CI uses; add `workflow_dispatch` to the migration deploy; scope `SUPABASE_ACCESS_TOKEN` to the steps that need it.
