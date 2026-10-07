@@ -59,7 +59,7 @@ Resumen de lo decidido en el issue #15.
 - Estética limpia y amable, fondo claro. El color lo aportan los énfasis; el resto de la interfaz es neutra, con los colores institucionales de la iglesia.
 
 ## Los 4 énfasis
-Cada evento pertenece a uno. Cada énfasis tiene color **y forma**, para distinguirse sin depender del color.
+Un evento pertenece a un énfasis o a ninguno. Cada énfasis tiene color **y forma**, para distinguirse sin depender del color.
 
 | Énfasis | Lema | Forma | Color |
 |---|---|---|---|
@@ -68,6 +68,8 @@ Cada evento pertenece a uno. Cada énfasis tiene color **y forma**, para disting
 | Nuevas Generaciones | Integramos | "D" (semicírculo) | #FFD84D |
 | Discipulado | Hacemos | Cuadrado | #2DC86E |
 
+Un evento sin énfasis es una **actividad regular** (cultos de oración, Escuela Sabática). No es un quinto énfasis: es la falta de uno. Se muestra con un rombo gris (#6B7685).
+
 ## Roles
 1. **Hermano (sin login):** al abrir la app por primera vez elige su iglesia (queda guardada; se cambia en Ajustes). Ve el calendario de su iglesia + eventos de su distrito + eventos de la asociación. No tiene chat. No edita nada.
 2. **Encargado de calendario (con login):** secretaria, tesorero, etc. Una iglesia puede tener varios, todos con los mismos permisos. Crea/edita/borra eventos de su iglesia y puede compartirlos con otras iglesias. Usa el chat para consultar y cargar.
@@ -75,7 +77,7 @@ Cada evento pertenece a uno. Cada énfasis tiene color **y forma**, para disting
 4. **Admin de asociación (con login):** ve todas las iglesias. Crea eventos de asociación (aparecen en todas las iglesias) y también de cualquier distrito o iglesia. Gestiona distritos, iglesias (con dirección/ubicación), pastores y encargados.
 
 ## Eventos
-- Campos: título, fecha y hora, fecha de fin (opcional, para eventos de varios días), lugar, descripción (opcional), énfasis (obligatorio), alcance (iglesia / distrito / asociación).
+- Campos: título, fecha y hora, fecha de fin (opcional, para eventos de varios días), lugar, descripción (opcional), énfasis (uno de los cuatro, o ninguno si es una actividad regular), alcance (iglesia / distrito / asociación).
 - Un evento de varios días se marca en cada día del rango. La fecha de fin es solo fecha, sin hora de finalización.
 - Pueden repetirse: semanal (el mismo día todas las semanas) o mensual (mismo día de la semana y misma posición, por ejemplo "el tercer sábado de cada mes"; la quinta posición se toma como "el último"). Un evento de varios días no puede repetirse.
 - Toda serie tiene un fin de la serie ("Hasta"), obligatorio, sugerido a un año y con ese tope. Es un campo distinto de la fecha de fin de un evento de varios días. Para terminar una serie se acorta; para renovarla, se alarga.
@@ -103,9 +105,9 @@ Recordatorios simples de eventos próximos (ej. "Mañana: Congreso de Jóvenes")
 1. **Bienvenida:** botón principal "Elegir mi iglesia"; secundario "Soy encargado o pastor" (lleva al login).
 2. **Login:** email y contraseña, con el enlace "Es mi primera vez u olvidé mi contraseña" (envía un código de 6 dígitos por correo para elegir la contraseña).
 3. **Elegir iglesia:** buscador, opción "Usar mi ubicación", lista de cercanas mostrando distrito y distancia, botón Continuar.
-4. **Calendario (todos los roles):** vista mensual con marcadores por día (forma + color del énfasis), día seleccionado destacado y lista de eventos de ese día debajo. Filtros por énfasis (y por iglesia para pastor/admin). Los eventos de asociación/distrito muestran su alcance.
+4. **Calendario (todos los roles):** vista mensual con marcadores por día (forma + color del énfasis, o el rombo de la actividad regular), día seleccionado destacado y lista de eventos de ese día debajo. Filtros por énfasis (y por iglesia para pastor/admin). Los eventos de asociación/distrito muestran su alcance.
 5. **Detalle de evento:** toda la información, énfasis, alcance y con qué iglesias se comparte. Editar/quitar según permisos.
-6. **Crear/editar evento:** título, fecha, hora, fecha de fin opcional, descripción opcional, selector de énfasis (4 opciones con forma y color), repetición (con el campo "Hasta" y un texto que la explica con palabras), buscador de iglesias para compartir.
+6. **Crear/editar evento:** título, fecha, hora, fecha de fin opcional, descripción opcional, selector de énfasis (los 4 énfasis y "Actividad regular", cada opción con forma y color; hay que elegir una), repetición (con el campo "Hasta" y un texto que la explica con palabras), buscador de iglesias para compartir.
 7. **Chat IA (solo con sesión iniciada):** conversación con tarjetas de vista previa para confirmar eventos y botón "Reportar respuesta". La primera vez pide aceptar que los mensajes se envían a OpenAI.
 8. **Gestión del pastor:** lista de sus iglesias (encargados y cantidad de eventos del mes, aviso si una iglesia no tiene encargado), lista de encargados, botón "Agregar encargado".
 9. **Gestión del admin:** pestañas Distritos / Iglesias / Usuarios; aviso de distritos sin pastor; botones "Nuevo distrito" y "Nueva iglesia" (con dirección).
@@ -121,7 +123,7 @@ Prueba que la app reemplaza a la agenda impresa de punta a punta.
 
 - Recorrido del hermano: bienvenida, elegir iglesia con buscador por nombre (cada resultado muestra distrito y localidad), calendario mensual con marcadores, lista del día y detalle del evento.
 - Calendario con eventos de iglesia, distrito y asociación, con su alcance visible.
-- Los cuatro énfasis con forma y color. Filtros por énfasis y, para pastor y admin, por iglesia.
+- Los cuatro énfasis y la actividad regular, con forma y color. Filtros por énfasis (con la actividad regular como una opción más) y, para pastor y admin, por iglesia.
 - Crear, editar y borrar eventos para encargado, pastor y admin, con inicio de sesión.
 - Repetición semanal y mensual con fin de la serie ("Hasta"). Editar o borrar afecta siempre a toda la serie.
 - Eventos de varios días, con fecha de fin opcional.

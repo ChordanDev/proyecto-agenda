@@ -58,8 +58,16 @@ Conjunto de eventos que se ven en una iglesia: los propios, los de su distrito a
 _Avoid_: Agenda, cronograma
 
 **Evento**:
-Actividad con fecha que pertenece a un nivel y a un énfasis. Su dueño es ese nivel, no la persona que lo cargó.
+Actividad con fecha que pertenece a un nivel y, salvo que sea una actividad regular, a un énfasis. Su dueño es ese nivel, no la persona que lo cargó.
 _Avoid_: Actividad, reunión, cita
+
+**Énfasis**:
+Cada una de las cuatro líneas de trabajo de la iglesia con las que se clasifica un evento: Identidad, Liderazgo, Nuevas Generaciones y Discipulado. Un evento tiene un solo énfasis o ninguno.
+_Avoid_: Categoría, tipo de evento, área
+
+**Actividad regular**:
+Evento al que no se le asigna un énfasis, como un culto de oración o la Escuela Sabática. No es un quinto énfasis, sino la falta de uno. Es el único uso admitido de la palabra "actividad" para nombrar un evento.
+_Avoid_: Evento regular, evento sin categoría, quinto énfasis
 
 **Alcance**:
 Nivel dueño de un evento: iglesia, distrito o asociación. Un evento se ve en todas las iglesias que dependen de su alcance.
