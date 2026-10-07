@@ -36,7 +36,7 @@ Out of scope: events, login, the approved screens, offline cache persistence, th
 ## Tasks
 
 - [x] **T1 — Expo app and structure.** Scaffold the app, strict TypeScript, Expo Router, dev client, ESLint + Prettier, Jest, the five features with three layers and `src/shared`. Route: delegated (2+ non-trivial files). Checks: `npm run typecheck`, `npm run lint`, `npm test`.
-- [ ] **T2 — Database structure.** `supabase init`, migration, RLS, seed (one asociación, several distritos and iglesias, one excluded church), pgTAP test with one allowed and one rejected case, generated types. Route: delegated. Checks: `npx supabase db reset`, `npx supabase test db`.
+- [x] **T2 — Database structure.** `supabase init`, migration, RLS, seed (one asociación, several distritos and iglesias, one excluded church), pgTAP test with one allowed and one rejected case, generated types. Route: delegated. Checks: `npx supabase db reset`, `npx supabase test db`.
 - [ ] **T3 — Real data on screen.** Supabase client in `src/shared`, `iglesias/datos` query, first domain rule with its Jest test written first, `iglesias/interfaz` screen wired from a route. Route: delegated. Checks: `npm run typecheck`, `npm run lint`, `npm test`.
 - [ ] **T4 — Continuous integration.** Workflow with four jobs (types, style, domain tests, permission tests on a local Supabase from scratch) on pull requests to `develop`; workflow that pushes migrations to the development Supabase on push to `develop`; README with setup steps. Route: delegated. Checks: workflow YAML parses; commands match the npm scripts.
 - [ ] **T5 — Development build.** Build and run on the iOS simulator and on the Android phone; confirm the screen shows seeded data. Route: inline (per-action). Checks: observed screen.
