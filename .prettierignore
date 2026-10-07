@@ -1,0 +1,24 @@
+# Generated
+node_modules/
+.expo/
+dist/
+ios/
+android/
+coverage/
+package-lock.json
+src/shared/database.types.ts
+supabase/.temp/
+supabase/.branches/
+
+# Approved design: a specification exported from the design tool, kept as is
+diseno/
+
+# Documentation goes straight to develop and is not gated by the style check
+*.md
+
+# Local agent tooling
+.atl/
+.claude/
+
+# Icon source files
+assets/
