@@ -6,6 +6,15 @@ App móvil que reemplaza las agendas impresas que hoy la Iglesia Adventista entr
 - Plataforma: iOS y Android.
 - Idioma: español.
 
+## Stack
+- **App:** Expo (React Native + TypeScript) con Expo Router. Development builds desde el primer día, no Expo Go.
+- **Backend y hosting:** Supabase, región de São Paulo. La app usa el cliente de Supabase directamente; los permisos viven en políticas RLS de Postgres y llevan pruebas automáticas. Las funciones de servidor se reservan para el chat con IA y los recordatorios (v2).
+- **Esquema:** los cambios de tablas y políticas son migraciones SQL versionadas en el repositorio (Supabase CLI). Hay un proyecto de desarrollo y otro de producción.
+- **Consulta sin conexión:** caché de consultas persistida con TanStack Query.
+- **Correos de acceso:** Resend, con remitente del dominio de la asociación.
+
+El detalle y los motivos de cada decisión están en los issues #10, #11 y #13.
+
 ## Público y tono
 - Usuarios de todas las edades, incluidos adultos mayores y personas poco técnicas.
 - Prioridad: claridad, textos legibles, botones grandes, pocas opciones por pantalla.
@@ -25,7 +34,7 @@ Cada evento pertenece a uno. Cada énfasis tiene color **y forma**, para disting
 1. **Hermano (sin login):** al abrir la app por primera vez elige su iglesia (queda guardada; se cambia en Ajustes). Ve el calendario de su iglesia + eventos de su distrito + eventos de la asociación. Usa el chat solo para consultar. No edita nada.
 2. **Encargado de calendario (con login):** secretaria, tesorero, etc. Una iglesia puede tener varios, todos con los mismos permisos. Crea/edita/borra eventos de su iglesia y puede compartirlos con otras iglesias. Usa el chat para consultar y cargar.
 3. **Pastor (con login):** tiene un distrito con varias iglesias. Ve todos sus calendarios (juntos o filtrados), crea eventos en cualquiera de sus iglesias y eventos de distrito (aparecen en todas sus iglesias). Da de alta encargados de sus iglesias.
-4. **Admin de asociación (con login):** ve todas las iglesias. Crea eventos de asociación (aparecen en todas las iglesias). Gestiona distritos, iglesias (con dirección/ubicación), pastores y encargados.
+4. **Admin de asociación (con login):** ve todas las iglesias. Crea eventos de asociación (aparecen en todas las iglesias) y también de cualquier distrito o iglesia. Gestiona distritos, iglesias (con dirección/ubicación), pastores y encargados.
 
 ## Eventos
 - Campos: título, fecha y hora, lugar, descripción (opcional), énfasis (obligatorio), alcance (iglesia / distrito / asociación).
@@ -54,7 +63,7 @@ Recordatorios simples de eventos próximos (ej. "Mañana: Congreso de Jóvenes")
 7. **Chat IA:** conversación con tarjetas de vista previa para confirmar eventos.
 8. **Gestión del pastor:** lista de sus iglesias (encargados y cantidad de eventos del mes, aviso si una iglesia no tiene encargado), lista de encargados, botón "Agregar encargado".
 9. **Gestión del admin:** pestañas Distritos / Iglesias / Usuarios; aviso de distritos sin pastor; botones "Nuevo distrito" y "Nueva iglesia" (con dirección).
-10. **Ajustes:** cambiar de iglesia, notificaciones, cerrar sesión.
+10. **Ajustes:** cambiar de iglesia, notificaciones, cerrar sesión, eliminar mi cuenta.
 
 Navegación inferior: Calendario · Chat · Gestión (solo pastor/admin) · Ajustes.
 
@@ -70,7 +79,7 @@ Prueba que la app reemplaza a la agenda impresa de punta a punta.
 - Crear, editar y borrar eventos para encargado, pastor y admin, con inicio de sesión.
 - Repetición semanal y mensual con fecha de fin. Editar o borrar afecta siempre a toda la serie.
 - Consulta sin conexión, solo lectura: se muestra el último calendario descargado con la fecha de última actualización. Crear, editar y borrar exigen conexión.
-- Ajustes: cambiar de iglesia y cerrar sesión.
+- Ajustes: cambiar de iglesia, cerrar sesión y eliminar mi cuenta.
 - Distritos, iglesias, pastores y encargados los cargan los desarrolladores a partir de los datos de la asociación. La relación de iglesias sumadas existe en el modelo de datos aunque todavía no tenga pantalla.
 
 ### v2 (en orden de construcción)
