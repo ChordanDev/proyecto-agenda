@@ -148,3 +148,17 @@ Se sacrifican, en este orden: el filtro por iglesia para pastor y admin, los fil
 
 ## Diseño
 El diseño visual aprobado está en `diseno/` (pantallas en HTML, capturas, logo y `theme.ts`). Leé `diseno/README.md` y respetá esos valores al implementar las pantallas en React Native.
+
+## Agent skills
+
+### Issue tracker
+
+Los issues y las especificaciones viven en GitHub Issues del repositorio, con la CLI `gh`. Ver `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Se usan las cinco etiquetas por defecto: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human` y `wontfix`. Ver `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Un solo contexto: `GLOSSARY.md` en la raíz y `docs/adr/`. Ver `docs/agents/domain.md`.
