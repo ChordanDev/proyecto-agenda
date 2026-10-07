@@ -37,7 +37,7 @@ Out of scope: events, login, the approved screens, offline cache persistence, th
 
 - [x] **T1 — Expo app and structure.** Scaffold the app, strict TypeScript, Expo Router, dev client, ESLint + Prettier, Jest, the five features with three layers and `src/shared`. Route: delegated (2+ non-trivial files). Checks: `npm run typecheck`, `npm run lint`, `npm test`.
 - [x] **T2 — Database structure.** `supabase init`, migration, RLS, seed (one asociación, several distritos and iglesias, one excluded church), pgTAP test with one allowed and one rejected case, generated types. Route: delegated. Checks: `npx supabase db reset`, `npx supabase test db`.
-- [ ] **T3 — Real data on screen.** Supabase client in `src/shared`, `iglesias/datos` query, first domain rule with its Jest test written first, `iglesias/interfaz` screen wired from a route. Route: delegated. Checks: `npm run typecheck`, `npm run lint`, `npm test`.
+- [x] **T3 — Real data on screen.** Supabase client in `src/shared`, `iglesias/datos` query, first domain rule with its Jest test written first, `iglesias/interfaz` screen wired from a route. Route: delegated. Checks: `npm run typecheck`, `npm run lint`, `npm test`.
 - [ ] **T4 — Continuous integration.** Workflow with four jobs (types, style, domain tests, permission tests on a local Supabase from scratch) on pull requests to `develop`; workflow that pushes migrations to the development Supabase on push to `develop`; README with setup steps. Route: delegated. Checks: workflow YAML parses; commands match the npm scripts.
 - [ ] **T5 — Development build.** Build and run on the iOS simulator and on the Android phone; confirm the screen shows seeded data. Route: inline (per-action). Checks: observed screen.
 
@@ -59,8 +59,10 @@ Strategy: `single-pr` — project policy is one short branch per ticket, squash-
 
 Branch `feat/18-project-skeleton`.
 
-- **T1** — commit `feat: scaffold Expo app with feature layers and style checks`. Observed: `npm run typecheck` clean; `npm run lint` clean (ESLint + Prettier); a temporary probe importing Supabase from `interfaz/`, `src/app/` and React from `dominio/` produced 5 `no-restricted-imports` errors, then was removed. `npm test` has no test yet (the first one arrives with T3).
+- **T1** — commit `3c2b8f2` `feat: scaffold Expo app with feature layers and style checks`. Observed: `npm run typecheck` clean; `npm run lint` clean (ESLint + Prettier); a temporary probe importing Supabase from `interfaz/`, `src/app/` and React from `dominio/` produced 5 `no-restricted-imports` errors, then was removed. `npm test` has no test yet (the first one arrives with T3).
+- **T2** — commit `ab314f4` `feat: add structure tables with read-only policies and seed data`. Observed: `npx supabase db reset` applied the migration and the seed; `npx supabase test db` 27/27 PASS; as anon through the REST API, reading iglesias with their distrito returns rows and an insert into asociaciones returns 401. The migration also grants `select` explicitly, so reading does not depend on the `auto_expose_new_tables` project setting.
+- **T3** — commit `feat: list iglesias from Supabase through the datos layer`. Test first: RED observed with a stub (`Tests: 9 failed, 9 total`), GREEN after implementing `buscarIglesias` (`Tests: 9 passed, 9 total`). Observed: `npm run typecheck` clean; `npm run lint` clean; `npm test` 9/9; `git check-ignore .env.local` prints `.env.local`; `npx expo export --platform ios` (to a scratch folder) bundles the app; `npx expo-doctor` 21/21. The screen on a device is verified in T5.
 
 ## Next step
 
-T2.
+T4.
