@@ -12,8 +12,9 @@ App móvil que reemplaza las agendas impresas que hoy la Iglesia Adventista entr
 - **Esquema:** los cambios de tablas y políticas son migraciones SQL versionadas en el repositorio (Supabase CLI). Hay un proyecto de desarrollo y otro de producción.
 - **Consulta sin conexión:** caché de consultas persistida con TanStack Query.
 - **Correos de acceso:** Resend, con remitente del dominio de la asociación.
+- **Chat con IA (v2):** GPT-6 Luna (OpenAI), llamado desde una función de servidor que aísla al proveedor. La clave nunca está en la app.
 
-El detalle y los motivos de cada decisión están en los issues #10, #11 y #13.
+El detalle y los motivos de cada decisión están en los issues #10, #11, #12 y #13.
 
 ## Público y tono
 - Usuarios de todas las edades, incluidos adultos mayores y personas poco técnicas.
@@ -31,7 +32,7 @@ Cada evento pertenece a uno. Cada énfasis tiene color **y forma**, para disting
 | Discipulado | Hacemos | Cuadrado | #2DC86E |
 
 ## Roles
-1. **Hermano (sin login):** al abrir la app por primera vez elige su iglesia (queda guardada; se cambia en Ajustes). Ve el calendario de su iglesia + eventos de su distrito + eventos de la asociación. Usa el chat solo para consultar. No edita nada.
+1. **Hermano (sin login):** al abrir la app por primera vez elige su iglesia (queda guardada; se cambia en Ajustes). Ve el calendario de su iglesia + eventos de su distrito + eventos de la asociación. No tiene chat. No edita nada.
 2. **Encargado de calendario (con login):** secretaria, tesorero, etc. Una iglesia puede tener varios, todos con los mismos permisos. Crea/edita/borra eventos de su iglesia y puede compartirlos con otras iglesias. Usa el chat para consultar y cargar.
 3. **Pastor (con login):** tiene un distrito con varias iglesias. Ve todos sus calendarios (juntos o filtrados), crea eventos en cualquiera de sus iglesias y eventos de distrito (aparecen en todas sus iglesias). Da de alta encargados de sus iglesias.
 4. **Admin de asociación (con login):** ve todas las iglesias. Crea eventos de asociación (aparecen en todas las iglesias) y también de cualquier distrito o iglesia. Gestiona distritos, iglesias (con dirección/ubicación), pastores y encargados.
@@ -49,9 +50,14 @@ Cada evento pertenece a uno. Cada énfasis tiene color **y forma**, para disting
 - Solo el dueño del evento (la iglesia o el distrito al que pertenece, no la persona que lo cargó) puede editarlo o borrarlo. El encargado de una iglesia sumada puede quitarlo de su calendario.
 
 ## Chat con IA
-- Consulta: "¿Qué hay el sábado que viene?", "¿De qué se trata el congreso de jóvenes?".
-- Carga (encargado/pastor/admin): "Cargame un culto joven el sábado 17 a las 19 h". La IA **siempre** muestra una tarjeta de vista previa del evento (con su forma y color de énfasis) y botones Editar / Confirmar. **Nunca guarda sin confirmación.**
-- Admite entrada por voz (micrófono).
+- Solo para usuarios con sesión iniciada (encargado, pastor, admin). El hermano no tiene chat.
+- Habla solo del calendario. Ante cualquier otra cosa responde que solo puede ayudar con el calendario; si a un evento le falta información, lo dice y no rellena.
+- Consulta: "¿Qué hay el sábado que viene?", "¿De qué se trata el congreso de jóvenes?". Las búsquedas se ejecutan con la identidad de quien pregunta.
+- Carga: "Cargame un culto joven el sábado 17 a las 19 h". La IA **siempre** muestra una tarjeta de vista previa del evento (con su forma y color de énfasis) y botones Editar / Confirmar. **Nunca guarda sin confirmación:** el modelo solo propone el evento y es la app la que guarda al tocar Confirmar. Por chat solo se crea; editar y borrar se hacen desde el detalle del evento.
+- Las conversaciones no se guardan. Cada respuesta tiene un botón "Reportar respuesta", que registra un motivo sin el texto.
+- Límites: 50 consultas por día por usuario y un presupuesto mensual de 20 USD. Al llegar al límite diario, el chat avisa que se alcanzó el máximo de consultas de hoy y recuerda que el formulario sigue disponible; el contador se reinicia a la medianoche, hora de la asociación. Si se agota el presupuesto mensual, el chat se apaga hasta el mes siguiente.
+- Admite entrada por voz (micrófono), con el reconocimiento de voz del teléfono.
+- Las reglas completas están en el issue #12.
 
 ## Notificaciones
 Recordatorios simples de eventos próximos (ej. "Mañana: Congreso de Jóvenes"), activables en Ajustes.
@@ -63,12 +69,12 @@ Recordatorios simples de eventos próximos (ej. "Mañana: Congreso de Jóvenes")
 4. **Calendario (todos los roles):** vista mensual con marcadores por día (forma + color del énfasis), día seleccionado destacado y lista de eventos de ese día debajo. Filtros por énfasis (y por iglesia para pastor/admin). Los eventos de asociación/distrito muestran su alcance.
 5. **Detalle de evento:** toda la información, énfasis, alcance y con qué iglesias se comparte. Editar/quitar según permisos.
 6. **Crear/editar evento:** título, fecha, hora, fecha de fin opcional, descripción opcional, selector de énfasis (4 opciones con forma y color), repetición (con el campo "Hasta" y un texto que la explica con palabras), buscador de iglesias para compartir.
-7. **Chat IA:** conversación con tarjetas de vista previa para confirmar eventos.
+7. **Chat IA (solo con sesión iniciada):** conversación con tarjetas de vista previa para confirmar eventos y botón "Reportar respuesta". La primera vez pide aceptar que los mensajes se envían a OpenAI.
 8. **Gestión del pastor:** lista de sus iglesias (encargados y cantidad de eventos del mes, aviso si una iglesia no tiene encargado), lista de encargados, botón "Agregar encargado".
 9. **Gestión del admin:** pestañas Distritos / Iglesias / Usuarios; aviso de distritos sin pastor; botones "Nuevo distrito" y "Nueva iglesia" (con dirección).
 10. **Ajustes:** cambiar de iglesia, notificaciones, cerrar sesión, eliminar mi cuenta.
 
-Navegación inferior: Calendario · Chat · Gestión (solo pastor/admin) · Ajustes.
+Navegación inferior: Calendario · Chat (solo con sesión iniciada) · Gestión (solo pastor/admin) · Ajustes. El hermano ve Calendario y Ajustes.
 
 ## Entregas
 El trabajo se divide en dos entregas, cada una con su milestone en GitHub. Todas las funcionalidades de este documento se desglosan en issues; el milestone de cada una indica cuándo se construye. Si la v1 termina antes de su fecha, se continúa con la v2.
@@ -87,7 +93,7 @@ Prueba que la app reemplaza a la agenda impresa de punta a punta.
 - Distritos, iglesias, pastores y encargados los cargan los desarrolladores a partir de los datos de la asociación. La relación de iglesias sumadas existe en el modelo de datos aunque todavía no tenga pantalla.
 
 ### v2 (en orden de construcción)
-1. Chat de consulta.
+1. Chat de consulta, para usuarios con sesión iniciada.
 2. Chat de carga, con tarjeta de vista previa y botones Editar / Confirmar.
 3. Notificaciones de recordatorio, enviadas desde el servidor.
 4. Gestión del pastor.
