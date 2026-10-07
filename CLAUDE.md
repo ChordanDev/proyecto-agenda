@@ -16,6 +16,43 @@ App móvil que reemplaza las agendas impresas que hoy la Iglesia Adventista entr
 
 El detalle y los motivos de cada decisión están en los issues #10, #11, #12 y #13.
 
+## Forma de trabajo
+Resumen de lo decidido en el issue #15.
+
+### Estructura del código
+- Un solo repositorio: la app y la carpeta `supabase/` (migraciones, pruebas de permisos, funciones).
+- Carpetas por funcionalidad (`calendario`, `eventos`, `iglesias`, `sesion`, `ajustes`). Cada una tiene tres capas: `dominio` (reglas puras en TypeScript, sin React ni Supabase), `datos` (consultas a Supabase) e `interfaz` (pantallas y componentes).
+- **Un componente nunca llama a Supabase:** pide datos a través de la capa `datos` de su funcionalidad.
+- Las rutas de Expo Router solo conectan una URL con una pantalla.
+- El código compartido entre funcionalidades va en `src/shared`.
+- TypeScript en modo estricto. Los tipos de la base se generan desde el esquema.
+
+### Idioma del código
+- Si la palabra está en `GLOSSARY.md`, va en español, sin tildes ni eñes: tabla `iglesias`, tipo `Cargo`, `alcance`, `iglesiaSumada`. "Dueño" se escribe `duenio`.
+- Todo lo demás va en inglés. Los nombres mixtos son esperables: `getEventosDeIglesia()`.
+- Commits convencionales y comentarios en inglés. Tickets y documentación, en español.
+
+### Pruebas
+- Reglas del dominio: pruebas unitarias obligatorias, escritas antes que el código (Jest).
+- Permisos de la base: pruebas obligatorias contra un Supabase local (pgTAP), con al menos un caso permitido y uno rechazado por política.
+- Pantallas: sin pruebas automáticas en la v1; se verifican a mano contra el diseño aprobado.
+
+### Ramas
+- Una rama corta por ticket, con pull request a `develop`, fusionado en un solo commit. No hay revisión obligatoria: se fusiona cuando las verificaciones automáticas pasan.
+- `develop` es la rama por defecto. La documentación va directo a `develop`.
+- `main` contiene solo versiones publicadas. Una versión es un pull request de `develop` a `main`, fusionado sin aplastar y etiquetado (`v1.0.0`).
+- Arreglos urgentes: se parte desde `main` y el arreglo se fusiona a `main` y a `develop`.
+
+### Integración continua
+- En cada pull request a `develop` corren cuatro verificaciones, todas obligatorias: tipos (`tsc`), estilo (ESLint y Prettier), pruebas del dominio y pruebas de permisos sobre un Supabase local con las migraciones aplicadas desde cero.
+- Las migraciones se aplican solas al Supabase de desarrollo al fusionar a `develop`. A producción se aplican a mano, como paso de la publicación de cada versión.
+- Los secretos van en GitHub y en EAS, nunca en un archivo versionado.
+
+### Tickets
+- Se trabaja por funcionalidad completa: quien toma un ticket hace su migración, sus permisos, sus reglas, sus consultas y su pantalla.
+- Cada pantalla es un ticket principal, con el diseño aprobado como criterio de terminado. Las pantallas grandes se parten en sub-tickets, uno por cada parte que se pueda cortar o que sea de otra entrega.
+- Antes de crear una migración se trae `develop`.
+
 ## Público y tono
 - Usuarios de todas las edades, incluidos adultos mayores y personas poco técnicas.
 - Prioridad: claridad, textos legibles, botones grandes, pocas opciones por pantalla.
