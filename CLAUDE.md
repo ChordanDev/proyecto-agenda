@@ -37,8 +37,11 @@ Cada evento pertenece a uno. Cada énfasis tiene color **y forma**, para disting
 4. **Admin de asociación (con login):** ve todas las iglesias. Crea eventos de asociación (aparecen en todas las iglesias) y también de cualquier distrito o iglesia. Gestiona distritos, iglesias (con dirección/ubicación), pastores y encargados.
 
 ## Eventos
-- Campos: título, fecha y hora, lugar, descripción (opcional), énfasis (obligatorio), alcance (iglesia / distrito / asociación).
-- Pueden repetirse (semanal, mensual).
+- Campos: título, fecha y hora, fecha de fin (opcional, para eventos de varios días), lugar, descripción (opcional), énfasis (obligatorio), alcance (iglesia / distrito / asociación).
+- Un evento de varios días se marca en cada día del rango. La fecha de fin es solo fecha, sin hora de finalización.
+- Pueden repetirse: semanal (el mismo día todas las semanas) o mensual (mismo día de la semana y misma posición, por ejemplo "el tercer sábado de cada mes"; la quinta posición se toma como "el último"). Un evento de varios días no puede repetirse.
+- Toda serie tiene un fin de la serie ("Hasta"), obligatorio, sugerido a un año y con ese tope. Es un campo distinto de la fecha de fin de un evento de varios días. Para terminar una serie se acorta; para renovarla, se alarga.
+- Las reglas completas de repetición, eventos compartidos y excepciones están en el issue #14.
 
 ### Eventos compartidos entre iglesias
 - Al crear un evento se pueden sumar otras iglesias con un buscador que abarca toda la asociación. Sin escribir, muestra primero las 4 más cercanas; al buscar, los resultados siguen ordenados por distancia. Las elegidas quedan arriba como etiquetas.
@@ -55,11 +58,11 @@ Recordatorios simples de eventos próximos (ej. "Mañana: Congreso de Jóvenes")
 
 ## Pantallas
 1. **Bienvenida:** botón principal "Elegir mi iglesia"; secundario "Soy encargado o pastor" (lleva al login).
-2. **Login:** email y contraseña.
+2. **Login:** email y contraseña, con el enlace "Es mi primera vez u olvidé mi contraseña" (envía un código de 6 dígitos por correo para elegir la contraseña).
 3. **Elegir iglesia:** buscador, opción "Usar mi ubicación", lista de cercanas mostrando distrito y distancia, botón Continuar.
 4. **Calendario (todos los roles):** vista mensual con marcadores por día (forma + color del énfasis), día seleccionado destacado y lista de eventos de ese día debajo. Filtros por énfasis (y por iglesia para pastor/admin). Los eventos de asociación/distrito muestran su alcance.
 5. **Detalle de evento:** toda la información, énfasis, alcance y con qué iglesias se comparte. Editar/quitar según permisos.
-6. **Crear/editar evento:** título, fecha, hora, descripción opcional, selector de énfasis (4 opciones con forma y color), repetición, buscador de iglesias para compartir.
+6. **Crear/editar evento:** título, fecha, hora, fecha de fin opcional, descripción opcional, selector de énfasis (4 opciones con forma y color), repetición (con el campo "Hasta" y un texto que la explica con palabras), buscador de iglesias para compartir.
 7. **Chat IA:** conversación con tarjetas de vista previa para confirmar eventos.
 8. **Gestión del pastor:** lista de sus iglesias (encargados y cantidad de eventos del mes, aviso si una iglesia no tiene encargado), lista de encargados, botón "Agregar encargado".
 9. **Gestión del admin:** pestañas Distritos / Iglesias / Usuarios; aviso de distritos sin pastor; botones "Nuevo distrito" y "Nueva iglesia" (con dirección).
@@ -77,7 +80,8 @@ Prueba que la app reemplaza a la agenda impresa de punta a punta.
 - Calendario con eventos de iglesia, distrito y asociación, con su alcance visible.
 - Los cuatro énfasis con forma y color. Filtros por énfasis y, para pastor y admin, por iglesia.
 - Crear, editar y borrar eventos para encargado, pastor y admin, con inicio de sesión.
-- Repetición semanal y mensual con fecha de fin. Editar o borrar afecta siempre a toda la serie.
+- Repetición semanal y mensual con fin de la serie ("Hasta"). Editar o borrar afecta siempre a toda la serie.
+- Eventos de varios días, con fecha de fin opcional.
 - Consulta sin conexión, solo lectura: se muestra el último calendario descargado con la fecha de última actualización. Crear, editar y borrar exigen conexión.
 - Ajustes: cambiar de iglesia, cerrar sesión y eliminar mi cuenta.
 - Distritos, iglesias, pastores y encargados los cargan los desarrolladores a partir de los datos de la asociación. La relación de iglesias sumadas existe en el modelo de datos aunque todavía no tenga pantalla.
