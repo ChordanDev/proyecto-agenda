@@ -58,7 +58,36 @@ Recordatorios simples de eventos próximos (ej. "Mañana: Congreso de Jóvenes")
 
 Navegación inferior: Calendario · Chat · Gestión (solo pastor/admin) · Ajustes.
 
-## Fuera de la primera versión
+## Entregas
+El trabajo se divide en dos entregas, cada una con su milestone en GitHub. Todas las funcionalidades de este documento se desglosan en issues; el milestone de cada una indica cuándo se construye. Si la v1 termina antes de su fecha, se continúa con la v2.
+
+### v1 (vence el viernes 4 de diciembre de 2026)
+Prueba que la app reemplaza a la agenda impresa de punta a punta.
+
+- Recorrido del hermano: bienvenida, elegir iglesia con buscador por nombre (cada resultado muestra distrito y localidad), calendario mensual con marcadores, lista del día y detalle del evento.
+- Calendario con eventos de iglesia, distrito y asociación, con su alcance visible.
+- Los cuatro énfasis con forma y color. Filtros por énfasis y, para pastor y admin, por iglesia.
+- Crear, editar y borrar eventos para encargado, pastor y admin, con inicio de sesión.
+- Repetición semanal y mensual con fecha de fin. Editar o borrar afecta siempre a toda la serie.
+- Consulta sin conexión, solo lectura: se muestra el último calendario descargado con la fecha de última actualización. Crear, editar y borrar exigen conexión.
+- Ajustes: cambiar de iglesia y cerrar sesión.
+- Distritos, iglesias, pastores y encargados los cargan los desarrolladores a partir de los datos de la asociación. La relación de iglesias sumadas existe en el modelo de datos aunque todavía no tenga pantalla.
+
+### v2 (en orden de construcción)
+1. Chat de consulta.
+2. Chat de carga, con tarjeta de vista previa y botones Editar / Confirmar.
+3. Notificaciones de recordatorio, enviadas desde el servidor.
+4. Gestión del pastor.
+5. Gestión del admin.
+6. "Usar mi ubicación" y distancias al elegir iglesia.
+7. Eventos compartidos entre iglesias.
+8. Excepciones en eventos repetidos (cambiar una sola fecha de una serie).
+9. Entrada por voz en el chat.
+
+### Si la v1 se atrasa
+Se sacrifican, en este orden: el filtro por iglesia para pastor y admin, los filtros por énfasis y la repetición mensual. El resto de la v1 no se recorta; si no alcanza, se mueve la fecha.
+
+## Fuera de alcance
 - Nivel de unión: por ahora hay una sola asociación, pero la estructura de datos debe permitir sumar ese nivel después.
 
 ## Diseño

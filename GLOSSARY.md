@@ -19,7 +19,7 @@ Campo local que agrupa distritos. Incluye por igual a las asociaciones y a las m
 _Avoid_: Misión, campo, campo local
 
 **Unión**:
-Nivel que agrupa asociaciones. Está fuera de la primera versión, que contempla una sola asociación.
+Nivel que agrupa asociaciones. Está fuera de alcance: la agenda contempla una sola asociación.
 
 ### Personas y cargos
 
@@ -88,3 +88,13 @@ _Avoid_: Ocultar, rechazar, bloquear
 **Borrar**:
 Eliminar un evento para todas las iglesias donde se ve. Solo puede hacerlo quien tenga un cargo que abarque a su dueño.
 _Avoid_: Quitar, cancelar
+
+### Entregas
+
+**v1**:
+Primera entrega de la agenda: lo necesario para reemplazar a la agenda impresa. No designa a la agenda completa.
+_Avoid_: Primera versión, MVP, versión de diciembre
+
+**v2**:
+Segunda entrega de la agenda: todo lo descrito para la agenda que no entra en la v1.
+_Avoid_: Segunda versión, fase 2
