@@ -13,7 +13,7 @@ supabase/.branches/
 # Approved design: a specification exported from the design tool, kept as is
 diseno/
 
-# Documentation goes straight to develop and is not gated by the style check
+# Documentation goes straight to main and is not gated by the style check
 *.md
 
 # Local agent tooling

@@ -74,7 +74,7 @@ Al abrir, la app muestra la lista de iglesias leída del Supabase local.
 
 ### Cambios en la base
 
-1. Traer `develop` antes de crear una migración.
+1. Traer `main` antes de crear una migración.
 2. Crear la migración con `npx supabase migration new <nombre>` y escribir el SQL.
 3. Aplicarla con `npm run db:reset`.
 4. Agregar o ajustar las pruebas de permisos en `supabase/tests/` (al menos un caso permitido y uno rechazado) y correr `npm run db:test`.
@@ -82,7 +82,7 @@ Al abrir, la app muestra la lista de iglesias leída del Supabase local.
 
 ## Integración continua
 
-En cada pull request a `develop` corren cuatro verificaciones (`.github/workflows/ci.yml`):
+En cada pull request a `main` corren cuatro verificaciones (`.github/workflows/ci.yml`):
 
 | Verificación       | Equivalente local                                    |
 | ------------------ | ---------------------------------------------------- |
@@ -91,7 +91,7 @@ En cada pull request a `develop` corren cuatro verificaciones (`.github/workflow
 | `Domain tests`     | `npm test`                                           |
 | `Permission tests` | `npm run db:reset && npm run db:test && npm run db:types` |
 
-Al fusionar a `develop`, las migraciones nuevas se aplican solas al Supabase de desarrollo (`.github/workflows/deploy-migrations.yml`). A producción se aplican a mano, como paso de la publicación de cada versión.
+Al fusionar a `main`, las migraciones nuevas se aplican solas al Supabase de desarrollo (`.github/workflows/deploy-migrations.yml`). A producción se aplican a mano, como paso de la publicación de cada versión.
 
 ## Configuración que debe hacer una persona
 
@@ -106,6 +106,6 @@ Estos pasos requieren acceso a las cuentas y no están automatizados.
    | `SUPABASE_DB_PASSWORD`  | Contraseña de la base del proyecto de desarrollo.                  |
    | `SUPABASE_PROJECT_ID`   | Identificador (reference ID) del proyecto de desarrollo.           |
 
-3. **Protección de la rama `develop`:** marcar como obligatorias las verificaciones `Types`, `Style`, `Domain tests` y `Permission tests`.
+3. **Protección de la rama `main`:** marcar como obligatorias las verificaciones `Types`, `Style`, `Domain tests` y `Permission tests`.
 
 Ningún secreto va en un archivo versionado. Las variables `EXPO_PUBLIC_*` quedan incluidas en la app y son públicas por diseño: ahí solo van la URL y la clave anónima, nunca la clave `service_role`.

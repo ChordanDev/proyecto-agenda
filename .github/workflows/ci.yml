@@ -1,10 +1,10 @@
 name: CI
 
-# The four checks below are required to merge a pull request into develop.
+# The four checks below are required to merge a pull request into main.
 # Their names are referenced by the branch protection rule: do not rename them.
 on:
   pull_request:
-    branches: [develop]
+    branches: [main]
 
 concurrency:
   group: ci-${{ github.event.pull_request.number }}

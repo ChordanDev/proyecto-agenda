@@ -1,16 +1,16 @@
 name: Deploy migrations
 
 # Applies pending migrations to the DEVELOPMENT Supabase project when they
-# reach develop. Production migrations are applied by hand on each release.
+# reach main. Production migrations are applied by hand on each release.
 on:
   push:
-    branches: [develop]
+    branches: [main]
     paths:
       - 'supabase/migrations/**'
 
 # Never run two pushes against the same database at once.
 concurrency:
-  group: deploy-migrations-develop
+  group: deploy-migrations-main
   cancel-in-progress: false
 
 permissions:
