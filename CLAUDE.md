@@ -38,20 +38,20 @@ Resumen de lo decidido en el issue #15.
 - Pantallas: sin pruebas automáticas en la v1; se verifican a mano contra el diseño aprobado.
 
 ### Ramas
-- Una rama corta por ticket, con pull request a `develop`, fusionado en un solo commit. No hay revisión obligatoria: se fusiona cuando las verificaciones automáticas pasan.
-- `develop` es la rama por defecto. La documentación va directo a `develop`.
-- `main` contiene solo versiones publicadas. Una versión es un pull request de `develop` a `main`, fusionado sin aplastar y etiquetado (`v1.0.0`).
-- Arreglos urgentes: se parte desde `main` y el arreglo se fusiona a `main` y a `develop`.
+- Una rama corta por ticket, con pull request a `main`, fusionado en un solo commit. No hay revisión obligatoria: se fusiona cuando las verificaciones automáticas pasan.
+- `main` es la rama por defecto y la única permanente. La documentación va directo a `main`.
+- Una versión es una etiqueta sobre un commit de `main` (`v1.0.0`).
+- Arreglos urgentes: se parte desde la etiqueta de la versión publicada y el arreglo se fusiona también a `main`.
 
 ### Integración continua
-- En cada pull request a `develop` corren cuatro verificaciones, todas obligatorias: tipos (`tsc`), estilo (ESLint y Prettier), pruebas del dominio y pruebas de permisos sobre un Supabase local con las migraciones aplicadas desde cero.
-- Las migraciones se aplican solas al Supabase de desarrollo al fusionar a `develop`. A producción se aplican a mano, como paso de la publicación de cada versión.
+- En cada pull request a `main` corren cuatro verificaciones, todas obligatorias: tipos (`tsc`), estilo (ESLint y Prettier), pruebas del dominio y pruebas de permisos sobre un Supabase local con las migraciones aplicadas desde cero.
+- Las migraciones se aplican solas al Supabase de desarrollo al fusionar a `main`. A producción se aplican a mano, como paso de la publicación de cada versión.
 - Los secretos van en GitHub y en EAS, nunca en un archivo versionado.
 
 ### Tickets
 - Se trabaja por funcionalidad completa: quien toma un ticket hace su migración, sus permisos, sus reglas, sus consultas y su pantalla.
 - Cada pantalla es un ticket principal, con el diseño aprobado como criterio de terminado. Las pantallas grandes se parten en sub-tickets, uno por cada parte que se pueda cortar o que sea de otra entrega.
-- Antes de crear una migración se trae `develop`.
+- Antes de crear una migración se trae `main`.
 
 ## Público y tono
 - Usuarios de todas las edades, incluidos adultos mayores y personas poco técnicas.
