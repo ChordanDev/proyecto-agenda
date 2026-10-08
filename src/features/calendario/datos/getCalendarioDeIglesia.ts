@@ -11,9 +11,22 @@ import { getMonthRange, type Month } from '../dominio/getMonthRange';
 
 type EventoRow = Database['public']['Tables']['eventos']['Row'];
 
+/** The calendario of an iglesia for a month. */
+export type CalendarioDeIglesia = {
+  /** The dates of its eventos, as `armarCalendario` orders them. */
+  fechas: FechaDeEvento[];
+  /**
+   * Nombre of each distrito that owns one of the eventos read, by its id: a
+   * duenio only carries ids, and the calendar shows which distrito an evento
+   * comes from.
+   */
+  nombresDeDistritos: Record<string, string>;
+};
+
 /**
- * A date with its evento and the iglesias sumadas of that evento. It is a
- * single literal because the client infers the type of the rows from it.
+ * A date with its evento, the iglesias sumadas of that evento and the nombre
+ * of the distrito that owns it, if one does. It is a single literal because
+ * the client infers the type of the rows from it.
  */
 const FECHA_COLUMNS = `
   fecha,
@@ -21,7 +34,8 @@ const FECHA_COLUMNS = `
     id, titulo, lugar, descripcion, enfasis, alcance,
     duenio_iglesia_id, duenio_distrito_id, duenio_asociacion_id,
     hora, fecha_fin, repeticion, fin_de_serie,
-    iglesias_sumadas (iglesia_id)
+    iglesias_sumadas (iglesia_id),
+    distritos (nombre)
   )
 ` as const;
 
@@ -105,7 +119,7 @@ function selectFechas(ownedOrSumada: string) {
 export async function getCalendarioDeIglesia(
   iglesiaId: string,
   month: Month,
-): Promise<FechaDeEvento[]> {
+): Promise<CalendarioDeIglesia> {
   const { firstDay, lastDay } = getMonthRange(month);
   const { iglesia, eventosSumados } = await getIglesiaEnEstructura(iglesiaId);
 
@@ -132,8 +146,13 @@ export async function getCalendarioDeIglesia(
   }
 
   const rows = [...(insideTheMonth.data ?? []), ...(startedBefore.data ?? [])];
+  const nombresDeDistritos: Record<string, string> = {};
 
   const fechas = rows.map((row): FechaDeEvento => {
+    if (row.eventos.duenio_distrito_id && row.eventos.distritos) {
+      nombresDeDistritos[row.eventos.duenio_distrito_id] = row.eventos.distritos.nombre;
+    }
+
     const evento: Evento = {
       id: row.eventos.id,
       titulo: row.eventos.titulo,
@@ -151,5 +170,5 @@ export async function getCalendarioDeIglesia(
     return { fecha: row.fecha, evento };
   });
 
-  return armarCalendario(iglesia, fechas);
+  return { fechas: armarCalendario(iglesia, fechas), nombresDeDistritos };
 }
