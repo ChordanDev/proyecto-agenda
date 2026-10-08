@@ -44,9 +44,10 @@ function RootStack() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       {/* These two open from the start route, behind the splash screen: a
-          transition would still be running when the splash screen leaves. */}
+          transition would still be running when the splash screen leaves. The
+          tabs open on the calendar. */}
       <Stack.Screen name="bienvenida" options={{ animation: 'none' }} />
-      <Stack.Screen name="calendario" options={{ animation: 'none' }} />
+      <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
       {/* The sample screen of the base components only exists in development. */}
       <Stack.Protected guard={__DEV__}>
         <Stack.Screen name="showcase" />
