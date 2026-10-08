@@ -57,6 +57,19 @@ El build se repite solo cuando cambian las dependencias nativas o `app.json`. El
 
 Al abrir, la app muestra la lista de iglesias leída del Supabase local.
 
+### Pantalla de muestra de los componentes
+
+Los componentes base del diseño (formas de los énfasis, textos, botones, campo de texto, tarjeta y fondo) viven en `src/shared/ui/`. Una pantalla de muestra los exhibe juntos para compararlos con el diseño aprobado. Solo existe en desarrollo: en una versión publicada la ruta no está disponible.
+
+Para abrirla, con la app instalada y `npm start` en ejecución:
+
+```sh
+xcrun simctl openurl booted agendadeiglesia://showcase                                # simulador de iOS
+adb shell am start -a android.intent.action.VIEW -d "agendadeiglesia://showcase"     # Android
+```
+
+Después de traer este cambio hay que repetir el development build, porque suma dependencias nativas.
+
 ## Comandos de todos los días
 
 | Comando             | Qué hace                                                                           |

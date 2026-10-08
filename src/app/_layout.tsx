@@ -28,7 +28,12 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        {/* The sample screen of the base components only exists in development. */}
+        <Stack.Protected guard={__DEV__}>
+          <Stack.Screen name="showcase" />
+        </Stack.Protected>
+      </Stack>
     </QueryClientProvider>
   );
 }
