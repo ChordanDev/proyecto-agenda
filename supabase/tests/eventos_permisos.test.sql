@@ -12,7 +12,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(60);
+select plan(66);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -37,15 +37,31 @@ insert into public.iglesias_sumadas (evento_id, iglesia_id) values
   ('eeeeeeee-0000-4000-8000-000000000001', '11111111-0000-4000-8000-000000000002');
 
 -- The policies themselves ---------------------------------------------------------
--- `policies_are` fails if someone adds a policy (for example, a write policy)
--- without updating this test.
+-- `policies_are` fails if someone adds a policy without updating this test.
+-- Who the write policies let through is tested in cargos_permisos.test.sql.
 
-select policies_are('public', 'eventos', array['Anyone can read eventos']);
-select policies_are('public', 'eventos_fechas', array['Anyone can read eventos_fechas']);
+select policies_are('public', 'eventos', array[
+  'Anyone can read eventos',
+  'Usuarios can insert eventos their cargos cover',
+  'Usuarios can update eventos their cargos cover',
+  'Usuarios can delete eventos their cargos cover'
+]);
+select policies_are('public', 'eventos_fechas', array[
+  'Anyone can read eventos_fechas',
+  'Usuarios can insert eventos_fechas their cargos cover',
+  'Usuarios can update eventos_fechas their cargos cover',
+  'Usuarios can delete eventos_fechas their cargos cover'
+]);
 select policies_are('public', 'iglesias_sumadas', array['Anyone can read iglesias_sumadas']);
 
-select policy_cmd_is('public', 'eventos', 'Anyone can read eventos', 'select', 'eventos has a read-only policy');
-select policy_cmd_is('public', 'eventos_fechas', 'Anyone can read eventos_fechas', 'select', 'eventos_fechas has a read-only policy');
+select policy_cmd_is('public', 'eventos', 'Anyone can read eventos', 'select', 'eventos has a read policy');
+select policy_cmd_is('public', 'eventos', 'Usuarios can insert eventos their cargos cover', 'insert', 'eventos has an insert policy');
+select policy_cmd_is('public', 'eventos', 'Usuarios can update eventos their cargos cover', 'update', 'eventos has an update policy');
+select policy_cmd_is('public', 'eventos', 'Usuarios can delete eventos their cargos cover', 'delete', 'eventos has a delete policy');
+select policy_cmd_is('public', 'eventos_fechas', 'Anyone can read eventos_fechas', 'select', 'eventos_fechas has a read policy');
+select policy_cmd_is('public', 'eventos_fechas', 'Usuarios can insert eventos_fechas their cargos cover', 'insert', 'eventos_fechas has an insert policy');
+select policy_cmd_is('public', 'eventos_fechas', 'Usuarios can update eventos_fechas their cargos cover', 'update', 'eventos_fechas has an update policy');
+select policy_cmd_is('public', 'eventos_fechas', 'Usuarios can delete eventos_fechas their cargos cover', 'delete', 'eventos_fechas has a delete policy');
 select policy_cmd_is('public', 'iglesias_sumadas', 'Anyone can read iglesias_sumadas', 'select', 'iglesias_sumadas has a read-only policy');
 
 -- Without a session (anon): the hermano ---------------------------------------------
@@ -113,8 +129,9 @@ select is_empty(
 reset role;
 
 -- With a session (authenticated) -----------------------------------------------
--- A session does not add any permission over the eventos until the cargos and
--- the write policies exist (issue #21).
+-- A session alone does not add any permission over the eventos: writing takes
+-- a cargo that covers the duenio. This session belongs to no usuario, so it has
+-- no cargos; the usuarios with cargos are in cargos_permisos.test.sql.
 
 set local role authenticated;
 

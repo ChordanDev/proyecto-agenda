@@ -29,6 +29,53 @@ insert into public.iglesias (id, distrito_id, nombre, direccion, localidad) valu
 insert into public.iglesias (id, distrito_id, nombre, direccion, localidad, excluida_del_buscador) values
   ('10000000-0000-4000-8000-000000000099', 'd0000000-0000-4000-8000-000000000001', 'Iglesia de prueba', 'Calle Ficticia 123', 'Córdoba', true);
 
+-- Simulated usuarios -------------------------------------------------------------
+-- Four usuarios that can log in to the local Supabase, one per case of the
+-- permission table: an encargado, a pastor, an admin and a usuario without
+-- cargos. They are loaded straight into the tables of Supabase Auth, with what
+-- a signup with email and password would have left there.
+--
+-- All four share the development password: agenda-local
+-- It only exists in a local Supabase: this file is never applied to the
+-- development or production projects.
+
+insert into auth.users (
+  instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+  -- Supabase Auth cannot read a usuario whose token columns are null.
+  confirmation_token, recovery_token, email_change_token_new, email_change,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+)
+select
+  '00000000-0000-0000-0000-000000000000', usuario.id, 'authenticated', 'authenticated', usuario.email,
+  extensions.crypt('agenda-local', extensions.gen_salt('bf')), now(),
+  '', '', '', '',
+  '{"provider": "email", "providers": ["email"]}', '{}', now(), now()
+from (
+  values
+    ('b0000000-0000-4000-8000-000000000001'::uuid, 'encargado@example.com'),
+    ('b0000000-0000-4000-8000-000000000002'::uuid, 'pastor@example.com'),
+    ('b0000000-0000-4000-8000-000000000003'::uuid, 'admin@example.com'),
+    ('b0000000-0000-4000-8000-000000000004'::uuid, 'sin-cargos@example.com')
+) as usuario (id, email);
+
+-- The identity that logging in with email and password looks for.
+insert into auth.identities (user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
+select
+  id, id::text, 'email',
+  jsonb_build_object('sub', id::text, 'email', email, 'email_verified', true, 'phone_verified', false),
+  now(), now(), now()
+from auth.users
+where id::text like 'b0000000-0000-4000-8000-%';
+
+-- Their cargos. The fourth usuario has none.
+insert into public.cargos (id, usuario_id, iglesia_id, distrito_id, asociacion_id) values
+  -- Encargado of Córdoba Central.
+  ('c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', null, null),
+  -- Pastor of the distrito Córdoba Centro.
+  ('c0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000002', null, 'd0000000-0000-4000-8000-000000000001', null),
+  -- Admin of the asociacion.
+  ('c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000003', null, null, 'a0000000-0000-4000-8000-000000000001');
+
 -- Simulated eventos ---------------------------------------------------------------
 -- Made up as well, with fixed dates between October 2026 and January 2027. They
 -- cover the three alcances, the four enfasis and the actividad regular (a null
