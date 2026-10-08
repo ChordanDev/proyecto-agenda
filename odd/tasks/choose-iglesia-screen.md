@@ -79,13 +79,20 @@ Advisory findings, none blocking, left as later work:
 - SUGGESTION — rows stay selectable while the save is pending, so the checked row can differ from the one being stored (`:71-75`).
 - SUGGESTION — the back button calls `router.back()` without checking there is history; entered by a deep link or from Ajustes (#28) it would do nothing (`:115`).
 
+## Follow-up of the advisory review of the pull request
+
+Jorge el Curioso reviewed #67 on `e92b7a2`: approved, with two confirmed low-priority findings, both fixed in this branch.
+
+- **CD-1 — rows of 75 against the 72 of the mockup.** The two texts of a row get line heights of their own (25 and 20) in `IglesiaRow`; `AppText` and the mockup are untouched. Measured between row separators: 72.0 pt on iOS, 72 dp on Android, no clipped text on either.
+- **SP-2 — the save error was not announced by screen readers.** React Native 0.86.3 gives the `alert` role no live region on Android and no announcement on iOS. The error now sits in a wrapper that is always there with `accessibilityLiveRegion="polite"` (Android), and iOS gets an explicit announcement when the write fails. The footer spacing is unchanged. Not observed with TalkBack nor VoiceOver: the write cannot be made to fail on a device without changing the code.
+- Checks after both: `npm run typecheck` clean, `npm run lint` clean, `npm test` 5 suites and 67 tests passed.
+- A note of this document was wrong and is gone: `CLAUDE.md` does not contradict this screen. Its list of screens describes the whole product, and "Usar mi ubicación" with distances is item 6 of the v2.
+
 ## Notes for the next tickets
 
-- Rows are about 3pt taller than the mockup (75 against 72): `AppText` applies the line heights of the theme, the mockup sets none.
 - On Android the keyboard resizes the window, so "Continuar" rides above it; on iOS it is covered until an iglesia is picked or the keyboard is dismissed.
 - #28 (change the iglesia from Ajustes) can reuse this screen, but "Continuar" always resets the stack to the calendar.
 - The iglesia elegida is stored as its id only: #24 reads nombre, distrito and localidad from the `['iglesias']` query.
-- `CLAUDE.md` still describes this screen with "Usar mi ubicación" and distances (section "Pantallas", item 3).
 
 ## Next step
 
