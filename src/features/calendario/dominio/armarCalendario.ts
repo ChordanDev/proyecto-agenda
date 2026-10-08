@@ -1,0 +1,86 @@
+import type { Evento } from '@/features/eventos/dominio/evento';
+
+/** The place an iglesia has in the structure right now. */
+export type IglesiaEnEstructura = {
+  id: string;
+  distritoId: string;
+  asociacionId: string;
+};
+
+/** One date of an evento. A series has one per occurrence. */
+export type FechaDeEvento = {
+  /** Local date, `YYYY-MM-DD`. */
+  fecha: string;
+  evento: Evento;
+};
+
+/**
+ * An evento is seen in an iglesia when its duenio is that iglesia, the distrito
+ * the iglesia belongs to now or its asociacion, or when the iglesia is one of
+ * its iglesias sumadas.
+ */
+function belongsToCalendario(iglesia: IglesiaEnEstructura, evento: Evento): boolean {
+  if (evento.iglesiasSumadas.includes(iglesia.id)) {
+    return true;
+  }
+
+  const { duenio } = evento;
+
+  switch (duenio.alcance) {
+    case 'iglesia':
+      return duenio.iglesiaId === iglesia.id;
+    case 'distrito':
+      return duenio.distritoId === iglesia.distritoId;
+    case 'asociacion':
+      return duenio.asociacionId === iglesia.asociacionId;
+  }
+}
+
+/** Dates and horas are fixed-width strings, so they order as plain text. */
+function compareText(a: string, b: string): number {
+  if (a === b) {
+    return 0;
+  }
+
+  return a < b ? -1 : 1;
+}
+
+function compareFechas(a: FechaDeEvento, b: FechaDeEvento): number {
+  return (
+    compareText(a.fecha, b.fecha) ||
+    compareText(a.evento.hora, b.evento.hora) ||
+    a.evento.titulo.localeCompare(b.evento.titulo, 'es')
+  );
+}
+
+/**
+ * Builds the calendario of an iglesia out of dates of eventos: keeps the ones
+ * that belong to it, each (evento, date) pair once, ordered by date, then hora,
+ * then titulo.
+ *
+ * The calendario is never stored: it follows from the structure received, so an
+ * iglesia that moves to another distrito gets the eventos of the new one and
+ * loses those of the old one.
+ */
+export function armarCalendario(
+  iglesia: IglesiaEnEstructura,
+  fechas: readonly FechaDeEvento[],
+): FechaDeEvento[] {
+  // An evento can arrive twice: the input may repeat a row, and an iglesia
+  // sumada may also depend on the duenio.
+  const seen = new Set<string>();
+  const calendario: FechaDeEvento[] = [];
+
+  for (const fechaDeEvento of fechas) {
+    const key = `${fechaDeEvento.evento.id}|${fechaDeEvento.fecha}`;
+
+    if (seen.has(key) || !belongsToCalendario(iglesia, fechaDeEvento.evento)) {
+      continue;
+    }
+
+    seen.add(key);
+    calendario.push(fechaDeEvento);
+  }
+
+  return calendario.sort(compareFechas);
+}
