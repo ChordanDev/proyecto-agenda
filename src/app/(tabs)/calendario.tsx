@@ -1,6 +1,5 @@
-import { PlaceholderScreen } from '@/shared/ui/PlaceholderScreen';
+import { CalendarioScreen } from '@/features/calendario/interfaz/CalendarioScreen';
 
-// Provisional: the calendar screen belongs to another ticket (#24).
 export default function CalendarioRoute() {
-  return <PlaceholderScreen title="Calendario" />;
+  return <CalendarioScreen />;
 }
