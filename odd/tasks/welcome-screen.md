@@ -40,7 +40,7 @@ Out of scope: choosing an iglesia (#23), the calendar (#24), the login form and 
 - [x] **T1 — First-screen rule.** Pure function in `sesion/dominio` that returns the first screen from the iglesia elegida and the session: Bienvenida only when both are missing. RED first. Route: delegated (same writer as T2 and T3). Checks: `npm test`, `npm run typecheck`, `npm run lint`.
 - [x] **T2 — Bienvenida screen and provisional destinations.** Shared logo component; the screen with logo, the four shapes, the lemas, title, text and the two buttons; routes for the Bienvenida, the provisional "elegir iglesia", login and calendar. Route: delegated (2+ non-trivial files, reading the mockup prepares the write). Checks: `npm run typecheck`, `npm run lint`, `npm test`.
 - [x] **T3 — Start gate.** Install AsyncStorage; read and write the iglesia elegida in `iglesias/datos`; read the session in `sesion/datos`; the start route applies the rule of T1 while the splash screen stays up. Route: delegated (same writer). Checks: `npm run typecheck`, `npm run lint`, `npm test`.
-- [ ] **T4 — Observed on device.** Development build on iOS and Android: the Bienvenida against the approved capture, both buttons, and the gate with and without an iglesia elegida. Route: inline (per-action). Checks: observed screens.
+- [x] **T4 — Observed on device.** Development build on iOS and Android: the Bienvenida against the approved capture, both buttons, and the gate with and without an iglesia elegida. Route: inline (per-action). Checks: observed screens.
 
 ## Acceptance criteria
 
@@ -60,6 +60,20 @@ Branch `claude/issue-22-7587e3`, fast-forwarded to `79de6fb` (main). Review boun
 - Checks observed on `b860ef1`: `npm test` 4 suites and 47 tests passed (writer and parent spot check), `npm run typecheck` clean (writer and parent spot check), `npm run lint` clean (writer).
 - Authored lines `79de6fb..b860ef1`, lockfile excluded: 478 added, 32 removed (the logo path data is one long line).
 
+- Review — range `79de6fb..3a132ae` assessed medium (not passive, configuration change in `package-lock.json`). Consent granted; one reliability lens found one blocking defect: a read that failed is fetched again when the start route mounts, its status goes back to pending, and the root layout took the routes down again, which could leave the app behind the splash screen. Corrected in `0381d8c` fix(sesion): keep the first screen known when a failed read is fetched again (the gate waits on `isFetched`, not on `isPending`). Targeted validation approved; acknowledged (lineage `review-73f935afb9caa616`). Review boundary: `0381d8c`.
+- T4, iOS — development build on the iPhone 17 simulator (iOS 26.2). Observed: the Bienvenida matches `diseno/capturas/1 · Bienvenida.png`; "Elegir mi iglesia" opens the temporary list of iglesias and "Soy encargado o pastor" the login placeholder; with an iglesia elegida written to the storage of the app, a cold start opens the calendar placeholder and never shows the Bienvenida.
+- T4, Android — development build (`BUILD SUCCESSFUL`) on the emulator `Medium_Phone_API_36.1`. Observed: the same screen; both buttons and the back key behave as on iOS; back on the Bienvenida and on the calendar leaves the app, never returns to the start route; with an iglesia elegida in the storage of the app, a cold start opens the calendar placeholder.
+- `0a37577` fix(sesion): keep the Bienvenida text in two lines on Android. Found on the emulator: Android measured the first line of the paragraph a little wider than 300 and broke it in three lines. The paragraph is now 320 wide with a non-breaking space in "y la", and the lemas wrap instead of running off a narrow screen. Observed again on both platforms. Assessed `0381d8c..0a37577`: medium, `under_budget` (12 lines), no review due.
+- Checks observed on `0a37577`: `npm test` 47 passed, `npm run typecheck` clean, `npm run lint` clean.
+- Not observed: a read of the storage or of the session that fails on a device (the correction rests on the source of TanStack Query 5.104.1); a 360 dp phone and a large system font; a release build.
+
+
+## Review follow-ups (non-blocking)
+
+- The mapping from the state of the two reads to the rule (`useFirstScreen`) has no automated test; only the pure rule has one.
+- Nothing bounds how long the splash screen waits for the two reads: a read that never settles leaves the app on it.
+- Any stored string counts as an iglesia elegida, the empty one included; `setIglesiaElegida` does not validate what #23 gives it.
+
 ## Notes for the next tickets
 
 - #23 and #28 call `setIglesiaElegida` / `clearIglesiaElegida` and then invalidate the query `['iglesiaElegida']`; the functions do not touch the query cache.
@@ -69,10 +83,10 @@ Branch `claude/issue-22-7587e3`, fast-forwarded to `79de6fb` (main). Review boun
 
 ## Values not in the theme
 
-All from `diseno/pantallas/01-bienvenida.html`: screen padding 48 / 24 / 40 (line 17); logo box 104, radius 28, shadow `0 8 24 rgba(22,46,74,0.18)` (line 19); logo height 66 (line 20); marks margin 64, gap 22, size 52 (lines 23–24); lemas margin 14, gap 10 (line 29); texts margin 56, gap 12, title 34 with line height 1.12, paragraph max width 300 (lines 33–35); buttons gap 12, primary 60 high with a 19 label, text button 56 high with an 18 semibold label (lines 40–42). The default `Logo` height 34 comes from `02-login.html` (line 22).
+All from `diseno/pantallas/01-bienvenida.html`: screen padding 48 / 24 / 40 (line 17); logo box 104, radius 28, shadow `0 8 24 rgba(22,46,74,0.18)` (line 19); logo height 66 (line 20); marks margin 64, gap 22, size 52 (lines 23–24); lemas margin 14, gap 10 (line 29); texts margin 56, gap 12, title 34 with line height 1.12, paragraph max width 320 instead of the 300 of the mockup, see `0a37577` (lines 33–35); buttons gap 12, primary 60 high with a 19 label, text button 56 high with an 18 semibold label (lines 40–42). The default `Logo` height 34 comes from `02-login.html` (line 22).
 
 The marks are the base component scaled to 52, not the exact mockup sizes: triangle 57.2 wide (mockup 58), "D" 33.8 (34), square 46.8 (48) with corner radius 5.2 (3).
 
 ## Next step
 
-T4: observe the Bienvenida and the gate on iOS and Android.
+Push the branch and open the pull request to `main` (the user decides).
