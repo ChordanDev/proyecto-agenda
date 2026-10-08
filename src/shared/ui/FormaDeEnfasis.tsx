@@ -40,7 +40,7 @@ function getBox(forma: Forma, size: number): Box {
   }
 }
 
-function renderForma(forma: Forma, { width, height }: Box, color: string) {
+function renderForma(forma: Forma, { width, height }: Box, color: string, outlined: boolean) {
   switch (forma) {
     case 'circulo':
       return <Circle cx={width / 2} cy={height / 2} r={height / 2} fill={color} />;
@@ -49,15 +49,14 @@ function renderForma(forma: Forma, { width, height }: Box, color: string) {
     case 'd': {
       // A rectangle whose right side is a semicircle. The outline is drawn half
       // a border inside the box, so the stroke stays within it.
-      const inset = BORDER_WIDTH / 2;
+      const inset = outlined ? BORDER_WIDTH / 2 : 0;
       const centerX = width - height / 2;
       const r = height / 2 - inset;
       return (
         <Path
           d={`M${inset},${inset} H${centerX} A${r},${r} 0 0 1 ${centerX},${height - inset} H${inset} Z`}
           fill={color}
-          stroke={BORDER_COLOR}
-          strokeWidth={BORDER_WIDTH}
+          {...(outlined && { stroke: BORDER_COLOR, strokeWidth: BORDER_WIDTH })}
         />
       );
     }
@@ -84,6 +83,11 @@ type FormaDeEnfasisProps = {
   categoria: Categoria;
   /** Height of the shape, in points. The square and the rombo are sized in proportion. */
   size?: number;
+  /**
+   * The border the yellow needs to show on white. The welcome screen draws its
+   * marks on the gradient, without it.
+   */
+  outlined?: boolean;
 };
 
 /**
@@ -91,7 +95,11 @@ type FormaDeEnfasisProps = {
  * color together, so it is never recognised by color alone. Screen readers get
  * the name instead.
  */
-export function FormaDeEnfasis({ categoria, size = REFERENCE_SIZE }: FormaDeEnfasisProps) {
+export function FormaDeEnfasis({
+  categoria,
+  size = REFERENCE_SIZE,
+  outlined = true,
+}: FormaDeEnfasisProps) {
   const { forma, color, lema, nombre } = categorias[categoria];
   const box = getBox(forma, size);
   // The actividad regular carries its name in `lema`; `nombre` holds examples.
@@ -100,7 +108,7 @@ export function FormaDeEnfasis({ categoria, size = REFERENCE_SIZE }: FormaDeEnfa
   return (
     <View accessible accessibilityRole="image" accessibilityLabel={label}>
       <Svg width={box.width} height={box.height} viewBox={`0 0 ${box.width} ${box.height}`}>
-        {renderForma(forma, box, color)}
+        {renderForma(forma, box, color, outlined)}
       </Svg>
     </View>
   );
