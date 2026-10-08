@@ -37,6 +37,38 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"cargos": {
+                  Row: {
+                    "asociacion_id": string | null,"distrito_id": string | null,"id": string,"iglesia_id": string | null,"usuario_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "asociacion_id"?: string | null,"distrito_id"?: string | null,"id"?: string,"iglesia_id"?: string | null,"usuario_id": string
+                  }
+                  Update: {
+                    "asociacion_id"?: string | null,"distrito_id"?: string | null,"id"?: string,"iglesia_id"?: string | null,"usuario_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "cargos_asociacion_id_fkey"
+      columns: ["asociacion_id"]
+isOneToOne: false
+      referencedRelation: "asociaciones"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "cargos_distrito_id_fkey"
+      columns: ["distrito_id"]
+isOneToOne: false
+      referencedRelation: "distritos"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "cargos_iglesia_id_fkey"
+      columns: ["iglesia_id"]
+isOneToOne: false
+      referencedRelation: "iglesias"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"distritos": {
                   Row: {
                     "asociacion_id": string,"id": string,"nombre": string
@@ -161,7 +193,9 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            [_ in never]: never
+            "cargos_abarcan_duenio":
+{ Args: { "duenio_asociacion_id": string,"duenio_distrito_id": string,"duenio_iglesia_id": string }; Returns: boolean
+                           }
           }
           Enums: {
             "alcance": "iglesia"|"distrito"|"asociacion","enfasis": "identidad"|"liderazgo"|"nuevas_generaciones"|"discipulado","repeticion": "ninguna"|"semanal"|"mensual"
