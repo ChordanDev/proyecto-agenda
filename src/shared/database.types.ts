@@ -57,6 +57,58 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"eventos": {
+                  Row: {
+                    "alcance": Database["public"]['Enums']["alcance"],"descripcion": string | null,"duenio_asociacion_id": string | null,"duenio_distrito_id": string | null,"duenio_iglesia_id": string | null,"enfasis": Database["public"]['Enums']["enfasis"] | null,"fecha_fin": string | null,"fin_de_serie": string | null,"hora": string,"id": string,"lugar": string | null,"repeticion": Database["public"]['Enums']["repeticion"],"titulo": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "alcance": Database["public"]['Enums']["alcance"],"descripcion"?: string | null,"duenio_asociacion_id"?: string | null,"duenio_distrito_id"?: string | null,"duenio_iglesia_id"?: string | null,"enfasis"?: Database["public"]['Enums']["enfasis"] | null,"fecha_fin"?: string | null,"fin_de_serie"?: string | null,"hora": string,"id"?: string,"lugar"?: string | null,"repeticion"?: Database["public"]['Enums']["repeticion"],"titulo": string
+                  }
+                  Update: {
+                    "alcance"?: Database["public"]['Enums']["alcance"],"descripcion"?: string | null,"duenio_asociacion_id"?: string | null,"duenio_distrito_id"?: string | null,"duenio_iglesia_id"?: string | null,"enfasis"?: Database["public"]['Enums']["enfasis"] | null,"fecha_fin"?: string | null,"fin_de_serie"?: string | null,"hora"?: string,"id"?: string,"lugar"?: string | null,"repeticion"?: Database["public"]['Enums']["repeticion"],"titulo"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "eventos_duenio_asociacion_id_fkey"
+      columns: ["duenio_asociacion_id"]
+isOneToOne: false
+      referencedRelation: "asociaciones"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "eventos_duenio_distrito_id_fkey"
+      columns: ["duenio_distrito_id"]
+isOneToOne: false
+      referencedRelation: "distritos"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "eventos_duenio_iglesia_id_fkey"
+      columns: ["duenio_iglesia_id"]
+isOneToOne: false
+      referencedRelation: "iglesias"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"eventos_fechas": {
+                  Row: {
+                    "evento_id": string,"fecha": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "evento_id": string,"fecha": string
+                  }
+                  Update: {
+                    "evento_id"?: string,"fecha"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "eventos_fechas_evento_id_fkey"
+      columns: ["evento_id"]
+isOneToOne: false
+      referencedRelation: "eventos"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"iglesias": {
                   Row: {
                     "direccion": string,"distrito_id": string,"excluida_del_buscador": boolean,"id": string,"localidad": string,"nombre": string
@@ -77,6 +129,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"iglesias_sumadas": {
+                  Row: {
+                    "evento_id": string,"iglesia_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "evento_id": string,"iglesia_id": string
+                  }
+                  Update: {
+                    "evento_id"?: string,"iglesia_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "iglesias_sumadas_evento_id_fkey"
+      columns: ["evento_id"]
+isOneToOne: false
+      referencedRelation: "eventos"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "iglesias_sumadas_iglesia_id_fkey"
+      columns: ["iglesia_id"]
+isOneToOne: false
+      referencedRelation: "iglesias"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
@@ -86,7 +164,7 @@ isOneToOne: false
             [_ in never]: never
           }
           Enums: {
-            [_ in never]: never
+            "alcance": "iglesia"|"distrito"|"asociacion","enfasis": "identidad"|"liderazgo"|"nuevas_generaciones"|"discipulado","repeticion": "ninguna"|"semanal"|"mensual"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -206,7 +284,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            
+            "alcance": ["iglesia", "distrito", "asociacion"],"enfasis": ["identidad", "liderazgo", "nuevas_generaciones", "discipulado"],"repeticion": ["ninguna", "semanal", "mensual"]
           }
         }
 } as const
