@@ -57,6 +57,15 @@ Branch `claude/issue-19-84c5ee`. Review boundary: `8f70723` (branch point).
 - Checks observed on `eed92d4`: `npm run typecheck` clean (writer and parent spot check), `npm run lint` clean, `npm test` 1 suite and 9 tests passed.
 - T4, iOS — development build on the iPhone 17 simulator (iOS 26.2), opened with `agendadeiglesia://showcase`. Observed: the five shapes with lema and nombre matching `diseno/capturas/6 · Crear evento.png`, Noto Sans and Oswald loaded, the gradient background, primary button 58 high, secondary 52, field 56, flat white cards. `pod install` needs `LANG=en_US.UTF-8`. The worktree has no `.env.local`, so the bundler ran with the placeholder values of `.env.example`; the sample screen does not use Supabase.
 - T4, Android — development build (`BUILD SUCCESSFUL`) on the emulator `Medium_Phone_API_36.1` (Android 36.1), opened with `agendadeiglesia://showcase`. Observed: the same screen as on iOS; shapes, fonts, gradient, buttons, fields and cards match, and the 1.15 title line height does not clip accented capitals. The first build needs NDK 27.1.12297006, CMake 3.22.1 and build-tools 35/36, which Gradle downloads (several GB); a download cut by a full disk leaves a stub folder under `ndk/` that must be removed before retrying.
+- Review — range `8f70723..624101c` assessed medium (`configuration_change` in `app.json`, slice budget reached). Consent granted; one reliability lens; approved and acknowledged (lineage `review-94720e28cf5c57d6`). Review boundary: `624101c`.
+
+## Review follow-ups (non-blocking)
+
+- The `__DEV__` guard of the sample route was only observed in development builds; the release branch (route rejected) was never exercised.
+- The root layout renders nothing until the fonts load or fail; the system-font fallback is untested and the splash-screen promises are not caught.
+- `Button` spreads the caller props after `accessibilityState`, so a caller state replaces the disabled flag for screen readers.
+- `ScreenBackground` computes the gradient stop from the window height instead of its own layout height, so the stop shifts inside a tab layout or a modal.
+- `FormaDeEnfasis` accepts zero or negative sizes, and its geometry (`getBox`) has no unit test.
 
 ## Values not in the theme
 
