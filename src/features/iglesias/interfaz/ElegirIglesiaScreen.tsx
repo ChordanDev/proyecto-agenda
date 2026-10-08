@@ -1,6 +1,14 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Keyboard, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  AccessibilityInfo,
+  Keyboard,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { colors, radius, spacing } from '@/shared/theme';
@@ -32,10 +40,17 @@ const ROW_GAP = 14; // line 39
 const ROW_MIN_HEIGHT = 72;
 const ROW_PADDING_VERTICAL = 12;
 const ROW_TEXTS_GAP = 2; // line 40
+// The mockup sets no line height on the two texts of a row: with the ones of
+// the font they fit in its 72 of height, which the line heights of the theme
+// (27 and 21) overflow.
+const ROW_NAME_LINE_HEIGHT = 25;
+const ROW_DETAIL_LINE_HEIGHT = 20;
 const RADIO_SIZE = 28; // lines 45 and 48
 const RADIO_BORDER_WIDTH = 2;
 const CHECK_SIZE = 16; // line 45
 const CHECK_STROKE_WIDTH = 3.2;
+
+const SAVE_ERROR = 'No se pudo guardar la iglesia. Probá de nuevo.';
 
 /**
  * The hermano looks for their iglesia by its nombre, picks it and confirms it
@@ -62,9 +77,19 @@ export function ElegirIglesiaScreen() {
     router.replace('/calendario');
   };
 
+  const announceSaveError = () => {
+    // Android reads the live region of the footer by itself; iOS has none.
+    if (Platform.OS === 'ios') {
+      AccessibilityInfo.announceForAccessibility(SAVE_ERROR);
+    }
+  };
+
   const confirm = () => {
     if (selectedId !== null) {
-      elegirIglesia.mutate(selectedId, { onSuccess: goToCalendario });
+      elegirIglesia.mutate(selectedId, {
+        onSuccess: goToCalendario,
+        onError: announceSaveError,
+      });
     }
   };
 
@@ -144,11 +169,14 @@ export function ElegirIglesiaScreen() {
 
       {/* Outside the scroll: "Continuar" stays in reach however long the list is. */}
       <View style={styles.footer}>
-        {elegirIglesia.isError && (
-          <AppText color="peligro" accessibilityRole="alert" style={styles.saveError}>
-            No se pudo guardar la iglesia. Probá de nuevo.
-          </AppText>
-        )}
+        {/* Always there, so that a screen reader says the error when it shows up. */}
+        <View accessibilityLiveRegion="polite">
+          {elegirIglesia.isError && (
+            <AppText color="peligro" accessibilityRole="alert" style={styles.saveError}>
+              {SAVE_ERROR}
+            </AppText>
+          )}
+        </View>
         <Button
           label="Continuar"
           // Once stored, the screen is on its way out: a second touch has nothing to do.
@@ -189,10 +217,10 @@ function IglesiaRow({ iglesia, checked, onPress }: IglesiaRowProps) {
       style={styles.row}
     >
       <View style={styles.rowTexts}>
-        <AppText variant="cuerpoGrande" weight="bold">
+        <AppText variant="cuerpoGrande" weight="bold" style={styles.rowName}>
           {nombre}
         </AppText>
-        <AppText variant="secundario">
+        <AppText variant="secundario" style={styles.rowDetail}>
           {distrito} · {localidad}
         </AppText>
       </View>
@@ -268,6 +296,12 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: ROW_TEXTS_GAP,
   },
+  rowName: {
+    lineHeight: ROW_NAME_LINE_HEIGHT,
+  },
+  rowDetail: {
+    lineHeight: ROW_DETAIL_LINE_HEIGHT,
+  },
   radio: {
     width: RADIO_SIZE,
     height: RADIO_SIZE,
@@ -283,12 +317,12 @@ const styles = StyleSheet.create({
     borderColor: colors.radioInactivo,
   },
   footer: {
-    gap: spacing.entreTarjetas,
     paddingTop: spacing.entreTarjetas,
     paddingHorizontal: spacing.pantallaHorizontal,
     paddingBottom: PADDING_BOTTOM,
   },
   saveError: {
+    marginBottom: spacing.entreTarjetas,
     textAlign: 'center',
   },
 });
