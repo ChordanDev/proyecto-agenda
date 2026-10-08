@@ -96,6 +96,10 @@ create index iglesias_sumadas_iglesia_id_idx on public.iglesias_sumadas (iglesia
 -- The calendario is read by month: a range of dates across every evento.
 create index eventos_fechas_fecha_idx on public.eventos_fechas (fecha);
 
+-- The read of a month also looks for the eventos of several days that started
+-- before it and still reach it. Partial, because few eventos have a fecha_fin.
+create index eventos_fecha_fin_idx on public.eventos (fecha_fin) where fecha_fin is not null;
+
 alter table public.eventos enable row level security;
 alter table public.eventos_fechas enable row level security;
 alter table public.iglesias_sumadas enable row level security;

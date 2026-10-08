@@ -12,7 +12,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(59);
+select plan(60);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -340,6 +340,15 @@ select is_empty(
        and table_name in ('eventos', 'eventos_fechas', 'iglesias_sumadas')
        and (data_type like 'timestamp%' or data_type = 'time with time zone') $$,
   'no column of the event model carries a time zone or a timestamp'
+);
+
+-- The indexes -----------------------------------------------------------------------
+-- The read of a month looks for the eventos of several days that started before
+-- it and still reach it, by their fecha_fin.
+
+select has_index(
+  'public', 'eventos', 'eventos_fecha_fin_idx', array['fecha_fin'],
+  'eventos.fecha_fin is indexed'
 );
 
 -- The enums ------------------------------------------------------------------------
