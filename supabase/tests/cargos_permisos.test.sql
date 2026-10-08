@@ -1175,7 +1175,10 @@ select results_eq(
   'every evento has the duenio the last allowed write left'
 );
 select is(
-  (select count(*) from public.eventos_fechas where fecha = '2026-12-25'),
+  -- Only the eventos of this test: the seed may be loaded, and nothing keeps it
+  -- from having an evento on that day.
+  (select count(*) from public.eventos_fechas
+    where fecha = '2026-12-25' and evento_id::text like 'eeeeeeee-%'),
   0::bigint,
   'no date was inserted or moved by a rejected write'
 );
