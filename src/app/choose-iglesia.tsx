@@ -1,6 +1,5 @@
-import { ListaDeIglesiasScreen } from '@/features/iglesias/interfaz/ListaDeIglesiasScreen';
+import { ElegirIglesiaScreen } from '@/features/iglesias/interfaz/ElegirIglesiaScreen';
 
-// Provisional: the temporary list of iglesias stands in for "Elegir iglesia" (#23).
 export default function ChooseIglesiaRoute() {
-  return <ListaDeIglesiasScreen />;
+  return <ElegirIglesiaScreen />;
 }
