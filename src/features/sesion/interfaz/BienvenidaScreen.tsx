@@ -30,7 +30,10 @@ const TEXTS_MARGIN_TOP = 56; // line 33
 const TEXTS_GAP = 12;
 const TITLE_SIZE = 34; // line 34
 const TITLE_LINE_HEIGHT = 1.12;
-const PARAGRAPH_MAX_WIDTH = 300; // line 35
+// The mockup sets 300 (line 35), and its first line is 298 wide: Android measures
+// the same text a little wider and broke it in three lines. The extra room keeps
+// the two lines of the mockup on both platforms.
+const PARAGRAPH_MAX_WIDTH = 320;
 const BUTTONS_GAP = 12; // line 40
 
 // The four énfasis, without the actividad regular.
@@ -81,7 +84,9 @@ export function BienvenidaScreen() {
             Agenda de iglesia
           </AppText>
           <AppText variant="cuerpoGrande" color="textoSecundario" style={styles.paragraph}>
-            Los eventos de tu iglesia, tu distrito y la asociación, siempre a mano.
+            {/* The non-breaking space keeps "y la" together, so the first line ends
+                where the mockup ends it. */}
+            {'Los eventos de tu iglesia, tu distrito y\u00A0la asociación, siempre a mano.'}
           </AppText>
         </View>
 
@@ -129,6 +134,9 @@ const styles = StyleSheet.create({
   },
   lemas: {
     flexDirection: 'row',
+    // On a narrow phone or with a large system font the lemas take two lines
+    // instead of running off the screen.
+    flexWrap: 'wrap',
     justifyContent: 'center',
     gap: LEMAS_GAP,
     marginTop: LEMAS_MARGIN_TOP,
