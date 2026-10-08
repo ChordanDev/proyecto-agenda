@@ -20,7 +20,11 @@ export function useFirstScreen(): FirstScreen | undefined {
     retry: false,
   });
 
-  if (iglesiaElegida.isPending || sesion.isPending) {
+  // Known once both reads have settled, whatever the outcome. A read that
+  // failed is fetched again when another screen asks for it, which makes it
+  // pending again: waiting on `isPending` would take the routes down and start
+  // over, leaving the app behind the splash screen.
+  if (!iglesiaElegida.isFetched || !sesion.isFetched) {
     return undefined;
   }
 
