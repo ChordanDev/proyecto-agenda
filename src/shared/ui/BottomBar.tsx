@@ -60,7 +60,13 @@ export function BottomBar({ state, descriptors, navigation, insets }: BottomTabB
             onPress={onPress}
             style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
           >
-            <View style={[styles.pill, focused && styles.pillActive]}>
+            {/* The key draws the pill again when the tab changes: on Android a
+                view that gets its background after being drawn without one
+                loses its radius, and the active pill came out as a rectangle. */}
+            <View
+              key={focused ? 'active' : 'inactive'}
+              style={[styles.pill, focused && styles.pillActive]}
+            >
               {options.tabBarIcon?.({
                 focused,
                 color: colors.textoSobreOscuro,

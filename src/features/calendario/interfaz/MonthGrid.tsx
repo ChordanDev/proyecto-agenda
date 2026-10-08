@@ -117,7 +117,11 @@ function Day({ cell, selected, isToday, markers, eventosCount, onPress }: DayPro
       onPress={onPress}
       style={[styles.cell, styles.day]}
     >
+      {/* The key draws the number again whenever its look changes: on Android
+          a view that gets its background after being drawn without one loses
+          its radius, and the selected day came out as a square. */}
       <View
+        key={selected ? 'selected' : ringed ? 'today' : 'plain'}
         style={[styles.number, selected && styles.numberSelected, ringed && styles.numberToday]}
       >
         <AppText
