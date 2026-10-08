@@ -74,6 +74,7 @@ Branch `claude/calendario-monthly-day-list-eac297`, fast-forwarded to `1809ebd` 
   - Month navigation from September 2026 to January 2027: each month starts on the right weekday, day 1 is selected, and coming back to October selects today again.
   - Hours as stored: 13:00, 16:00, 19:00, 20:00.
   - The Ajustes tab opens the temporary screen. On Android the system back button on Ajustes returns to Calendario. Reopening the app goes straight to the calendar.
+- After the pull request (#72) — fix(calendario): move the selection to the new today when the day changes. Found by the native review and confirmed by the advisory review of the pull request (F2): with the app left open overnight the ring moved to the new today while the selection and the list stayed on yesterday. Rule `getSelectedDateAfterTodayChange` (four tests, RED first): whoever was on today moves on to the new today, with its month; whoever was looking at another day stays there. Observed on Android by moving the phone a day ahead through its time zone while the app was in the background: back in front, "Viernes 9 de octubre" was selected; with 24 October selected and the date moved back, the selection stayed. Not observed on iOS (the simulator follows the clock of the Mac), where the screen was only seen to open. Checks: `npm test` 11 suites and 134 tests, `npm run typecheck` and `npm run lint` clean.
 - Not observed: the load error with "Reintentar", the state with no iglesia elegida, a day with five markers (the seed has none), a phone narrower than 390, VoiceOver and TalkBack.
 
 ## Notes for the next tickets
@@ -83,6 +84,7 @@ Branch `claude/calendario-monthly-day-list-eac297`, fast-forwarded to `1809ebd` 
 - `04a` still draws the Gestión tab for the pastor, so the capture `4b` shows Calendario, Gestión and Ajustes, while story 89 says the bar is the same for everyone in v1.
 - #25 adds the "Filtrar" row and the iglesia filter above the grid; #26 adds the chevron and the tap on each row, and may move `formatTime` to `eventos`; #34 marks every day of an evento of several days; #27 can persist `{ fechas, nombresDeDistritos }` as it is (plain data).
 - `Tabs` comes from `expo-router/js-tabs`: the export of `expo-router` is deprecated in version 57.
+- Left from the advisory review of the pull request, for later tickets: the header and the "iglesia exists" check read the whole list of iglesias instead of the row the calendar already reads by id, so a failed read of the iglesias leaves the header empty with no "Reintentar" (F1); each change of month makes three requests, also for a month already seen, because the query has no `staleTime` — to settle with the offline cache of #27 (F3). `useToday` still does not notice midnight passing with the app in front.
 - Months are not prefetched: "Cargando eventos…" shows for a moment on each change of month.
 
 ## Next step

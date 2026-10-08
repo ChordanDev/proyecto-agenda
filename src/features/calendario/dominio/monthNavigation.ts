@@ -27,3 +27,16 @@ export function getSelectedDate(month: Month, today: string): string {
 
   return holdsToday ? today : toLocalDate(month.year, month.month, 1);
 }
+
+/**
+ * The day that is selected once today has changed, as it does when the app
+ * stays open overnight: whoever was on today moves on to the new today, and
+ * whoever was looking at another day stays there.
+ */
+export function getSelectedDateAfterTodayChange(
+  selectedDate: string,
+  previousToday: string,
+  today: string,
+): string {
+  return selectedDate === previousToday ? today : selectedDate;
+}

@@ -1,4 +1,10 @@
-import { getMonthOf, getNextMonth, getPreviousMonth, getSelectedDate } from './monthNavigation';
+import {
+  getMonthOf,
+  getNextMonth,
+  getPreviousMonth,
+  getSelectedDate,
+  getSelectedDateAfterTodayChange,
+} from './monthNavigation';
 
 describe('getPreviousMonth', () => {
   it('goes back one month inside the year', () => {
@@ -50,5 +56,31 @@ describe('getSelectedDate', () => {
 
   it('selects day 1 of the same month of another year', () => {
     expect(getSelectedDate({ year: 2027, month: 10 }, today)).toBe('2027-10-01');
+  });
+});
+
+describe('getSelectedDateAfterTodayChange', () => {
+  it('moves on to the new today when the old today was selected', () => {
+    expect(getSelectedDateAfterTodayChange('2026-10-08', '2026-10-08', '2026-10-09')).toBe(
+      '2026-10-09',
+    );
+  });
+
+  it('moves on to the new today across the end of the month', () => {
+    expect(getSelectedDateAfterTodayChange('2026-10-31', '2026-10-31', '2026-11-01')).toBe(
+      '2026-11-01',
+    );
+  });
+
+  it('keeps another day of the same month selected', () => {
+    expect(getSelectedDateAfterTodayChange('2026-10-24', '2026-10-08', '2026-10-09')).toBe(
+      '2026-10-24',
+    );
+  });
+
+  it('keeps a day of another month selected', () => {
+    expect(getSelectedDateAfterTodayChange('2026-12-01', '2026-10-08', '2026-10-09')).toBe(
+      '2026-12-01',
+    );
   });
 });

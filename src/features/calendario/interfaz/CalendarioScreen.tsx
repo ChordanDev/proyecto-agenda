@@ -15,6 +15,7 @@ import {
   getNextMonth,
   getPreviousMonth,
   getSelectedDate,
+  getSelectedDateAfterTodayChange,
 } from '../dominio/monthNavigation';
 import { EventosOfDay } from './EventosOfDay';
 import { MonthGrid } from './MonthGrid';
@@ -104,6 +105,17 @@ function MonthOfCalendario({ iglesiaId, onRetry }: MonthOfCalendarioProps) {
   const today = useToday();
   const [month, setMonth] = useState(() => getMonthOf(today));
   const [selectedDate, setSelectedDate] = useState(today);
+  // Today changes when the app comes back to the front on another day. The
+  // selection follows it only if it was on today, and takes its month along.
+  const [previousToday, setPreviousToday] = useState(today);
+  if (previousToday !== today) {
+    const newSelectedDate = getSelectedDateAfterTodayChange(selectedDate, previousToday, today);
+    setPreviousToday(today);
+    if (newSelectedDate !== selectedDate) {
+      setSelectedDate(newSelectedDate);
+      setMonth(getMonthOf(newSelectedDate));
+    }
+  }
   const {
     data: calendario,
     isError,
