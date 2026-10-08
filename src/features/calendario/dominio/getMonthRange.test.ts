@@ -72,4 +72,17 @@ describe('getMonthRange', () => {
     expect(() => getMonthRange({ year: 2026, month: 13 })).toThrow(RangeError);
     expect(() => getMonthRange({ year: 2026, month: 1.5 })).toThrow(RangeError);
   });
+
+  it('rejects a year that does not fit in four digits', () => {
+    expect(() => getMonthRange({ year: NaN, month: 3 })).toThrow(RangeError);
+    expect(() => getMonthRange({ year: 2026.5, month: 3 })).toThrow(RangeError);
+    expect(() => getMonthRange({ year: 0, month: 3 })).toThrow(RangeError);
+    expect(() => getMonthRange({ year: -1, month: 3 })).toThrow(RangeError);
+    expect(() => getMonthRange({ year: 10000, month: 3 })).toThrow(RangeError);
+  });
+
+  it('accepts the first and the last year of four digits', () => {
+    expect(getMonthRange({ year: 1, month: 1 }).firstDay).toBe('0001-01-01');
+    expect(getMonthRange({ year: 9999, month: 12 }).lastDay).toBe('9999-12-31');
+  });
 });

@@ -36,6 +36,12 @@ export function getMonthRange({ year, month }: Month): MonthRange {
     throw new RangeError(`A month goes from 1 to 12, got ${month}`);
   }
 
+  // Anything else would not be a `YYYY-MM-DD` date and would only fail later,
+  // in the database.
+  if (!Number.isInteger(year) || year < 1 || year > 9999) {
+    throw new RangeError(`A year goes from 1 to 9999, got ${year}`);
+  }
+
   return {
     firstDay: toLocalDate(year, month, 1),
     lastDay: toLocalDate(year, month, getDaysInMonth({ year, month })),
