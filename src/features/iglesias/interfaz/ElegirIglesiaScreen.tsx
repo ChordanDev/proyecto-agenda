@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Keyboard, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { colors, radius, spacing } from '@/shared/theme';
@@ -68,6 +68,12 @@ export function ElegirIglesiaScreen() {
     }
   };
 
+  const select = (iglesiaId: string) => {
+    setSelectedId(iglesiaId);
+    // The keyboard covers "Continuar": picking an iglesia puts it back in view.
+    Keyboard.dismiss();
+  };
+
   const renderIglesias = () => {
     if (iglesias === undefined) {
       if (isError && !isFetching) {
@@ -96,7 +102,7 @@ export function ElegirIglesiaScreen() {
             key={iglesia.id}
             iglesia={iglesia}
             checked={iglesia.id === selectedId}
-            onPress={() => setSelectedId(iglesia.id)}
+            onPress={() => select(iglesia.id)}
           />
         ))}
       </View>
