@@ -41,7 +41,7 @@ Resumen de lo decidido en el issue #15.
 - Una rama corta por ticket, con pull request a `main`, fusionado en un solo commit. No hay revisión obligatoria: se fusiona cuando las verificaciones automáticas pasan.
 - `main` es la rama por defecto y la única permanente. La documentación va directo a `main`.
 - Una versión es una etiqueta sobre un commit de `main` (`v1.0.0`).
-- Arreglos urgentes: se parte desde la etiqueta de la versión publicada y el arreglo se fusiona también a `main`.
+- Arreglos urgentes: son un pull request más a `main` y se publican etiquetando `main`.
 
 ### Integración continua
 - En cada pull request a `main` corren cuatro verificaciones, todas obligatorias: tipos (`tsc`), estilo (ESLint y Prettier), pruebas del dominio y pruebas de permisos sobre un Supabase local con las migraciones aplicadas desde cero.

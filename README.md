@@ -91,7 +91,7 @@ En cada pull request a `main` corren cuatro verificaciones (`.github/workflows/c
 | `Domain tests`     | `npm test`                                           |
 | `Permission tests` | `npm run db:reset && npm run db:test && npm run db:types` |
 
-Al fusionar a `main`, las migraciones nuevas se aplican solas al Supabase de desarrollo (`.github/workflows/deploy-migrations.yml`). A producción se aplican a mano, como paso de la publicación de cada versión.
+Al fusionar a `main`, las migraciones nuevas se aplican solas al Supabase de desarrollo (`.github/workflows/deploy-migrations.yml`). El mismo workflow se puede lanzar a mano desde la pestaña Actions, solo sobre `main`. A producción se aplican a mano, como paso de la publicación de cada versión.
 
 ## Configuración que debe hacer una persona
 
