@@ -10,5 +10,8 @@ export function useIglesiaElegida() {
     // would not fix a failure.
     networkMode: 'always',
     retry: false,
+    // It only changes when this app writes it, and whoever writes it
+    // invalidates this query: reading it again on every mount adds nothing.
+    staleTime: Infinity,
   });
 }

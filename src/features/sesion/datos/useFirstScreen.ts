@@ -18,6 +18,9 @@ export function useFirstScreen(): FirstScreen | undefined {
     // The client answers from what it holds, without a request.
     networkMode: 'always',
     retry: false,
+    // Nothing changes the session yet, and whoever signs in or out will
+    // invalidate this query: reading it again on every mount adds nothing.
+    staleTime: Infinity,
   });
 
   // Known once both reads have settled, whatever the outcome. A read that
