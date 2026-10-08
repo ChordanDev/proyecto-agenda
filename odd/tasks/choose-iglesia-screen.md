@@ -68,6 +68,17 @@ Branch `claude/issue-23-afa760`, fast-forwarded to `f6d44bc` (main). Review boun
 - Authored lines: 460 insertions and 129 deletions against `f6d44bc`, capture and this document excluded; 111 of the deletions are the removed temporary list. Past the 400 forecast because the screen carries four states the mockup does not draw.
 - Not observed: the load-error state with "Reintentar", the save-error text and the "no iglesias" text (they need a failing network or storage); VoiceOver and TalkBack.
 
+## Review
+
+Native review of `f6d44bc..6ab60bf`: assessed medium (`slice_budget_reached`, 10 paths, 670 lines), consent granted, one lens (reliability), approved and acknowledged (lineage `review-d02295ceafeb6299`). Reviewed boundary: `6ab60bf`.
+
+Advisory findings, none blocking, left as later work:
+
+- WARNING — the load error with "Reintentar", the "no iglesias" text and the save error are proved by neither a test nor a device observation (`ElegirIglesiaScreen.tsx:78-97`).
+- SUGGESTION — a paused iglesias query (offline, once #27 wires connectivity) would show "Cargando iglesias…" with no way out (`:79-89`).
+- SUGGESTION — rows stay selectable while the save is pending, so the checked row can differ from the one being stored (`:71-75`).
+- SUGGESTION — the back button calls `router.back()` without checking there is history; entered by a deep link or from Ajustes (#28) it would do nothing (`:115`).
+
 ## Notes for the next tickets
 
 - Rows are about 3pt taller than the mockup (75 against 72): `AppText` applies the line heights of the theme, the mockup sets none.
@@ -78,4 +89,4 @@ Branch `claude/issue-23-afa760`, fast-forwarded to `f6d44bc` (main). Review boun
 
 ## Next step
 
-Native review of the branch, then the pull request to `main` when the user asks for it.
+The pull request to `main` when the user asks for it; the four advisory findings are the user's call.
