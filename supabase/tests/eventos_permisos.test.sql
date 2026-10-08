@@ -1,7 +1,7 @@
 -- Permission tests for the event model: eventos, eventos_fechas and
 -- iglesias_sumadas. They also cover the constraints that keep an evento
--- coherent (a single duenio, the series columns) and the local date and time
--- types.
+-- coherent (a single duenio, the series columns), the keys and cascades of its
+-- dates and iglesias sumadas, and the local date and time types.
 --
 -- The way permission tests are written is explained at the top of
 -- estructura_permisos.test.sql.
@@ -12,7 +12,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(54);
+select plan(59);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -290,6 +290,40 @@ select throws_ok(
   '23514',
   'new row for relation "eventos" violates check constraint "eventos_titulo_not_blank"',
   'an evento with a blank titulo is rejected'
+);
+
+-- Keys and cascades ------------------------------------------------------------
+-- An evento has each date once and each iglesia sumada once, and its dates and
+-- iglesias sumadas do not outlive it. A violated primary key raises 23505.
+
+-- Rejected: a date or an iglesia sumada the evento already has.
+select throws_ok(
+  $$ insert into public.eventos_fechas (evento_id, fecha)
+     values ('eeeeeeee-0000-4000-8000-000000000001', '2026-11-14') $$,
+  '23505',
+  'duplicate key value violates unique constraint "eventos_fechas_pkey"',
+  'the same date twice on an evento is rejected'
+);
+select throws_ok(
+  $$ insert into public.iglesias_sumadas (evento_id, iglesia_id)
+     values ('eeeeeeee-0000-4000-8000-000000000001', '11111111-0000-4000-8000-000000000002') $$,
+  '23505',
+  'duplicate key value violates unique constraint "iglesias_sumadas_pkey"',
+  'the same iglesia sumada twice on an evento is rejected'
+);
+
+-- Allowed: deleting an evento, which takes its dates and iglesias sumadas with it.
+select lives_ok(
+  $$ delete from public.eventos where id = 'eeeeeeee-0000-4000-8000-000000000001' $$,
+  'an evento with dates and iglesias sumadas can be deleted'
+);
+select is_empty(
+  $$ select 1 from public.eventos_fechas where evento_id = 'eeeeeeee-0000-4000-8000-000000000001' $$,
+  'deleting an evento deletes its dates'
+);
+select is_empty(
+  $$ select 1 from public.iglesias_sumadas where evento_id = 'eeeeeeee-0000-4000-8000-000000000001' $$,
+  'deleting an evento deletes its iglesias sumadas'
 );
 
 -- Local date and time ------------------------------------------------------------
