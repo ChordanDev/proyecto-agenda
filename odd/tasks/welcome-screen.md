@@ -65,6 +65,8 @@ Branch `claude/issue-22-7587e3`, fast-forwarded to `79de6fb` (main). Review boun
 - T4, Android — development build (`BUILD SUCCESSFUL`) on the emulator `Medium_Phone_API_36.1`. Observed: the same screen; both buttons and the back key behave as on iOS; back on the Bienvenida and on the calendar leaves the app, never returns to the start route; with an iglesia elegida in the storage of the app, a cold start opens the calendar placeholder.
 - `0a37577` fix(sesion): keep the Bienvenida text in two lines on Android. Found on the emulator: Android measured the first line of the paragraph a little wider than 300 and broke it in three lines. The paragraph is now 320 wide with a non-breaking space in "y la", and the lemas wrap instead of running off a narrow screen. Observed again on both platforms. Assessed `0381d8c..0a37577`: medium, `under_budget` (12 lines), no review due.
 - Checks observed on `0a37577`: `npm test` 47 passed, `npm run typecheck` clean, `npm run lint` clean.
+- Second review — the whole branch `79de6fb..ff47adb` again, after the Android fix changed the candidate. Consent granted; one reliability lens; approved without corrections and acknowledged (lineage `review-3c8478e50a556872`). Review boundary: `ff47adb`.
+- Advisory review (Jorge el Curioso) on `79de6fb..ff47adb`: approved, two confirmed low-priority findings, both corrected: the two reads of the start gate ran twice on every start because neither query had a `staleTime` (now `Infinity`, the writers invalidate), and `src/features/README.md` did not describe the `datos` to `datos` import between features nor the start route that redirects.
 - Not observed: a read of the storage or of the session that fails on a device (the correction rests on the source of TanStack Query 5.104.1); a 360 dp phone and a large system font; a release build.
 
 
@@ -76,6 +78,7 @@ Branch `claude/issue-22-7587e3`, fast-forwarded to `79de6fb` (main). Review boun
 
 ## Notes for the next tickets
 
+- #29 invalidates the query `['sesion']` when the session starts or ends: it is never read again on its own.
 - #23 and #28 call `setIglesiaElegida` / `clearIglesiaElegida` and then invalidate the query `['iglesiaElegida']`; the functions do not touch the query cache.
 - `/bienvenida` and `/calendario` open without animation because they open behind the splash screen; #24 can revisit it for later pushes to the calendar.
 - A read that fails counts as missing, per read: a storage failure with a session still opens the calendar.
@@ -89,4 +92,4 @@ The marks are the base component scaled to 52, not the exact mockup sizes: trian
 
 ## Next step
 
-Push the branch and open the pull request to `main` (the user decides).
+Merge pull request #64 once the checks pass (the user decides).
