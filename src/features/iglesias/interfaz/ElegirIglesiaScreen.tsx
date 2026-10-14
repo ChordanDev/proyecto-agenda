@@ -25,6 +25,7 @@ import {
 import { useElegirIglesia } from '../datos/useElegirIglesia';
 import { useIglesias } from '../datos/useIglesias';
 import { buscarIglesias, type Iglesia } from '../dominio/buscarIglesias';
+import { aceptaCambios, puedeConfirmar } from '../dominio/puedeConfirmar';
 
 // Layout of the approved mockup, which the theme has no tokens for. The line
 // numbers are those of diseno/pantallas/03-elegir-iglesia.html.
@@ -66,7 +67,21 @@ export function ElegirIglesiaScreen() {
   const results = buscarIglesias(iglesias ?? [], searchText);
   // What is confirmed is always on display: a search that hides the selected
   // iglesia leaves nothing to confirm until it shows again.
-  const selectedIsVisible = results.some((iglesia) => iglesia.id === selectedId);
+  const canConfirm = puedeConfirmar(selectedId, results);
+  // While saving, and once saved, the screen is leaving: nothing else changes.
+  const acceptsChanges = aceptaCambios(elegirIglesia.status);
+
+  // A save error describes the attempt made; it goes away with any new input.
+  const clearSaveError = () => {
+    if (elegirIglesia.isError) {
+      elegirIglesia.reset();
+    }
+  };
+
+  const changeSearchText = (text: string) => {
+    clearSaveError();
+    setSearchText(text);
+  };
 
   const goToCalendario = () => {
     // The calendar is left as the only screen of the stack, so going back from
@@ -85,7 +100,7 @@ export function ElegirIglesiaScreen() {
   };
 
   const confirm = () => {
-    if (selectedId !== null) {
+    if (canConfirm && selectedId !== null) {
       elegirIglesia.mutate(selectedId, {
         onSuccess: goToCalendario,
         onError: announceSaveError,
@@ -94,6 +109,10 @@ export function ElegirIglesiaScreen() {
   };
 
   const select = (iglesiaId: string) => {
+    if (!acceptsChanges) {
+      return;
+    }
+    clearSaveError();
     setSelectedId(iglesiaId);
     // The keyboard covers "Continuar": picking an iglesia puts it back in view.
     Keyboard.dismiss();
@@ -137,7 +156,13 @@ export function ElegirIglesiaScreen() {
   return (
     <ScreenBackground>
       <View style={styles.header}>
-        <BackButton onPress={() => router.back()} />
+        <BackButton
+          onPress={() => {
+            if (acceptsChanges) {
+              router.back();
+            }
+          }}
+        />
         <View style={styles.logoBox}>
           <Logo />
         </View>
@@ -159,7 +184,7 @@ export function ElegirIglesiaScreen() {
 
         <SearchField
           value={searchText}
-          onChangeText={setSearchText}
+          onChangeText={changeSearchText}
           placeholder="Buscar por nombre"
           accessibilityLabel="Buscar por nombre"
         />
@@ -180,7 +205,7 @@ export function ElegirIglesiaScreen() {
         <Button
           label="Continuar"
           // Once stored, the screen is on its way out: a second touch has nothing to do.
-          disabled={!selectedIsVisible || elegirIglesia.isPending || elegirIglesia.isSuccess}
+          disabled={!canConfirm || elegirIglesia.isPending || elegirIglesia.isSuccess}
           onPress={confirm}
         />
       </View>
