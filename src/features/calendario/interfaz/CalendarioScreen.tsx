@@ -176,8 +176,8 @@ function MonthOfCalendario({ fuente, encabezadoDeUsuario }: MonthOfCalendarioPro
   const [selectedIglesia, setSelectedIglesia] = useState<string | null>(null);
   const iglesiasDelFiltro = fuente.tipo === 'usuario' ? fuente.iglesias : NO_IGLESIAS;
   const { data: allEventos, isError, isFetching, refetch } = useCalendario(fuente, month);
-  // The header comes from the read of the iglesia, which goes with each month:
-  // the last one read stays while the next month loads.
+  // The header comes with the calendario of the month, built from the read of
+  // the iglesia: the last one stays while the next month loads.
   const encabezadoLeido =
     encabezadoDeUsuario ??
     (allEventos?.iglesia ? getEncabezadoDeCalendario([allEventos.iglesia]) : undefined);

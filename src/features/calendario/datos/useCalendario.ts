@@ -1,11 +1,15 @@
-import { useQuery } from '@tanstack/react-query';
+import { skipToken, useQuery } from '@tanstack/react-query';
 
 import type { Cargo } from '@/features/sesion/dominio/cargo';
 
-import type { CalendarioDeIglesia } from '../dominio/calendarioDeIglesia';
+import { armarCalendarioDeIglesia, type CalendarioDeIglesia } from '../dominio/calendarioDeIglesia';
 import type { Month } from '../dominio/getMonthRange';
-import { getCalendarioDeIglesia } from './getCalendarioDeIglesia';
-import { getCalendarioDeUsuario } from './getCalendarioDeUsuario';
+import {
+  getCalendarioDeIglesia,
+  getIglesiaDeCalendario,
+  type LecturaDeIglesia,
+} from './getCalendarioDeIglesia';
+import { getCalendarioDeUsuario, getOwnedOrSumada } from './getCalendarioDeUsuario';
 import type { Calendario } from './getFechasDelMes';
 import type { IglesiaConEstructura } from './getIglesiasEnEstructura';
 
@@ -25,22 +29,66 @@ export type FuenteDeCalendario =
  */
 export type CalendarioDelMes = Calendario & { iglesia?: CalendarioDeIglesia['iglesia'] };
 
-/** The calendario of the source for a month. */
+/**
+ * What every month of the source needs, read once: an iglesia with the filter of
+ * its eventos, or the filter of the eventos of a usuario's iglesias. Null is an
+ * iglesia that does not exist (any more).
+ */
+type LecturaDeFuente = LecturaDeIglesia | { ownedOrSumada: string | null };
+
+async function readFuente(fuente: FuenteDeCalendario): Promise<LecturaDeFuente | null> {
+  return fuente.tipo === 'iglesia'
+    ? getIglesiaDeCalendario(fuente.iglesiaId)
+    : { ownedOrSumada: await getOwnedOrSumada(fuente.iglesias) };
+}
+
+function readMonth(
+  fuente: FuenteDeCalendario,
+  lectura: LecturaDeFuente,
+  month: Month,
+): Promise<CalendarioDelMes> {
+  return fuente.tipo === 'iglesia'
+    ? // The source of an iglesia is read by `getIglesiaDeCalendario`.
+      getCalendarioDeIglesia(lectura as LecturaDeIglesia, month)
+    : getCalendarioDeUsuario(fuente.cargos, fuente.iglesias, lectura.ownedOrSumada, month);
+}
+
+/**
+ * The calendario of the source for a month. The iglesia (its distrito, its
+ * asociacion and the eventos sumados to it) is read once per source, and each
+ * month only reads its eventos. Both stay valid for the vigencia of the query
+ * client, so going back to a month already seen makes no request.
+ */
 export function useCalendario(fuente: FuenteDeCalendario, month: Month) {
-  return useQuery({
-    queryKey:
-      fuente.tipo === 'iglesia'
-        ? ['calendario', fuente.iglesiaId, month.year, month.month]
-        : [
-            'calendario',
-            'usuario',
-            fuente.iglesias.map((iglesia) => iglesia.id).join(','),
-            month.year,
-            month.month,
-          ],
-    queryFn: (): Promise<CalendarioDelMes> =>
-      fuente.tipo === 'iglesia'
-        ? getCalendarioDeIglesia(fuente.iglesiaId, month)
-        : getCalendarioDeUsuario(fuente.cargos, fuente.iglesias, month),
+  const fuenteKey =
+    fuente.tipo === 'iglesia'
+      ? [fuente.iglesiaId]
+      : ['usuario', fuente.iglesias.map((iglesia) => iglesia.id).join(',')];
+
+  const lectura = useQuery({
+    queryKey: ['calendario', ...fuenteKey],
+    queryFn: () => readFuente(fuente),
   });
+  const lecturaData = lectura.data;
+
+  const mes = useQuery({
+    // The filter is part of the key: when the eventos sumados change, the
+    // months are read again instead of keeping those of the old filter.
+    queryKey: [
+      'calendario',
+      ...fuenteKey,
+      lecturaData?.ownedOrSumada ?? null,
+      month.year,
+      month.month,
+    ],
+    queryFn: lecturaData ? () => readMonth(fuente, lecturaData, month) : skipToken,
+  });
+
+  return {
+    // An iglesia elegida that was deleted has no months to read.
+    data: lecturaData === null ? armarCalendarioDeIglesia(null, [], {}) : mes.data,
+    isError: lectura.isError || mes.isError,
+    isFetching: lectura.isFetching || mes.isFetching,
+    refetch: () => (lectura.isError ? lectura.refetch() : mes.refetch()),
+  };
 }
