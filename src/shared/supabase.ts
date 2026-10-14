@@ -21,11 +21,18 @@ if (!supabaseUrl || !supabaseAnonKey) {
  * encrypted preferences on Android). The module enforces no size limit on the
  * value, so the whole session is one entry.
  */
-const secureStorage = {
+export const authStorage = {
   getItem: (key: string) => SecureStore.getItemAsync(key),
   setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
   removeItem: (key: string) => SecureStore.deleteItemAsync(key),
 };
+
+/**
+ * Where the client keeps the session in that storage: the key the client uses
+ * by default, written out so that the session can be read without waiting for
+ * the client to start.
+ */
+export const AUTH_STORAGE_KEY = `sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token`;
 
 /**
  * Typed Supabase client. Only the `datos` layer of a feature imports it:
@@ -33,7 +40,8 @@ const secureStorage = {
  */
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: secureStorage,
+    storage: authStorage,
+    storageKey: AUTH_STORAGE_KEY,
     // The session stays until the person signs out: the refresh token does not
     // expire and the client renews the access token by itself.
     persistSession: true,
