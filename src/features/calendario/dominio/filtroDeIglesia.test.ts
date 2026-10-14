@@ -1,7 +1,11 @@
 import type { Evento } from '@/features/eventos/dominio/evento';
 
 import type { FechaDeEvento, IglesiaEnEstructura } from './armarCalendario';
-import { filterFechasByIglesia, hasFiltroDeIglesia } from './filtroDeIglesia';
+import {
+  filterFechasByIglesia,
+  getIglesiaSeleccionada,
+  hasFiltroDeIglesia,
+} from './filtroDeIglesia';
 
 const central: IglesiaEnEstructura = {
   id: 'iglesia-central',
@@ -81,5 +85,19 @@ describe('filterFechasByIglesia', () => {
 
   it('keeps every fecha when the selected iglesia is no longer covered', () => {
     expect(filterFechasByIglesia(fechas, [barrioNorte], central.id)).toEqual(fechas);
+  });
+});
+
+describe('getIglesiaSeleccionada', () => {
+  it('keeps the selected iglesia while the cargos cover it', () => {
+    expect(getIglesiaSeleccionada(iglesias, central.id)).toBe(central.id);
+  });
+
+  it('is "Todas" when the selected iglesia is no longer covered', () => {
+    expect(getIglesiaSeleccionada([barrioNorte], central.id)).toBeNull();
+  });
+
+  it('stays "Todas" when nothing is selected', () => {
+    expect(getIglesiaSeleccionada(iglesias, null)).toBeNull();
   });
 });

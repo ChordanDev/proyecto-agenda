@@ -12,7 +12,11 @@ import { useIglesiaDeCalendario } from '../datos/useIglesiaDeCalendario';
 import { formatMonthTitle } from '../dominio/calendarioTexts';
 import { getEncabezadoDeCalendario, type Encabezado } from '../dominio/encabezadoDeCalendario';
 import { filterFechasByCategorias } from '../dominio/filtroDeCategorias';
-import { filterFechasByIglesia, hasFiltroDeIglesia } from '../dominio/filtroDeIglesia';
+import {
+  filterFechasByIglesia,
+  getIglesiaSeleccionada,
+  hasFiltroDeIglesia,
+} from '../dominio/filtroDeIglesia';
 import type { Month } from '../dominio/getMonthRange';
 import {
   getMonthOf,
@@ -244,7 +248,7 @@ function MonthOfCalendario({ fuente, encabezadoDeUsuario }: MonthOfCalendarioPro
         {hasFiltroDeIglesia(iglesiasDelFiltro) && (
           <FiltroDeIglesia
             iglesias={iglesiasDelFiltro}
-            selected={selectedIglesia}
+            selected={getIglesiaSeleccionada(iglesiasDelFiltro, selectedIglesia)}
             onChange={setSelectedIglesia}
           />
         )}
