@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { useIglesiaElegida } from '@/features/iglesias/datos/useIglesiaElegida';
-import { useIglesias } from '@/features/iglesias/datos/useIglesias';
 import { useCargos } from '@/features/sesion/datos/useCargos';
 import { useSesion } from '@/features/sesion/datos/useSesion';
 
@@ -23,10 +22,11 @@ export type OrigenDeCalendario =
   | {
       estado: 'listo';
       fuente: FuenteDeCalendario;
-      /** Undefined until the nombres are read. */
+      /**
+       * The header of a usuario. The one of the iglesia elegida comes with its
+       * calendario, which is where the iglesia is read.
+       */
       encabezado: Encabezado | undefined;
-      /** Something else to read again when the person retries a failed load. */
-      onRetry: (() => void) | undefined;
     };
 
 /**
@@ -34,14 +34,13 @@ export type OrigenDeCalendario =
  * usuario's cargos, and the iglesia elegida of the phone is ignored; without
  * one it is the one of the iglesia elegida of the hermano.
  *
- * An iglesia elegida that is not among the iglesias no longer exists: it counts
- * as none, so the screen offers to choose another one instead of failing to
- * load a calendario for ever.
+ * The iglesia elegida is not read here: its calendario reads it by id, with its
+ * nombres, and tells when it no longer exists, so that the screen offers to
+ * choose another one instead of failing to load a calendario for ever.
  */
 export function useIglesiaDeCalendario(): OrigenDeCalendario {
   const hasSesion = useSesion() === true;
   const { data: iglesiaElegida } = useIglesiaElegida();
-  const { data: iglesias, refetch: refetchIglesias } = useIglesias();
   const cargos = useCargos();
   const estructura = useQuery({
     queryKey: ['iglesias-estructura'],
@@ -74,22 +73,16 @@ export function useIglesiaDeCalendario(): OrigenDeCalendario {
       estado: 'listo',
       fuente: { tipo: 'usuario', cargos: cargos.data, iglesias: covered },
       encabezado: getEncabezadoDeCalendario(covered),
-      onRetry: undefined,
     };
   }
 
-  const iglesia = iglesias?.find((candidate) => candidate.id === iglesiaElegida);
-  const exists = iglesias === undefined || iglesia !== undefined;
-
-  if (iglesiaElegida == null || !exists) {
+  if (iglesiaElegida == null) {
     return { estado: 'sin-iglesia' };
   }
 
   return {
     estado: 'listo',
     fuente: { tipo: 'iglesia', iglesiaId: iglesiaElegida },
-    encabezado: iglesia && getEncabezadoDeCalendario([iglesia]),
-    // Without the iglesias the header has no nombres: a retry reads them too.
-    onRetry: iglesia === undefined ? () => void refetchIglesias() : undefined,
+    encabezado: undefined,
   };
 }

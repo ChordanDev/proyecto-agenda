@@ -1,16 +1,25 @@
 import { supabase } from '@/shared/supabase';
 
-import { armarCalendario, type IglesiaEnEstructura } from '../dominio/armarCalendario';
+import {
+  armarCalendarioDeIglesia,
+  type CalendarioDeIglesia,
+  type IglesiaConNombres,
+} from '../dominio/calendarioDeIglesia';
 import type { Month } from '../dominio/getMonthRange';
-import { getFechasDelMes, type Calendario } from './getFechasDelMes';
+import { getFechasDelMes } from './getFechasDelMes';
 
-/** The current place of the iglesia in the structure and the eventos it is sumada to. */
+/**
+ * The current place of the iglesia in the structure, its nombres and the eventos
+ * it is sumada to; null when there is no such iglesia.
+ */
 async function getIglesiaEnEstructura(
   iglesiaId: string,
-): Promise<{ iglesia: IglesiaEnEstructura; eventosSumados: string[] }> {
+): Promise<{ iglesia: IglesiaConNombres; eventosSumados: string[] } | null> {
   const { data, error } = await supabase
     .from('iglesias')
-    .select('id, distrito_id, distritos (asociacion_id), iglesias_sumadas (evento_id)')
+    .select(
+      'id, nombre, distrito_id, distritos (nombre, asociacion_id), iglesias_sumadas (evento_id)',
+    )
     .eq('id', iglesiaId)
     .maybeSingle();
 
@@ -19,12 +28,14 @@ async function getIglesiaEnEstructura(
   }
 
   if (!data) {
-    throw new Error(`Could not read the calendario: there is no iglesia ${iglesiaId}`);
+    return null;
   }
 
   return {
     iglesia: {
       id: data.id,
+      nombre: data.nombre,
+      distrito: data.distritos.nombre,
       distritoId: data.distrito_id,
       asociacionId: data.distritos.asociacion_id,
     },
@@ -34,10 +45,21 @@ async function getIglesiaEnEstructura(
 
 /**
  * Reads the calendario of an iglesia for a month: its own eventos, those of
- * its distrito and its asociacion, and those where it is iglesia sumada.
+ * its distrito and its asociacion, and those where it is iglesia sumada. It also
+ * returns the nombres the header shows, read in the same request; an iglesia
+ * that does not exist comes back with `iglesia: null` and no dates.
  */
-export async function getCalendarioDeIglesia(iglesiaId: string, month: Month): Promise<Calendario> {
-  const { iglesia, eventosSumados } = await getIglesiaEnEstructura(iglesiaId);
+export async function getCalendarioDeIglesia(
+  iglesiaId: string,
+  month: Month,
+): Promise<CalendarioDeIglesia> {
+  const found = await getIglesiaEnEstructura(iglesiaId);
+
+  if (found === null) {
+    return armarCalendarioDeIglesia(null, [], {});
+  }
+
+  const { iglesia, eventosSumados } = found;
 
   const ownedOrSumada = [
     `duenio_iglesia_id.eq.${iglesia.id}`,
@@ -50,5 +72,5 @@ export async function getCalendarioDeIglesia(iglesiaId: string, month: Month): P
 
   const { fechas, nombresDeDistritos } = await getFechasDelMes(ownedOrSumada, month);
 
-  return { fechas: armarCalendario(iglesia, fechas), nombresDeDistritos };
+  return armarCalendarioDeIglesia(iglesia, fechas, nombresDeDistritos);
 }

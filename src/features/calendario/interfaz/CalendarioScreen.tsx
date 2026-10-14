@@ -10,6 +10,7 @@ import { AppText, Button, Card, Logo, ScreenBackground } from '@/shared/ui';
 import { useCalendario, type FuenteDeCalendario } from '../datos/useCalendario';
 import { useIglesiaDeCalendario } from '../datos/useIglesiaDeCalendario';
 import { formatMonthTitle } from '../dominio/calendarioTexts';
+import { getEncabezadoDeCalendario, type Encabezado } from '../dominio/encabezadoDeCalendario';
 import { filterFechasByCategorias } from '../dominio/filtroDeCategorias';
 import type { Month } from '../dominio/getMonthRange';
 import {
@@ -58,72 +59,91 @@ const SAFE_AREA_EDGES = ['top', 'left', 'right'] as const;
  * day and, under it, the eventos of the selected day.
  */
 export function CalendarioScreen() {
-  const router = useRouter();
   const origen = useIglesiaDeCalendario();
-  const encabezado = origen.estado === 'listo' ? origen.encabezado : undefined;
+
+  if (origen.estado === 'listo') {
+    return (
+      <ScreenBackground edges={SAFE_AREA_EDGES}>
+        <MonthOfCalendario
+          // Another iglesia starts from today, without the header of the last one.
+          key={origen.fuente.tipo === 'iglesia' ? origen.fuente.iglesiaId : 'usuario'}
+          fuente={origen.fuente}
+          encabezadoDeUsuario={origen.encabezado}
+        />
+      </ScreenBackground>
+    );
+  }
 
   return (
     <ScreenBackground edges={SAFE_AREA_EDGES}>
-      <View style={styles.header}>
-        <View style={styles.logoBox}>
-          <Logo />
-        </View>
-        {encabezado !== undefined && (
-          <View style={styles.headerTexts}>
-            <AppText variant="tituloEncabezado" accessibilityRole="header">
-              {encabezado.titulo}
+      <CalendarioHeader encabezado={undefined} />
+      {/* States the mockup does not draw. */}
+      <View style={styles.content}>
+        {origen.estado === 'sin-iglesia' && <SinIglesia />}
+        <Card style={styles.message}>
+          {origen.estado === 'cargando' && (
+            <AppText color="textoSecundario" style={styles.paragraph}>
+              Cargando tu calendario…
             </AppText>
-            <AppText variant="subtitulo">{encabezado.subtitulo}</AppText>
-          </View>
-        )}
+          )}
+          {origen.estado === 'sin-iglesias-asignadas' && (
+            <AppText color="textoSecundario" style={styles.paragraph}>
+              Todavía no tenés iglesias asignadas. Consultá con la asociación.
+            </AppText>
+          )}
+          {origen.estado === 'error' && (
+            <>
+              <AppText color="textoSecundario" style={styles.paragraph}>
+                No se pudo cargar tu calendario. Revisá la conexión y probá de nuevo.
+              </AppText>
+              <Button label="Reintentar" variant="secondary" onPress={origen.refetch} />
+            </>
+          )}
+        </Card>
       </View>
+    </ScreenBackground>
+  );
+}
 
-      {origen.estado === 'listo' ? (
-        <MonthOfCalendario fuente={origen.fuente} onRetry={origen.onRetry} />
-      ) : (
-        // States the mockup does not draw.
-        <View style={styles.content}>
-          <Card style={styles.message}>
-            {origen.estado === 'sin-iglesia' && (
-              <>
-                <AppText color="textoSecundario" style={styles.paragraph}>
-                  Elegí tu iglesia para ver su calendario.
-                </AppText>
-                <Button label="Elegir mi iglesia" onPress={() => router.push('/choose-iglesia')} />
-              </>
-            )}
-            {origen.estado === 'cargando' && (
-              <AppText color="textoSecundario" style={styles.paragraph}>
-                Cargando tu calendario…
-              </AppText>
-            )}
-            {origen.estado === 'sin-iglesias-asignadas' && (
-              <AppText color="textoSecundario" style={styles.paragraph}>
-                Todavía no tenés iglesias asignadas. Consultá con la asociación.
-              </AppText>
-            )}
-            {origen.estado === 'error' && (
-              <>
-                <AppText color="textoSecundario" style={styles.paragraph}>
-                  No se pudo cargar tu calendario. Revisá la conexión y probá de nuevo.
-                </AppText>
-                <Button label="Reintentar" variant="secondary" onPress={origen.refetch} />
-              </>
-            )}
-          </Card>
+function CalendarioHeader({ encabezado }: { encabezado: Encabezado | undefined }) {
+  return (
+    <View style={styles.header}>
+      <View style={styles.logoBox}>
+        <Logo />
+      </View>
+      {encabezado !== undefined && (
+        <View style={styles.headerTexts}>
+          <AppText variant="tituloEncabezado" accessibilityRole="header">
+            {encabezado.titulo}
+          </AppText>
+          <AppText variant="subtitulo">{encabezado.subtitulo}</AppText>
         </View>
       )}
-    </ScreenBackground>
+    </View>
+  );
+}
+
+/** The hermano has no iglesia elegida, or the one elegida does not exist any more. */
+function SinIglesia() {
+  const router = useRouter();
+
+  return (
+    <Card style={styles.message}>
+      <AppText color="textoSecundario" style={styles.paragraph}>
+        Elegí tu iglesia para ver su calendario.
+      </AppText>
+      <Button label="Elegir mi iglesia" onPress={() => router.push('/choose-iglesia')} />
+    </Card>
   );
 }
 
 type MonthOfCalendarioProps = {
   fuente: FuenteDeCalendario;
-  /** Something else to read again when the person retries a failed load. */
-  onRetry: (() => void) | undefined;
+  /** The header of a usuario; the one of an iglesia elegida comes with its calendario. */
+  encabezadoDeUsuario: Encabezado | undefined;
 };
 
-function MonthOfCalendario({ fuente, onRetry }: MonthOfCalendarioProps) {
+function MonthOfCalendario({ fuente, encabezadoDeUsuario }: MonthOfCalendarioProps) {
   const today = useToday();
   const [month, setMonth] = useState(() => getMonthOf(today));
   const [selectedDate, setSelectedDate] = useState(today);
@@ -141,6 +161,20 @@ function MonthOfCalendario({ fuente, onRetry }: MonthOfCalendarioProps) {
   // Everything is shown until the person hides something.
   const [selectedCategorias, setSelectedCategorias] = useState<Categoria[]>([...CATEGORIAS]);
   const { data: allEventos, isError, isFetching, refetch } = useCalendario(fuente, month);
+  // The header comes from the read of the iglesia, which goes with each month:
+  // the last one read stays while the next month loads.
+  const encabezadoLeido =
+    encabezadoDeUsuario ??
+    (allEventos?.iglesia ? getEncabezadoDeCalendario([allEventos.iglesia]) : undefined);
+  const [ultimoEncabezado, setUltimoEncabezado] = useState(encabezadoLeido);
+  if (
+    encabezadoLeido !== undefined &&
+    (encabezadoLeido.titulo !== ultimoEncabezado?.titulo ||
+      encabezadoLeido.subtitulo !== ultimoEncabezado.subtitulo)
+  ) {
+    setUltimoEncabezado(encabezadoLeido);
+  }
+  const encabezado = encabezadoLeido ?? ultimoEncabezado;
   // The same filtered fechas feed the markers of the grid and the list of the day.
   const calendario = useMemo(
     () =>
@@ -156,50 +190,60 @@ function MonthOfCalendario({ fuente, onRetry }: MonthOfCalendarioProps) {
     setSelectedDate(getSelectedDate(newMonth, today));
   };
 
-  const retry = () => {
-    refetch();
-    onRetry?.();
-  };
+  // An iglesia elegida that was deleted: there is no calendario to show.
+  if (allEventos?.iglesia === null) {
+    return (
+      <>
+        <CalendarioHeader encabezado={undefined} />
+        <View style={styles.content}>
+          <SinIglesia />
+        </View>
+      </>
+    );
+  }
 
   return (
-    // The header stays in place and the bottom navigation is outside: only
-    // the month and its eventos scroll.
-    <ScrollView contentContainerStyle={styles.content}>
-      <View style={styles.monthRow}>
-        <AppText variant="tituloPantalla" accessibilityRole="header" style={styles.monthTitle}>
-          {formatMonthTitle(month)}
-        </AppText>
-        <View style={styles.monthButtons}>
-          <MonthButton
-            label="Mes anterior"
-            direction="previous"
-            onPress={() => showMonth(getPreviousMonth(month))}
-          />
-          <MonthButton
-            label="Mes siguiente"
-            direction="next"
-            onPress={() => showMonth(getNextMonth(month))}
-          />
+    <>
+      <CalendarioHeader encabezado={encabezado} />
+      {/* The header stays in place and the bottom navigation is outside: only
+          the month and its eventos scroll. */}
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.monthRow}>
+          <AppText variant="tituloPantalla" accessibilityRole="header" style={styles.monthTitle}>
+            {formatMonthTitle(month)}
+          </AppText>
+          <View style={styles.monthButtons}>
+            <MonthButton
+              label="Mes anterior"
+              direction="previous"
+              onPress={() => showMonth(getPreviousMonth(month))}
+            />
+            <MonthButton
+              label="Mes siguiente"
+              direction="next"
+              onPress={() => showMonth(getNextMonth(month))}
+            />
+          </View>
         </View>
-      </View>
 
-      <FiltroDeCategorias selected={selectedCategorias} onChange={setSelectedCategorias} />
+        <FiltroDeCategorias selected={selectedCategorias} onChange={setSelectedCategorias} />
 
-      <MonthGrid
-        month={month}
-        today={today}
-        selectedDate={selectedDate}
-        fechas={calendario?.fechas}
-        onSelectDate={setSelectedDate}
-      />
+        <MonthGrid
+          month={month}
+          today={today}
+          selectedDate={selectedDate}
+          fechas={calendario?.fechas}
+          onSelectDate={setSelectedDate}
+        />
 
-      <EventosOfDay
-        date={selectedDate}
-        calendario={calendario}
-        failed={isError && !isFetching}
-        onRetry={retry}
-      />
-    </ScrollView>
+        <EventosOfDay
+          date={selectedDate}
+          calendario={calendario}
+          failed={isError && !isFetching}
+          onRetry={() => void refetch()}
+        />
+      </ScrollView>
+    </>
   );
 }
 
