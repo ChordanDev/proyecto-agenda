@@ -40,7 +40,7 @@ Those of issue #68.
 
 Branch `feat/68-confirm-marked-iglesia` from `feat/66-cargos-rule-cases`.
 Checks: typecheck, lint (eslint + prettier) and `npm test` (16 suites, 245 tests) pass.
-Commits: see `git log` on the branch (T1+T2 in one work unit: `fix: confirm always the marked iglesia (#68)`).
+Commit `c3f5ae3` fix: confirm always the marked iglesia (#68) (T1+T2, one work unit).
 Review: not assessed by the writer. Engram mirror: pending.
 
 ## Next step
