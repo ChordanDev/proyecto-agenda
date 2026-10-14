@@ -1,7 +1,8 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
   AccessibilityInfo,
+  BackHandler,
   Keyboard,
   Platform,
   Pressable,
@@ -11,6 +12,8 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+import { useFirstScreen } from '@/features/sesion/datos/useFirstScreen';
+import { firstScreenRoute } from '@/features/sesion/dominio/firstScreenRoute';
 import { colors, radius, spacing } from '@/shared/theme';
 import {
   AppText,
@@ -61,6 +64,7 @@ export function ElegirIglesiaScreen() {
   const router = useRouter();
   const { data: iglesias, isError, isFetching, refetch } = useIglesias();
   const elegirIglesia = useElegirIglesia();
+  const firstScreen = useFirstScreen();
   const [searchText, setSearchText] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -91,6 +95,32 @@ export function ElegirIglesiaScreen() {
     }
     router.replace('/calendario');
   };
+
+  // Goes to the previous screen or, when this is the only one of the stack,
+  // to the first screen of the app. Returns whether it handled the request.
+  const goBack = () => {
+    if (!acceptsChanges) {
+      return true;
+    }
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      // While the first screen is still being read, the start route decides it.
+      router.replace(firstScreen === undefined ? '/' : firstScreenRoute(firstScreen));
+    }
+    return true;
+  };
+
+  // Android's back button follows the same rule; alone in the stack it would
+  // otherwise close the app.
+  useFocusEffect(
+    useCallback(() => {
+      const subscription = BackHandler.addEventListener('hardwareBackPress', () => goBack());
+      return () => subscription.remove();
+      // goBack is rebuilt on every render and only reads the values listed here.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [acceptsChanges, firstScreen, router]),
+  );
 
   const announceSaveError = () => {
     // Android reads the live region of the footer by itself; iOS has none.
@@ -156,13 +186,7 @@ export function ElegirIglesiaScreen() {
   return (
     <ScreenBackground>
       <View style={styles.header}>
-        <BackButton
-          onPress={() => {
-            if (acceptsChanges) {
-              router.back();
-            }
-          }}
-        />
+        <BackButton onPress={goBack} />
         <View style={styles.logoBox}>
           <Logo />
         </View>
