@@ -2,12 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 
 import type { Cargo } from '@/features/sesion/dominio/cargo';
 
-import type { IglesiaEnEstructura } from '../dominio/armarCalendario';
 import type { CalendarioDeIglesia } from '../dominio/calendarioDeIglesia';
 import type { Month } from '../dominio/getMonthRange';
 import { getCalendarioDeIglesia } from './getCalendarioDeIglesia';
 import { getCalendarioDeUsuario } from './getCalendarioDeUsuario';
 import type { Calendario } from './getFechasDelMes';
+import type { IglesiaConEstructura } from './getIglesiasEnEstructura';
 
 /** Whose calendario to read: the iglesia elegida of the hermano, or a usuario's cargos. */
 export type FuenteDeCalendario =
@@ -16,7 +16,7 @@ export type FuenteDeCalendario =
       tipo: 'usuario';
       cargos: readonly Cargo[];
       /** The iglesias their cargos cover. */
-      iglesias: readonly IglesiaEnEstructura[];
+      iglesias: readonly IglesiaConEstructura[];
     };
 
 /**
