@@ -61,6 +61,14 @@ body{margin:0}
       </button>
     </div>
 
+    <!-- Offline (#27): shown only without connection, with the date of the last successful download. -->
+    <sc-if value="{{ sinConexion }}" hint-placeholder-val="{{ true }}">
+      <div role="status" style="display: flex; align-items: center; gap: 10px; min-height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 14px; background: #FFFFFF; color: #1B3550">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0"><path d="M2 2l20 20"></path><path d="M5.8 5.8A5.5 5.5 0 0 0 6.5 17H17"></path><path d="M9.6 4.6A6 6 0 0 1 17.6 9 4 4 0 0 1 20.7 15.6"></path></svg>
+        <span style="font-size: 15px; line-height: 1.35; color: #222222"><span style="font-weight: 700; color: #1B3550">Sin conexión.</span> {{ actualizado }}</span>
+      </div>
+    </sc-if>
+
     <div style="background: #FFFFFF; border-radius: 20px; padding: 14px 8px 10px">
       <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding-bottom: 6px">
         <span style="text-align: center; font-size: 14px; font-weight: 600; color: #717171">D</span>
@@ -272,6 +280,12 @@ class Component extends DCLogic {
     }));
     const ocultos = KEYS.filter((k) => off[k]).length;
     const mostrados = KEYS.filter((k) => !off[k]).map((k) => META[k].lema);
+    // Last successful download: "hoy" and "ayer" by name, older dates in full.
+    const sinConexion = st.sinConexion !== false;
+    const ultimaDescarga = { cuando: 'hoy', fecha: 'el martes 6 de octubre', hora: '18:40' };
+    const actualizado = ultimaDescarga.cuando === 'hoy' || ultimaDescarga.cuando === 'ayer'
+      ? 'Actualizado ' + ultimaDescarga.cuando + ' a las ' + ultimaDescarga.hora + '.'
+      : 'Actualizado ' + ultimaDescarga.fecha + ' a las ' + ultimaDescarga.hora + '.';
     const resumenFiltro = ocultos === 0 ? 'Mostrando todo' : (mostrados.length === 0 ? 'Nada seleccionado' : 'Mostrando: ' + mostrados.join(', '));
 
     const iglesias = ['Todas', 'Central', 'Barrio Norte', 'Las Rosas', 'San Martín'].map((n) => ({
@@ -286,6 +300,7 @@ class Component extends DCLogic {
       subtitulo: pastor ? '4 iglesias' : 'Distrito Norte',
       celdas, opciones, iglesias, eventos,
       resumenFiltro, hayFiltro: ocultos > 0, cantOcultos: ocultos,
+      sinConexion, actualizado,
       filtroAbierto: !!st.filtro,
       abrirFiltro: () => this.setState({ filtro: true }),
       cerrarFiltro: () => this.setState({ filtro: false }),
