@@ -5,7 +5,7 @@ import type { Evento } from '@/features/eventos/dominio/evento';
 import { colors, fontSize, radius, spacing } from '@/shared/theme';
 import { AppText, Button, Card, FormaDeEnfasis } from '@/shared/ui';
 
-import type { CalendarioDeIglesia } from '../datos/getCalendarioDeIglesia';
+import type { Calendario } from '../datos/getFechasDelMes';
 import {
   formatDayHeading,
   formatEventosCount,
@@ -42,7 +42,7 @@ type EventosOfDayProps = {
   /** Local date, `YYYY-MM-DD`. */
   date: string;
   /** Undefined until the month is read. */
-  calendario: CalendarioDeIglesia | undefined;
+  calendario: Calendario | undefined;
   /** The month could not be read and nobody is trying again right now. */
   failed: boolean;
   onRetry: () => void;
