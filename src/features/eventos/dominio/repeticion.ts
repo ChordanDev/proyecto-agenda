@@ -198,3 +198,17 @@ export function formatFraseDeRepeticion(
 
   return `Se repite ${como}, hasta el ${formatLongDate(finDeSerie)}.`;
 }
+
+/**
+ * The note under "Hasta". While a series is edited its cap depends on two dates
+ * (see `getTopeDeHasta`), so the note names the day instead of the rule.
+ */
+export function formatNotaDeHasta(contexto: {
+  fecha: string;
+  hoy: string;
+  editando: boolean;
+}): string {
+  return contexto.editando
+    ? `Como máximo, el ${formatLongDate(getTopeDeHasta(contexto))}.`
+    : 'Como máximo, un año desde la primera fecha.';
+}
