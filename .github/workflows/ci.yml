@@ -2,9 +2,10 @@ name: CI
 
 # The four checks below are required to merge a pull request into main.
 # Their names are referenced by the branch protection rule: do not rename them.
+# They run on every pull request, whatever its base, so stacked pull requests
+# get checked before their parent is merged.
 on:
   pull_request:
-    branches: [main]
 
 concurrency:
   group: ci-${{ github.event.pull_request.number }}
