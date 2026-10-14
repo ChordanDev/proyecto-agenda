@@ -1,0 +1,241 @@
+{
+  "estructura": {
+    "asociaciones": ["asociacion-central", "otra-asociacion"],
+    "distritos": {
+      "distrito-centro": "asociacion-central",
+      "distrito-norte": "asociacion-central",
+      "distrito-lejano": "otra-asociacion"
+    },
+    "iglesias": {
+      "iglesia-cordoba-central": "distrito-centro",
+      "iglesia-nueva-cordoba": "distrito-centro",
+      "iglesia-arguello": "distrito-norte",
+      "iglesia-lejana": "distrito-lejano"
+    }
+  },
+  "usuarios": {
+    "encargado-de-cordoba-central": ["iglesia-cordoba-central"],
+    "pastor-de-distrito-centro": ["distrito-centro"],
+    "pastor-de-distrito-norte": ["distrito-norte"],
+    "admin-de-asociacion-central": ["asociacion-central"],
+    "admin-de-otra-asociacion": ["otra-asociacion"],
+    "sin-cargos": [],
+    "encargado-de-cordoba-central-y-pastor-de-distrito-norte": [
+      "iglesia-cordoba-central",
+      "distrito-norte"
+    ],
+    "encargado-de-cordoba-central-y-cargos-lejanos": [
+      "iglesia-lejana",
+      "distrito-lejano",
+      "iglesia-cordoba-central"
+    ],
+    "encargado-de-cordoba-central-pastor-y-admin-lejanos": [
+      "iglesia-cordoba-central",
+      "distrito-lejano",
+      "otra-asociacion"
+    ]
+  },
+  "casos": [
+    {
+      "usuario": "encargado-de-cordoba-central",
+      "duenio": "iglesia-cordoba-central",
+      "abarca": true
+    },
+    {
+      "usuario": "encargado-de-cordoba-central",
+      "duenio": "iglesia-nueva-cordoba",
+      "abarca": false
+    },
+    { "usuario": "encargado-de-cordoba-central", "duenio": "iglesia-arguello", "abarca": false },
+    { "usuario": "encargado-de-cordoba-central", "duenio": "iglesia-lejana", "abarca": false },
+    { "usuario": "encargado-de-cordoba-central", "duenio": "distrito-centro", "abarca": false },
+    { "usuario": "encargado-de-cordoba-central", "duenio": "distrito-norte", "abarca": false },
+    { "usuario": "encargado-de-cordoba-central", "duenio": "distrito-lejano", "abarca": false },
+    { "usuario": "encargado-de-cordoba-central", "duenio": "asociacion-central", "abarca": false },
+    { "usuario": "encargado-de-cordoba-central", "duenio": "otra-asociacion", "abarca": false },
+    { "usuario": "pastor-de-distrito-centro", "duenio": "iglesia-cordoba-central", "abarca": true },
+    { "usuario": "pastor-de-distrito-centro", "duenio": "iglesia-nueva-cordoba", "abarca": true },
+    { "usuario": "pastor-de-distrito-centro", "duenio": "iglesia-arguello", "abarca": false },
+    { "usuario": "pastor-de-distrito-centro", "duenio": "iglesia-lejana", "abarca": false },
+    { "usuario": "pastor-de-distrito-centro", "duenio": "distrito-centro", "abarca": true },
+    { "usuario": "pastor-de-distrito-centro", "duenio": "distrito-norte", "abarca": false },
+    { "usuario": "pastor-de-distrito-centro", "duenio": "distrito-lejano", "abarca": false },
+    { "usuario": "pastor-de-distrito-centro", "duenio": "asociacion-central", "abarca": false },
+    { "usuario": "pastor-de-distrito-centro", "duenio": "otra-asociacion", "abarca": false },
+    { "usuario": "pastor-de-distrito-norte", "duenio": "iglesia-cordoba-central", "abarca": false },
+    { "usuario": "pastor-de-distrito-norte", "duenio": "iglesia-nueva-cordoba", "abarca": false },
+    { "usuario": "pastor-de-distrito-norte", "duenio": "iglesia-arguello", "abarca": true },
+    { "usuario": "pastor-de-distrito-norte", "duenio": "iglesia-lejana", "abarca": false },
+    { "usuario": "pastor-de-distrito-norte", "duenio": "distrito-centro", "abarca": false },
+    { "usuario": "pastor-de-distrito-norte", "duenio": "distrito-norte", "abarca": true },
+    { "usuario": "pastor-de-distrito-norte", "duenio": "distrito-lejano", "abarca": false },
+    { "usuario": "pastor-de-distrito-norte", "duenio": "asociacion-central", "abarca": false },
+    { "usuario": "pastor-de-distrito-norte", "duenio": "otra-asociacion", "abarca": false },
+    {
+      "usuario": "admin-de-asociacion-central",
+      "duenio": "iglesia-cordoba-central",
+      "abarca": true
+    },
+    { "usuario": "admin-de-asociacion-central", "duenio": "iglesia-nueva-cordoba", "abarca": true },
+    { "usuario": "admin-de-asociacion-central", "duenio": "iglesia-arguello", "abarca": true },
+    { "usuario": "admin-de-asociacion-central", "duenio": "iglesia-lejana", "abarca": false },
+    { "usuario": "admin-de-asociacion-central", "duenio": "distrito-centro", "abarca": true },
+    { "usuario": "admin-de-asociacion-central", "duenio": "distrito-norte", "abarca": true },
+    { "usuario": "admin-de-asociacion-central", "duenio": "distrito-lejano", "abarca": false },
+    { "usuario": "admin-de-asociacion-central", "duenio": "asociacion-central", "abarca": true },
+    { "usuario": "admin-de-asociacion-central", "duenio": "otra-asociacion", "abarca": false },
+    { "usuario": "admin-de-otra-asociacion", "duenio": "iglesia-cordoba-central", "abarca": false },
+    { "usuario": "admin-de-otra-asociacion", "duenio": "iglesia-nueva-cordoba", "abarca": false },
+    { "usuario": "admin-de-otra-asociacion", "duenio": "iglesia-arguello", "abarca": false },
+    { "usuario": "admin-de-otra-asociacion", "duenio": "iglesia-lejana", "abarca": true },
+    { "usuario": "admin-de-otra-asociacion", "duenio": "distrito-centro", "abarca": false },
+    { "usuario": "admin-de-otra-asociacion", "duenio": "distrito-norte", "abarca": false },
+    { "usuario": "admin-de-otra-asociacion", "duenio": "distrito-lejano", "abarca": true },
+    { "usuario": "admin-de-otra-asociacion", "duenio": "asociacion-central", "abarca": false },
+    { "usuario": "admin-de-otra-asociacion", "duenio": "otra-asociacion", "abarca": true },
+    { "usuario": "sin-cargos", "duenio": "iglesia-cordoba-central", "abarca": false },
+    { "usuario": "sin-cargos", "duenio": "iglesia-nueva-cordoba", "abarca": false },
+    { "usuario": "sin-cargos", "duenio": "iglesia-arguello", "abarca": false },
+    { "usuario": "sin-cargos", "duenio": "iglesia-lejana", "abarca": false },
+    { "usuario": "sin-cargos", "duenio": "distrito-centro", "abarca": false },
+    { "usuario": "sin-cargos", "duenio": "distrito-norte", "abarca": false },
+    { "usuario": "sin-cargos", "duenio": "distrito-lejano", "abarca": false },
+    { "usuario": "sin-cargos", "duenio": "asociacion-central", "abarca": false },
+    { "usuario": "sin-cargos", "duenio": "otra-asociacion", "abarca": false },
+    {
+      "usuario": "encargado-de-cordoba-central-y-pastor-de-distrito-norte",
+      "duenio": "iglesia-cordoba-central",
+      "abarca": true
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-y-pastor-de-distrito-norte",
+      "duenio": "iglesia-nueva-cordoba",
+      "abarca": false
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-y-pastor-de-distrito-norte",
+      "duenio": "iglesia-arguello",
+      "abarca": true
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-y-pastor-de-distrito-norte",
+      "duenio": "iglesia-lejana",
+      "abarca": false
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-y-pastor-de-distrito-norte",
+      "duenio": "distrito-centro",
+      "abarca": false
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-y-pastor-de-distrito-norte",
+      "duenio": "distrito-norte",
+      "abarca": true
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-y-pastor-de-distrito-norte",
+      "duenio": "distrito-lejano",
+      "abarca": false
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-y-pastor-de-distrito-norte",
+      "duenio": "asociacion-central",
+      "abarca": false
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-y-pastor-de-distrito-norte",
+      "duenio": "otra-asociacion",
+      "abarca": false
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-y-cargos-lejanos",
+      "duenio": "iglesia-cordoba-central",
+      "abarca": true
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-y-cargos-lejanos",
+      "duenio": "iglesia-nueva-cordoba",
+      "abarca": false
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-y-cargos-lejanos",
+      "duenio": "iglesia-arguello",
+      "abarca": false
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-y-cargos-lejanos",
+      "duenio": "iglesia-lejana",
+      "abarca": true
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-y-cargos-lejanos",
+      "duenio": "distrito-centro",
+      "abarca": false
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-y-cargos-lejanos",
+      "duenio": "distrito-norte",
+      "abarca": false
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-y-cargos-lejanos",
+      "duenio": "distrito-lejano",
+      "abarca": true
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-y-cargos-lejanos",
+      "duenio": "asociacion-central",
+      "abarca": false
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-y-cargos-lejanos",
+      "duenio": "otra-asociacion",
+      "abarca": false
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-pastor-y-admin-lejanos",
+      "duenio": "iglesia-cordoba-central",
+      "abarca": true
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-pastor-y-admin-lejanos",
+      "duenio": "iglesia-nueva-cordoba",
+      "abarca": false
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-pastor-y-admin-lejanos",
+      "duenio": "iglesia-arguello",
+      "abarca": false
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-pastor-y-admin-lejanos",
+      "duenio": "iglesia-lejana",
+      "abarca": true
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-pastor-y-admin-lejanos",
+      "duenio": "distrito-centro",
+      "abarca": false
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-pastor-y-admin-lejanos",
+      "duenio": "distrito-norte",
+      "abarca": false
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-pastor-y-admin-lejanos",
+      "duenio": "distrito-lejano",
+      "abarca": true
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-pastor-y-admin-lejanos",
+      "duenio": "asociacion-central",
+      "abarca": false
+    },
+    {
+      "usuario": "encargado-de-cordoba-central-pastor-y-admin-lejanos",
+      "duenio": "otra-asociacion",
+      "abarca": true
+    }
+  ]
+}

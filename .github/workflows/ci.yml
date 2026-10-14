@@ -56,6 +56,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Only to run the script that generates a test: it needs no dependency.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
       - uses: supabase/setup-cli@v1
         with:
           # Keep in sync with the `supabase` dev dependency in package.json.
@@ -68,5 +72,17 @@ jobs:
           supabase gen types typescript --local > src/shared/database.types.ts
           if ! git diff --exit-code src/shared/database.types.ts; then
             echo "::error file=src/shared/database.types.ts::The generated types are out of date. Run 'npm run db:types' and commit the result."
+            exit 1
+          fi
+      - name: Check that the generated cargos rule test matches its table of cases
+        run: |
+          # A deleted file would be regenerated untracked and slip past git diff.
+          if ! git ls-files --error-unmatch supabase/tests/cargos_regla.test.sql > /dev/null; then
+            echo "::error file=supabase/tests/cargos_regla.test.sql::The generated test is missing. Run 'npm run db:casos-cargos' and commit the result."
+            exit 1
+          fi
+          node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/generar-casos-cargos.ts
+          if ! git diff --exit-code supabase/tests/cargos_regla.test.sql; then
+            echo "::error file=supabase/tests/cargos_regla.test.sql::The generated test is out of date with src/features/sesion/dominio/cargosAbarcanDuenio.casos.json. Run 'npm run db:casos-cargos' and commit the result."
             exit 1
           fi
