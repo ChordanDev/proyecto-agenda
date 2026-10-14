@@ -11,6 +11,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 
 import { accesibilidad, colors, fontSize, radius, spacing } from '@/shared/theme';
+import { useToday } from '@/features/calendario/interfaz/useToday';
 import { AppText, BackButton, Button, Card, ScreenBackground, TextField } from '@/shared/ui';
 
 import { useEvento } from '../datos/useEvento';
@@ -22,7 +23,6 @@ import {
   formatFechaDelCampo,
   formularioDesdeEvento,
   formularioVacio,
-  seEditaEnElFormulario,
   validarFormulario,
   type FormularioDeEvento,
 } from '../dominio/formularioDeEvento';
@@ -33,8 +33,10 @@ import {
   type OpcionesDeDuenio,
 } from '../dominio/opcionesDeDuenio';
 import { HojaDeDuenio } from './HojaDeDuenio';
+import { getHastaSugerido } from '../dominio/repeticion';
 import { HojaDeFecha } from './HojaDeFecha';
 import { SelectorDeEnfasis } from './SelectorDeEnfasis';
+import { SelectorDeRepeticion } from './SelectorDeRepeticion';
 
 // Layout of the approved mockup, which the theme has no tokens for. The line
 // numbers are those of diseno/pantallas/06-crear-evento.html.
@@ -58,6 +60,8 @@ const TIME_FLEX = 2;
 const DATE_PADDING_HORIZONTAL = 14; // line 50
 const HINT_LINE_HEIGHT = 1.4; // line 45
 const BANNER_PADDING = 14;
+// The field of the fecha de fin while it cannot be used (line 264).
+const DISABLED_FIELD_COLOR = '#F5F6F8';
 // The mockups draw no pressed state; the same value as `Button`.
 const PRESSED_OPACITY = 0.85;
 const PARAGRAPH_SIZE = 16;
@@ -88,18 +92,6 @@ export function FormularioDeEventoScreen({ modo }: { modo: ModoDelFormulario }) 
   };
 
   const renderContent = () => {
-    // The detail hides Editar for these eventos; a link must not reach the form either.
-    if (modo.tipo === 'editar' && evento.data && !seEditaEnElFormulario(evento.data.evento)) {
-      return (
-        <Card style={styles.message}>
-          <AppText color="textoSecundario" style={styles.paragraph}>
-            Este evento todavía no se puede editar.
-          </AppText>
-          <Button label="Volver" variant="secondary" onPress={leave} />
-        </Card>
-      );
-    }
-
     if (opciones.data && (modo.tipo === 'nuevo' || evento.data)) {
       const initial =
         modo.tipo === 'nuevo' || !evento.data
@@ -196,10 +188,15 @@ function Formulario({ opciones, initial, id, onSaved }: FormularioProps) {
   // The fields only show what is missing after a first attempt to save.
   const [triedToSave, setTriedToSave] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [openSheet, setOpenSheet] = useState<'duenio' | 'fecha' | 'fechaFin' | null>(null);
+  const [openSheet, setOpenSheet] = useState<'duenio' | 'fecha' | 'fechaFin' | 'finDeSerie' | null>(
+    null,
+  );
   const guardar = useGuardarEvento(id);
+  const hoy = useToday();
+  const editando = id !== undefined;
+  const seRepite = formulario.repeticion !== 'ninguna';
 
-  const result = validarFormulario(formulario);
+  const result = validarFormulario(formulario, { hoy, editando });
   const errores = triedToSave && !result.ok ? result.errores : {};
   const opcionDeDuenio = getOpcionDeDuenio(opciones, formulario.duenio);
   const severalDuenios = countOpciones(opciones) > 1;
@@ -312,7 +309,7 @@ function Formulario({ opciones, initial, id, onSaved }: FormularioProps) {
         </View>
 
         <Field error={errores.fechaFin}>
-          <AppText variant="label">
+          <AppText variant="label" color={seRepite ? 'textoTenue' : 'texto'}>
             Fecha de fin{' '}
             <AppText variant="label" weight="regular" color="textoTenue">
               (opcional)
@@ -324,10 +321,14 @@ function Formulario({ opciones, initial, id, onSaved }: FormularioProps) {
               accessibilityLabel={`Fecha de fin: ${
                 formulario.fechaFin ? formatFechaDelCampo(formulario.fechaFin) : 'sin fecha de fin'
               }`}
+              accessibilityState={{ disabled: seRepite }}
+              // A series cannot last several days: one excludes the other.
+              disabled={seRepite}
               onPress={() => setOpenSheet('fechaFin')}
               style={({ pressed }) => [
                 styles.dateBox,
                 styles.endDateBox,
+                seRepite && styles.disabledBox,
                 pressed && styles.pressed,
               ]}
             >
@@ -350,6 +351,11 @@ function Formulario({ opciones, initial, id, onSaved }: FormularioProps) {
               />
             )}
           </View>
+          {seRepite && (
+            <AppText variant="chico" style={styles.hint}>
+              Un evento que se repite no puede durar varios días.
+            </AppText>
+          )}
         </Field>
 
         <TextField
@@ -375,6 +381,29 @@ function Formulario({ opciones, initial, id, onSaved }: FormularioProps) {
         error={errores.enfasis}
       />
 
+      <SelectorDeRepeticion
+        fecha={formulario.fecha ?? hoy}
+        repeticion={formulario.repeticion}
+        finDeSerie={formulario.finDeSerie}
+        tieneFechaFin={formulario.fechaFin !== null && formulario.fechaFin !== formulario.fecha}
+        editando={editando}
+        errorDeRepeticion={errores.repeticion}
+        errorDeHasta={errores.finDeSerie}
+        onChangeRepeticion={(repeticion) =>
+          update({
+            repeticion,
+            // "Hasta" is suggested a year after the first date, and can be shortened.
+            finDeSerie:
+              repeticion === 'ninguna' ||
+              formulario.finDeSerie !== null ||
+              formulario.fecha === null
+                ? formulario.finDeSerie
+                : getHastaSugerido(formulario.fecha),
+          })
+        }
+        onOpenHasta={() => setOpenSheet('finDeSerie')}
+      />
+
       {(saveError !== null || (triedToSave && !result.ok)) && (
         <View accessibilityRole="alert" style={styles.banner}>
           <AppText weight="semibold" color="peligro">
@@ -397,6 +426,16 @@ function Formulario({ opciones, initial, id, onSaved }: FormularioProps) {
         selected={formulario.duenio}
         onSelect={(duenio) => {
           update({ duenio });
+          setOpenSheet(null);
+        }}
+        onClose={() => setOpenSheet(null)}
+      />
+      <HojaDeFecha
+        visible={openSheet === 'finDeSerie'}
+        title="Hasta"
+        selected={formulario.finDeSerie ?? formulario.fecha}
+        onSelect={(finDeSerie) => {
+          update({ finDeSerie });
           setOpenSheet(null);
         }}
         onClose={() => setOpenSheet(null)}
@@ -537,6 +576,9 @@ const styles = StyleSheet.create({
   },
   endDateBox: {
     flex: 1,
+  },
+  disabledBox: {
+    backgroundColor: DISABLED_FIELD_COLOR,
   },
   clearButton: {
     minHeight: accesibilidad.alturaCampo,

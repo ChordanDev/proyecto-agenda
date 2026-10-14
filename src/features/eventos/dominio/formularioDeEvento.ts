@@ -1,8 +1,9 @@
-import { formatTime } from '@/features/calendario/dominio/calendarioTexts';
+import { formatLongDate, formatTime } from '@/features/calendario/dominio/calendarioTexts';
 import { getWeekday, parseLocalDate } from '@/features/calendario/dominio/localDate';
 
 import { getCategoria, type Categoria } from './categoria';
 import type { Duenio, Enfasis, Evento, Repeticion } from './evento';
+import { getFechasDeSerie, getTopeDeHasta } from './repeticion';
 
 /**
  * What the form of an evento holds while it is filled in. Texts are kept as
@@ -18,13 +19,26 @@ export type FormularioDeEvento = {
   hora: string;
   /** Last day of an evento of several days; null for one day. A date only, no hora. */
   fechaFin: string | null;
+  /** A series cannot last several days: one excludes the other. */
+  repeticion: Repeticion;
+  /** "Hasta": the last day the series can have a date on. Only used when it repeats. */
+  finDeSerie: string | null;
   lugar: string;
   descripcion: string;
   /** One of the four enfasis or `R` for the actividad regular; null until one is chosen. */
   categoria: Categoria | null;
 };
 
-export type CampoDelFormulario = 'titulo' | 'duenio' | 'fecha' | 'hora' | 'fechaFin' | 'enfasis';
+export type CampoDelFormulario =
+  'titulo' | 'duenio' | 'fecha' | 'hora' | 'fechaFin' | 'repeticion' | 'finDeSerie' | 'enfasis';
+
+/** What the rules of "Hasta" need besides the form. */
+export type ContextoDelFormulario = {
+  /** Today, by the clock of the phone. */
+  hoy: string;
+  /** Whether an existing evento is being edited: editing renews a series. */
+  editando: boolean;
+};
 
 /** An evento ready to be saved, with every date it has. */
 export type EventoAGuardar = Omit<Evento, 'id' | 'iglesiasSumadas'> & {
@@ -78,11 +92,15 @@ function optionalText(text: string): string | null {
 }
 
 /**
- * Checks the form and, when nothing is missing, gives the evento to save.
- * Title, duenio, fecha, hora and one of the five options of enfasis are
- * required; every missing one is told at once, so the person fixes them all.
+ * Checks the form and, when nothing is missing, gives the evento to save with
+ * all its dates. Title, duenio, fecha, hora and one of the five options of
+ * enfasis are required, and a series needs its "Hasta"; every problem is told
+ * at once, so the person fixes them all.
  */
-export function validarFormulario(formulario: FormularioDeEvento): ResultadoDelFormulario {
+export function validarFormulario(
+  formulario: FormularioDeEvento,
+  contexto: ContextoDelFormulario,
+): ResultadoDelFormulario {
   const titulo = formulario.titulo.trim();
   const hora = parseHora(formulario.hora);
   const errores: Partial<Record<CampoDelFormulario, string>> = {};
@@ -107,6 +125,23 @@ export function validarFormulario(formulario: FormularioDeEvento): ResultadoDelF
   ) {
     errores.fechaFin = 'La fecha de fin no puede ser anterior a la de inicio.';
   }
+  // An end on the first day is an evento of one day.
+  const fechaFin = formulario.fechaFin === formulario.fecha ? null : formulario.fechaFin;
+  const seRepite = formulario.repeticion !== 'ninguna';
+  if (seRepite && fechaFin !== null) {
+    errores.repeticion = 'Un evento que se repite no puede durar varios días.';
+  }
+  if (seRepite && formulario.finDeSerie === null) {
+    errores.finDeSerie = 'Elegí hasta cuándo se repite.';
+  }
+  if (seRepite && formulario.fecha !== null && formulario.finDeSerie !== null) {
+    const tope = getTopeDeHasta({ fecha: formulario.fecha, ...contexto });
+    if (formulario.finDeSerie < formulario.fecha) {
+      errores.finDeSerie = '"Hasta" no puede ser anterior a la primera fecha.';
+    } else if (formulario.finDeSerie > tope) {
+      errores.finDeSerie = `"Hasta" puede ser, como máximo, el ${formatLongDate(tope)}.`;
+    }
+  }
   if (formulario.categoria === null) {
     errores.enfasis = 'Elegí un énfasis o "Actividad regular".';
   }
@@ -121,7 +156,7 @@ export function validarFormulario(formulario: FormularioDeEvento): ResultadoDelF
     return { ok: false, errores };
   }
 
-  const repeticion: Repeticion = 'ninguna';
+  const finDeSerie = seRepite ? formulario.finDeSerie : null;
 
   return {
     ok: true,
@@ -132,11 +167,11 @@ export function validarFormulario(formulario: FormularioDeEvento): ResultadoDelF
       enfasis: ENFASIS_OF_CATEGORIA[formulario.categoria],
       duenio: formulario.duenio,
       hora,
-      // An end on the first day is an evento of one day.
-      fechaFin: formulario.fechaFin === formulario.fecha ? null : formulario.fechaFin,
-      repeticion,
-      finDeSerie: null,
-      fechas: [formulario.fecha],
+      fechaFin,
+      repeticion: formulario.repeticion,
+      finDeSerie,
+      // A series is saved with each of its dates, one row each.
+      fechas: getFechasDeSerie(formulario.fecha, formulario.repeticion, finDeSerie),
     },
   };
 }
@@ -153,6 +188,8 @@ export function formularioVacio(duenio: Duenio | null, fecha: string | null): Fo
     fecha,
     hora: '',
     fechaFin: null,
+    repeticion: 'ninguna',
+    finDeSerie: null,
     lugar: '',
     descripcion: '',
     categoria: null,
@@ -167,9 +204,12 @@ export function formularioDesdeEvento(
   return {
     titulo: evento.titulo,
     duenio: evento.duenio,
+    // A series is edited from its first date: saving it generates them all again.
     fecha: fechas[0] ?? null,
     hora: formatTime(evento.hora),
     fechaFin: evento.fechaFin,
+    repeticion: evento.repeticion,
+    finDeSerie: evento.finDeSerie,
     lugar: evento.lugar ?? '',
     descripcion: evento.descripcion ?? '',
     categoria: getCategoria(evento.enfasis),
@@ -197,9 +237,4 @@ export function formatFechaDelCampo(fecha: string): string {
   const { year, month, day } = parseLocalDate(fecha);
 
   return `${SHORT_WEEKDAYS[getWeekday(fecha)]} ${day} ${SHORT_MONTHS[month - 1]} ${year}`;
-}
-
-/** This form saves one date and its end: a series would lose its other dates. */
-export function seEditaEnElFormulario(evento: Evento): boolean {
-  return evento.repeticion === 'ninguna';
 }

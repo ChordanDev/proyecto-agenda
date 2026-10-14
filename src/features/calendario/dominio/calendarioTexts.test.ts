@@ -2,6 +2,7 @@ import {
   formatActualizado,
   formatDayHeading,
   formatEventosCount,
+  formatLongDate,
   formatMonthTitle,
   formatTime,
   formatTimeAndPlace,
@@ -180,5 +181,12 @@ describe('formatTimeAndPlaceDelDia', () => {
     expect(formatTimeAndPlaceDelDia({ ...evento, lugar: null }, { numero: 3, total: 3 })).toBe(
       'Día 3 de 3',
     );
+  });
+});
+
+describe('formatLongDate', () => {
+  it('writes the day, the month and the year', () => {
+    expect(formatLongDate('2027-10-17')).toBe('17 de octubre de 2027');
+    expect(formatLongDate('2027-01-01')).toBe('1 de enero de 2027');
   });
 });
