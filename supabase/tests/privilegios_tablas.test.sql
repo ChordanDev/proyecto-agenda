@@ -25,7 +25,7 @@ select plan(36);
 select is(
   coalesce((
     select array_agg(p order by p)
-    from unnest(array['DELETE','INSERT','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
     where has_table_privilege('anon', 'public.asociaciones', p)
   ), array[]::text[]),
   array['SELECT']::text[],
@@ -35,7 +35,7 @@ select is(
 select is(
   coalesce((
     select array_agg(p order by p)
-    from unnest(array['DELETE','INSERT','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
     where has_table_privilege('anon', 'public.distritos', p)
   ), array[]::text[]),
   array['SELECT']::text[],
@@ -45,7 +45,7 @@ select is(
 select is(
   coalesce((
     select array_agg(p order by p)
-    from unnest(array['DELETE','INSERT','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
     where has_table_privilege('anon', 'public.iglesias', p)
   ), array[]::text[]),
   array['SELECT']::text[],
@@ -55,7 +55,7 @@ select is(
 select is(
   coalesce((
     select array_agg(p order by p)
-    from unnest(array['DELETE','INSERT','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
     where has_table_privilege('anon', 'public.eventos', p)
   ), array[]::text[]),
   array['SELECT']::text[],
@@ -65,7 +65,7 @@ select is(
 select is(
   coalesce((
     select array_agg(p order by p)
-    from unnest(array['DELETE','INSERT','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
     where has_table_privilege('anon', 'public.eventos_fechas', p)
   ), array[]::text[]),
   array['SELECT']::text[],
@@ -75,7 +75,7 @@ select is(
 select is(
   coalesce((
     select array_agg(p order by p)
-    from unnest(array['DELETE','INSERT','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
     where has_table_privilege('anon', 'public.iglesias_sumadas', p)
   ), array[]::text[]),
   array['SELECT']::text[],
@@ -85,7 +85,7 @@ select is(
 select is(
   coalesce((
     select array_agg(p order by p)
-    from unnest(array['DELETE','INSERT','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
     where has_table_privilege('anon', 'public.cargos', p)
   ), array[]::text[]),
   array[]::text[],
@@ -95,7 +95,7 @@ select is(
 select is(
   coalesce((
     select array_agg(p order by p)
-    from unnest(array['DELETE','INSERT','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
     where has_table_privilege('authenticated', 'public.asociaciones', p)
   ), array[]::text[]),
   array['SELECT']::text[],
@@ -105,7 +105,7 @@ select is(
 select is(
   coalesce((
     select array_agg(p order by p)
-    from unnest(array['DELETE','INSERT','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
     where has_table_privilege('authenticated', 'public.distritos', p)
   ), array[]::text[]),
   array['SELECT']::text[],
@@ -115,7 +115,7 @@ select is(
 select is(
   coalesce((
     select array_agg(p order by p)
-    from unnest(array['DELETE','INSERT','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
     where has_table_privilege('authenticated', 'public.iglesias', p)
   ), array[]::text[]),
   array['SELECT']::text[],
@@ -125,7 +125,7 @@ select is(
 select is(
   coalesce((
     select array_agg(p order by p)
-    from unnest(array['DELETE','INSERT','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
     where has_table_privilege('authenticated', 'public.eventos', p)
   ), array[]::text[]),
   array['DELETE', 'INSERT', 'SELECT', 'UPDATE']::text[],
@@ -135,7 +135,7 @@ select is(
 select is(
   coalesce((
     select array_agg(p order by p)
-    from unnest(array['DELETE','INSERT','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
     where has_table_privilege('authenticated', 'public.eventos_fechas', p)
   ), array[]::text[]),
   array['DELETE', 'INSERT', 'SELECT', 'UPDATE']::text[],
@@ -145,7 +145,7 @@ select is(
 select is(
   coalesce((
     select array_agg(p order by p)
-    from unnest(array['DELETE','INSERT','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
     where has_table_privilege('authenticated', 'public.iglesias_sumadas', p)
   ), array[]::text[]),
   array['SELECT']::text[],
@@ -155,7 +155,7 @@ select is(
 select is(
   coalesce((
     select array_agg(p order by p)
-    from unnest(array['DELETE','INSERT','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
     where has_table_privilege('authenticated', 'public.cargos', p)
   ), array[]::text[]),
   array['SELECT']::text[],

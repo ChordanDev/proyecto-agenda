@@ -1,10 +1,11 @@
 -- Take the default table privileges away from the API roles.
 --
 -- Supabase gives every privilege (select, insert, update, delete, truncate,
--- references, trigger) on each new table to anon and authenticated. Until now
--- only row level security stood between the API and a bad write, and it does
--- not apply to truncate. This gives each role on each table only what the app
--- needs, so a policy written wrong is not the only barrier.
+-- references, trigger, and maintain since Postgres 17) on each new table to
+-- anon and authenticated. Until now only row level security stood between the
+-- API and a bad write, and it does not apply to truncate. This gives each role
+-- on each table only what the app needs, so a policy written wrong is not the
+-- only barrier.
 --
 -- Already merged migrations are not edited: cargos already did this for
 -- itself, and this migration does it for the other six tables.
