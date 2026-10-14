@@ -89,8 +89,8 @@ describe('getTopeDeHasta', () => {
 });
 
 describe('getOpcionesDeRepeticion', () => {
-  it('offers not repeating, or every week on the weekday of the fecha', () => {
-    expect(getOpcionesDeRepeticion('2026-10-17')).toEqual([
+  it('offers not repeating, or every week on the weekday of the fecha, first', () => {
+    expect(getOpcionesDeRepeticion('2026-10-17').slice(0, 2)).toEqual([
       { repeticion: 'ninguna', label: 'No se repite' },
       { repeticion: 'semanal', label: 'Cada semana, los sábados' },
     ]);
@@ -135,5 +135,89 @@ describe('formatRepeticionDelDetalle', () => {
 describe('formatHasta', () => {
   it('says until when a series repeats', () => {
     expect(formatHasta('2027-10-17')).toBe('Hasta el 17 de octubre de 2027');
+  });
+});
+
+describe('a monthly series', () => {
+  it('repeats on the same weekday and position of each month, never on the same day number', () => {
+    // 2026-10-17 is the third Saturday of October.
+    expect(getFechasDeSerie('2026-10-17', 'mensual', '2027-01-31')).toEqual([
+      '2026-10-17',
+      '2026-11-21',
+      '2026-12-19',
+      '2027-01-16',
+    ]);
+  });
+
+  it('knows the first, second and fourth positions', () => {
+    expect(getFechasDeSerie('2026-10-03', 'mensual', '2026-12-31')).toEqual([
+      '2026-10-03',
+      '2026-11-07',
+      '2026-12-05',
+    ]);
+    expect(getFechasDeSerie('2026-10-13', 'mensual', '2026-12-31')).toEqual([
+      '2026-10-13',
+      '2026-11-10',
+      '2026-12-08',
+    ]);
+    expect(getFechasDeSerie('2026-10-24', 'mensual', '2026-12-31')).toEqual([
+      '2026-10-24',
+      '2026-11-28',
+      '2026-12-26',
+    ]);
+  });
+
+  it('takes a fifth weekday as the last one, in months of four and of five such weekdays', () => {
+    // 2026-10-31 is the fifth Saturday of October. November has four Saturdays
+    // (the last on the 28th) and January 2027 five (the last on the 30th).
+    expect(getFechasDeSerie('2026-10-31', 'mensual', '2027-01-31')).toEqual([
+      '2026-10-31',
+      '2026-11-28',
+      '2026-12-26',
+      '2027-01-30',
+    ]);
+  });
+
+  it('does not skip a month when the fifth one does not exist', () => {
+    // The fifth Thursday of October 2026 is the 29th; February 2027 has four.
+    const fechas = getFechasDeSerie('2026-10-29', 'mensual', '2027-03-31');
+
+    expect(fechas).toEqual([
+      '2026-10-29',
+      '2026-11-26',
+      '2026-12-31',
+      '2027-01-28',
+      '2027-02-25',
+      '2027-03-25',
+    ]);
+  });
+
+  it('leaves out a month whose date falls after "Hasta"', () => {
+    expect(getFechasDeSerie('2026-10-17', 'mensual', '2026-12-18')).toEqual([
+      '2026-10-17',
+      '2026-11-21',
+    ]);
+  });
+
+  it('has 13 dates in a year', () => {
+    expect(getFechasDeSerie('2026-10-17', 'mensual', '2027-10-17')).toHaveLength(13);
+  });
+
+  it('is offered with the position of the fecha in words', () => {
+    expect(getOpcionesDeRepeticion('2026-10-17')[2]).toEqual({
+      repeticion: 'mensual',
+      label: 'Cada mes, el tercer sábado',
+    });
+    expect(getOpcionesDeRepeticion('2026-10-01')[2].label).toBe('Cada mes, el primer jueves');
+    expect(getOpcionesDeRepeticion('2026-10-31')[2].label).toBe('Cada mes, el último sábado');
+  });
+
+  it('is explained with words', () => {
+    expect(formatFraseDeRepeticion('mensual', '2026-10-17', '2027-10-17')).toBe(
+      'Se repite el tercer sábado de cada mes, hasta el 17 de octubre de 2027.',
+    );
+    expect(formatRepeticionDelDetalle('mensual', '2026-10-31')).toBe(
+      'El último sábado de cada mes',
+    );
   });
 });
