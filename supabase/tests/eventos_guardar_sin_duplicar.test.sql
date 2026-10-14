@@ -13,7 +13,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(9);
+select plan(11);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -125,6 +125,27 @@ select throws_ok(
     repeticion => 'ninguna',
     fechas => array['2026-12-05']::date[]) $$,
   'P0002', null, 'the id of an evento of another iglesia does not let the encargado edit it'
+);
+
+-- Allowed: with both ids, evento_id decides: it edits that evento and creates none.
+select is(
+  public.guardar_evento(
+    evento_id => 'eeeeeeee-0000-4000-8000-000000000010',
+    nuevo_evento_id => 'eeeeeeee-0000-4000-8000-000000000011',
+    titulo => 'Culto joven (editado)',
+    alcance => 'iglesia',
+    duenio_iglesia_id => '11111111-0000-4000-8000-000000000001',
+    hora => '19:00',
+    repeticion => 'ninguna',
+    fechas => array['2026-12-19']::date[]),
+  'eeeeeeee-0000-4000-8000-000000000010'::uuid,
+  'with both ids, the edit goes to evento_id'
+);
+select results_eq(
+  $$ select id, titulo from public.eventos
+     where id in ('eeeeeeee-0000-4000-8000-000000000010', 'eeeeeeee-0000-4000-8000-000000000011') $$,
+  $$ values ('eeeeeeee-0000-4000-8000-000000000010'::uuid, 'Culto joven (editado)') $$,
+  'with both ids, nuevo_evento_id creates nothing'
 );
 
 reset role;
