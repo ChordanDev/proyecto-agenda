@@ -82,7 +82,7 @@ function selectFechas(ownedOrSumada: string | null) {
  *
  * An evento of several days that started before the month and reaches it is
  * returned too, with its real first day as `fecha` (so it can be earlier than
- * the month). Expanding an evento into each of its days belongs to issue #34.
+ * the month). `expandirDias` puts it on each of its days.
  */
 export async function getFechasDelMes(
   ownedOrSumada: string | null,

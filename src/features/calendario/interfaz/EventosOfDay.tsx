@@ -11,10 +11,11 @@ import type { Calendario } from '../datos/getFechasDelMes';
 import {
   formatDayHeading,
   formatEventosCount,
-  formatTimeAndPlace,
+  formatTimeAndPlaceDelDia,
   getAlcanceLabel,
 } from '../dominio/calendarioTexts';
-import { getEventosOfDay } from '../dominio/dayOfCalendario';
+import { getEventosDelDia } from '../dominio/dayOfCalendario';
+import type { DiaDelRango } from '../dominio/diasDeEvento';
 
 // Layout of the approved mockup, which the theme has no tokens for. The line
 // numbers are those of diseno/pantallas/04a-calendario.html.
@@ -59,7 +60,7 @@ type EventosOfDayProps = {
 /** The heading of the selected day and, under it, its eventos ordered by hora. */
 export function EventosOfDay({ date, calendario, failed, onRetry }: EventosOfDayProps) {
   const router = useRouter();
-  const eventos = calendario ? getEventosOfDay(calendario.fechas, date) : [];
+  const eventos = calendario ? getEventosDelDia(calendario.fechas, date) : [];
 
   const renderEventos = () => {
     if (calendario === undefined) {
@@ -90,10 +91,11 @@ export function EventosOfDay({ date, calendario, failed, onRetry }: EventosOfDay
     }
     return (
       <View style={styles.list}>
-        {eventos.map((evento) => (
+        {eventos.map(({ evento, diaDelRango }) => (
           <EventoRow
             key={evento.id}
             evento={evento}
+            diaDelRango={diaDelRango}
             alcanceLabel={getAlcanceLabel(evento.duenio, calendario.nombresDeDistritos)}
             // The date goes along: a series has several, and the detail shows this one.
             onPress={() =>
@@ -130,6 +132,8 @@ export function EventosOfDay({ date, calendario, failed, onRetry }: EventosOfDay
 
 type EventoRowProps = {
   evento: Evento;
+  /** The day of its range, for an evento of several days. */
+  diaDelRango: DiaDelRango | null;
   /** Where the evento comes from when it is not of the iglesia, or null. */
   alcanceLabel: string | null;
   /** Opens the detail of the evento. */
@@ -137,8 +141,8 @@ type EventoRowProps = {
 };
 
 /** An evento of the list, which opens its detail. */
-function EventoRow({ evento, alcanceLabel, onPress }: EventoRowProps) {
-  const timeAndPlace = formatTimeAndPlace(evento);
+function EventoRow({ evento, diaDelRango, alcanceLabel, onPress }: EventoRowProps) {
+  const timeAndPlace = formatTimeAndPlaceDelDia(evento, diaDelRango);
   const lema = getLema(evento.enfasis);
 
   return (

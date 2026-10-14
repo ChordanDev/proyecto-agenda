@@ -1,4 +1,5 @@
 import { formatDayHeading, formatTime } from '@/features/calendario/dominio/calendarioTexts';
+import { daysBetween } from '@/features/calendario/dominio/localDate';
 import { categorias } from '@/shared/theme';
 
 import { getCategoria } from './categoria';
@@ -7,6 +8,17 @@ import type { Duenio, Enfasis } from './evento';
 /** The row "Fecha y hora" of the detail: "Sábado 10 de octubre · 19:00". */
 export function formatFechaYHora(fecha: string, hora: string): string {
   return `${formatDayHeading(fecha)} · ${formatTime(hora)}`;
+}
+
+/**
+ * Under "Fecha y hora" of an evento of several days: until when it lasts and
+ * how many days, "Hasta el domingo 1 de noviembre · 3 días".
+ */
+export function formatFechaFin(fecha: string, fechaFin: string): string {
+  const heading = formatDayHeading(fechaFin);
+  const days = daysBetween(fecha, fechaFin) + 1;
+
+  return `Hasta el ${heading.charAt(0).toLowerCase()}${heading.slice(1)} · ${days} días`;
 }
 
 /**

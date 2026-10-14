@@ -1,5 +1,6 @@
 import type { Duenio, Evento } from '@/features/eventos/dominio/evento';
 
+import type { DiaDelRango } from './diasDeEvento';
 import type { Month } from './getMonthRange';
 import { getWeekday, parseLocalDate } from './localDate';
 
@@ -59,6 +60,25 @@ export function formatTimeAndPlace({ hora, lugar }: Pick<Evento, 'hora' | 'lugar
   const time = formatTime(hora);
 
   return lugar ? `${time} · ${lugar}` : time;
+}
+
+/**
+ * The second line of an evento in the list of a day. An evento of several
+ * days says which day of its range this is ("Día 2 de 3"); only its first day
+ * carries the hora, the one it starts at.
+ */
+export function formatTimeAndPlaceDelDia(
+  evento: Pick<Evento, 'hora' | 'lugar'>,
+  diaDelRango: DiaDelRango | null,
+): string {
+  if (diaDelRango === null) {
+    return formatTimeAndPlace(evento);
+  }
+
+  const dia = `Día ${diaDelRango.numero} de ${diaDelRango.total}`;
+  const rest = diaDelRango.numero === 1 ? formatTimeAndPlace(evento) : evento.lugar;
+
+  return rest ? `${dia} · ${rest}` : dia;
 }
 
 /**

@@ -14,6 +14,7 @@ import { getCategoria } from '../dominio/categoria';
 import { getMensajeDeError } from '../dominio/errorDeEscritura';
 import { seEditaEnElFormulario } from '../dominio/formularioDeEvento';
 import {
+  formatFechaFin,
   formatFechaYHora,
   getDuenioDelDetalle,
   getEnfasisDelDetalle,
@@ -152,6 +153,9 @@ function Detalle({ detallado, fecha, onDeleted }: DetalleProps) {
             icon: <CalendarIcon />,
             label: 'Fecha y hora',
             value: formatFechaYHora(fechaShown, evento.hora),
+            ...(evento.fechaFin !== null && {
+              detail: formatFechaFin(fechaShown, evento.fechaFin),
+            }),
           },
         ]),
     ...(hasText(evento.lugar)

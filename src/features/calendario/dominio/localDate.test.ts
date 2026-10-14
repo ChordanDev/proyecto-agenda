@@ -1,4 +1,4 @@
-import { getWeekday, parseLocalDate, toLocalDate } from './localDate';
+import { addDays, daysBetween, getWeekday, parseLocalDate, toLocalDate } from './localDate';
 
 describe('toLocalDate', () => {
   it('writes a date as YYYY-MM-DD', () => {
@@ -58,5 +58,43 @@ describe('getWeekday', () => {
   it('counts February 29 in a century divisible by 400', () => {
     expect(getWeekday('2000-01-01')).toBe(6);
     expect(getWeekday('2000-03-01')).toBe(3);
+  });
+});
+
+describe('addDays', () => {
+  it('moves a date forward and back inside a month', () => {
+    expect(addDays('2026-10-10', 3)).toBe('2026-10-13');
+    expect(addDays('2026-10-10', -3)).toBe('2026-10-07');
+    expect(addDays('2026-10-10', 0)).toBe('2026-10-10');
+  });
+
+  it('crosses the end of a month and of a year', () => {
+    expect(addDays('2026-10-30', 3)).toBe('2026-11-02');
+    expect(addDays('2026-12-31', 1)).toBe('2027-01-01');
+    expect(addDays('2027-01-01', -1)).toBe('2026-12-31');
+  });
+
+  it('counts February 29 only in a leap year', () => {
+    expect(addDays('2028-02-28', 1)).toBe('2028-02-29');
+    expect(addDays('2027-02-28', 1)).toBe('2027-03-01');
+  });
+
+  it('moves a whole year', () => {
+    expect(addDays('2026-10-17', 365)).toBe('2027-10-17');
+  });
+});
+
+describe('daysBetween', () => {
+  it('counts the days from one date to another', () => {
+    expect(daysBetween('2026-10-30', '2026-11-01')).toBe(2);
+    expect(daysBetween('2026-10-10', '2026-10-10')).toBe(0);
+  });
+
+  it('is negative when the second date comes first', () => {
+    expect(daysBetween('2026-11-01', '2026-10-30')).toBe(-2);
+  });
+
+  it('counts across a leap year', () => {
+    expect(daysBetween('2028-01-01', '2029-01-01')).toBe(366);
   });
 });

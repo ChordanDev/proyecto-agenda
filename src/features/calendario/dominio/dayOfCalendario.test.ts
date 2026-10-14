@@ -1,7 +1,7 @@
 import type { Evento } from '@/features/eventos/dominio/evento';
 
 import type { FechaDeEvento } from './armarCalendario';
-import { getDayMarkers, getEventosOfDay } from './dayOfCalendario';
+import { getDayMarkers, getEventosDelDia, getEventosOfDay } from './dayOfCalendario';
 
 function fecha(fechaLocal: string, overrides: Partial<Evento> = {}): FechaDeEvento {
   return {
@@ -58,13 +58,6 @@ describe('getEventosOfDay', () => {
     expect(getEventosOfDay(calendario, '2026-10-08')).toEqual([]);
   });
 
-  it('shows an evento of several days on its first day only', () => {
-    const congreso = fecha('2026-10-24', { titulo: 'Congreso', fechaFin: '2026-10-25' });
-
-    expect(getEventosOfDay([congreso], '2026-10-24')).toEqual([congreso.evento]);
-    expect(getEventosOfDay([congreso], '2026-10-25')).toEqual([]);
-  });
-
   it('gives nothing for a day without eventos', () => {
     expect(getEventosOfDay([], '2026-10-10')).toEqual([]);
   });
@@ -117,5 +110,45 @@ describe('getDayMarkers', () => {
 
   it('gives no marker to a day without eventos', () => {
     expect(getDayMarkers([], '2026-10-06')).toEqual([]);
+  });
+});
+
+describe('an evento of several days', () => {
+  const congreso = fecha('2026-10-30', {
+    titulo: 'Congreso de Jóvenes',
+    enfasis: 'nuevas_generaciones',
+    hora: '19:00:00',
+    fechaFin: '2026-11-01',
+  });
+
+  it('is in the list of each day of its range', () => {
+    expect(titulos(getEventosOfDay([congreso], '2026-10-30'))).toEqual(['Congreso de Jóvenes']);
+    expect(titulos(getEventosOfDay([congreso], '2026-10-31'))).toEqual(['Congreso de Jóvenes']);
+    expect(titulos(getEventosOfDay([congreso], '2026-11-01'))).toEqual(['Congreso de Jóvenes']);
+    expect(getEventosOfDay([congreso], '2026-11-02')).toEqual([]);
+  });
+
+  it('says which day of the range each day is', () => {
+    expect(getEventosDelDia([congreso], '2026-10-31')).toEqual([
+      { evento: congreso.evento, diaDelRango: { numero: 2, total: 3 } },
+    ]);
+  });
+
+  it('marks each day of its range with its enfasis', () => {
+    expect(getDayMarkers([congreso], '2026-11-01')).toEqual(['I']);
+  });
+
+  it('is ordered by hora among the eventos of a day it did not start on', () => {
+    const calendario = [
+      congreso,
+      fecha('2026-10-31', { titulo: 'Escuela Sabática', hora: '09:30:00' }),
+      fecha('2026-10-31', { titulo: 'Concierto', hora: '20:00:00' }),
+    ];
+
+    expect(titulos(getEventosOfDay(calendario, '2026-10-31'))).toEqual([
+      'Escuela Sabática',
+      'Congreso de Jóvenes',
+      'Concierto',
+    ]);
   });
 });
