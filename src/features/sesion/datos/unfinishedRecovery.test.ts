@@ -11,6 +11,7 @@ const mockVerifyOtp = jest.fn();
 const mockUpdateUser = jest.fn();
 const mockSignOut = jest.fn();
 const mockGetSession = jest.fn();
+const mockRemoveStoredSession = jest.fn();
 
 jest.mock('@/shared/supabase', () => ({
   supabase: {
@@ -21,6 +22,15 @@ jest.mock('@/shared/supabase', () => ({
       getSession: () => mockGetSession(),
     },
   },
+  // The session the code opened, valid for an hour.
+  authStorage: {
+    getItem: () =>
+      Promise.resolve(
+        JSON.stringify({ refresh_token: 'r', expires_at: Math.floor(Date.now() / 1000) + 3600 }),
+      ),
+    removeItem: (key: string) => mockRemoveStoredSession(key),
+  },
+  AUTH_STORAGE_KEY: 'sb-test-auth-token',
 }));
 
 const CODE = { email: 'marta@correo.com', code: '482015' };
@@ -32,6 +42,7 @@ beforeEach(async () => {
   mockUpdateUser.mockReset().mockResolvedValue({ error: null });
   mockSignOut.mockReset().mockResolvedValue({ error: null });
   mockGetSession.mockReset().mockResolvedValue({ data: { session: null }, error: null });
+  mockRemoveStoredSession.mockReset().mockResolvedValue(undefined);
 });
 
 describe('discardUnfinishedRecovery', () => {
@@ -41,6 +52,7 @@ describe('discardUnfinishedRecovery', () => {
     await discardUnfinishedRecovery();
 
     expect(mockSignOut).toHaveBeenCalledWith({ scope: 'local' });
+    expect(mockRemoveStoredSession).toHaveBeenCalledWith('sb-test-auth-token');
   });
 
   it('keeps the session once the password was chosen', async () => {
