@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   BackHandler,
   Keyboard,
@@ -13,8 +13,12 @@ import {
 import { accesibilidad, colors, fonts, radius, spacing } from '@/shared/theme';
 import { AppText, BackButton, Button, ScreenBackground, TextField } from '@/shared/ui';
 
-import { useSignOut } from '../datos/useLeaveSesion';
-import { useChoosePassword, useSendCode, useVerifyCode } from '../datos/usePasswordRecovery';
+import {
+  useAbandonRecovery,
+  useChoosePassword,
+  useSendCode,
+  useVerifyCode,
+} from '../datos/usePasswordRecovery';
 import {
   normalizeCode,
   validateCode,
@@ -85,7 +89,7 @@ export function PasswordRecoveryScreen() {
   const sendCode = useSendCode();
   const verifyCode = useVerifyCode();
   const choosePassword = useChoosePassword();
-  const signOut = useSignOut();
+  const abandon = useAbandonRecovery();
   const [step, setStep] = useState<PasswordRecoveryStep>('email');
   const [email, setEmail] = useState('');
   const [sentTo, setSentTo] = useState('');
@@ -94,6 +98,22 @@ export function PasswordRecoveryScreen() {
   const [passwordShown, setPasswordShown] = useState(true);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [resent, setResent] = useState(false);
+  // From a right code until the password is stored, the usuario is signed in
+  // without a password. Leaving the screen in between, by any way (a swipe
+  // back, a closed screen), signs them out. Closing the app is handled when it
+  // opens again (discardUnfinishedRecovery).
+  const signedInByCode = useRef(false);
+
+  useEffect(
+    () => () => {
+      if (signedInByCode.current) {
+        abandon.mutate();
+      }
+    },
+    // Only on leaving: `abandon` keeps working after the screen is gone.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   const mutations = { email: sendCode, code: verifyCode, password: choosePassword };
   const current = mutations[step];
@@ -101,7 +121,7 @@ export function PasswordRecoveryScreen() {
   const serviceError = current.error ?? (step === 'code' ? sendCode.error : null);
   const error = fieldError ?? serviceError?.message ?? null;
   const busy =
-    current.isPending || sendCode.isPending || signOut.isPending || choosePassword.isSuccess;
+    current.isPending || sendCode.isPending || abandon.isPending || choosePassword.isSuccess;
 
   const clearErrors = () => {
     setFieldError(null);
@@ -143,7 +163,8 @@ export function PasswordRecoveryScreen() {
       return true;
     }
     if (step === 'password') {
-      signOut.mutate(undefined, { onSettled: () => goToStep('email') });
+      signedInByCode.current = false;
+      abandon.mutate(undefined, { onSettled: () => goToStep('email') });
     } else if (step === 'code') {
       setCode('');
       goToStep('email');
@@ -193,7 +214,12 @@ export function PasswordRecoveryScreen() {
       }
       verifyCode.mutate(
         { email: sentTo, code: checked.value },
-        { onSuccess: () => goToStep('password') },
+        {
+          onSuccess: () => {
+            signedInByCode.current = true;
+            goToStep('password');
+          },
+        },
       );
     } else {
       const checked = validatePassword(password);
@@ -201,7 +227,12 @@ export function PasswordRecoveryScreen() {
         setFieldError(checked.message);
         return;
       }
-      choosePassword.mutate(checked.value, { onSuccess: goToCalendario });
+      choosePassword.mutate(checked.value, {
+        onSuccess: () => {
+          signedInByCode.current = false;
+          goToCalendario();
+        },
+      });
     }
   };
 

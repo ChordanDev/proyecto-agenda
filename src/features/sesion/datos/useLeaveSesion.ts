@@ -7,7 +7,7 @@ import { signOut } from './signOut';
  * What the app knows once the session is gone: there is none, and the data of
  * the usuario does not stay behind for whoever signs in next.
  */
-function forgetSesion(queryClient: QueryClient) {
+export function forgetSesion(queryClient: QueryClient) {
   queryClient.setQueryData(['sesion'], false);
   queryClient.removeQueries({ queryKey: ['sesion', 'email'] });
   queryClient.removeQueries({ queryKey: ['cargos'] });

@@ -4,6 +4,7 @@ import {
   getPasswordRecoveryErrorMessage,
   type PasswordRecoveryStep,
 } from '../dominio/passwordRecovery';
+import { markRecoveryFinished, markRecoveryStarted } from './unfinishedRecovery';
 
 /** A failed step of the flow; its message is the one to show the person. */
 export class PasswordRecoveryError extends Error {
@@ -48,12 +49,24 @@ export function sendCode(email: string): Promise<void> {
   return runStep('email', () => supabase.auth.resetPasswordForEmail(email));
 }
 
-/** Checks the code; a right one signs the usuario in, to choose their password. */
-export function verifyCode({ email, code }: { email: string; code: string }): Promise<void> {
-  return runStep('code', () => supabase.auth.verifyOtp({ email, token: code, type: 'recovery' }));
+/**
+ * Checks the code; a right one signs the usuario in, to choose their password.
+ * The flow is marked as unfinished first, so the session cannot outlive it.
+ */
+export async function verifyCode({ email, code }: { email: string; code: string }): Promise<void> {
+  await markRecoveryStarted();
+
+  try {
+    await runStep('code', () => supabase.auth.verifyOtp({ email, token: code, type: 'recovery' }));
+  } catch (error) {
+    // A wrong code opens no session: there is nothing to discard.
+    await markRecoveryFinished();
+    throw error;
+  }
 }
 
 /** Stores the new password of the usuario signed in by the code. */
-export function choosePassword(password: string): Promise<void> {
-  return runStep('password', () => supabase.auth.updateUser({ password }));
+export async function choosePassword(password: string): Promise<void> {
+  await runStep('password', () => supabase.auth.updateUser({ password }));
+  await markRecoveryFinished();
 }

@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { choosePassword, sendCode, verifyCode } from './passwordRecovery';
+import { discardUnfinishedRecovery } from './unfinishedRecovery';
+import { forgetSesion } from './useLeaveSesion';
 
 // Every step talks to the auth service: a failed connection must come back as
 // an error to show, not wait for a network that may not return.
@@ -28,5 +30,20 @@ export function useChoosePassword() {
       // The cargos of whoever was signed in before are not these ones.
       await queryClient.invalidateQueries({ queryKey: ['cargos'] });
     },
+  });
+}
+
+/**
+ * Leaves the flow after the code and before the password: the session the code
+ * opened is signed out, as if the code had never been checked.
+ */
+export function useAbandonRecovery() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: discardUnfinishedRecovery,
+    // Removing the session from the phone needs no connection.
+    networkMode: 'always',
+    onSettled: () => forgetSesion(queryClient),
   });
 }
