@@ -7,8 +7,13 @@ const mockReadEvento = jest.fn();
 jest.mock('@/shared/supabase', () => ({
   supabase: {
     rpc: (...args: unknown[]) => mockRpc(...args),
-    from: () => ({
-      select: () => ({ eq: () => ({ maybeSingle: () => mockReadEvento() }) }),
+    // The read again records what it asks for, so a test can pin it.
+    from: (table: string) => ({
+      select: (columns: string) => ({
+        eq: (column: string, value: string) => ({
+          maybeSingle: () => mockReadEvento({ table, columns, eq: [column, value] }),
+        }),
+      }),
     }),
   },
 }));
@@ -41,6 +46,11 @@ describe('guardarEvento', () => {
     mockReadEvento.mockResolvedValue(GONE);
 
     await expect(guardarEvento(EVENTO, 'e1')).rejects.toMatchObject({ tipo: 'no-existe' });
+    expect(mockReadEvento).toHaveBeenCalledWith({
+      table: 'eventos',
+      columns: 'id',
+      eq: ['id', 'e1'],
+    });
   });
 
   it('tells an evento the cargos do not cover', async () => {
