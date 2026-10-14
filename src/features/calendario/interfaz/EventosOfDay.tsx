@@ -1,4 +1,6 @@
-import { StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Pressable, StyleSheet, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 import { getCategoria, getLema } from '@/features/eventos/dominio/categoria';
 import type { Evento } from '@/features/eventos/dominio/evento';
@@ -33,6 +35,12 @@ const ROW_TITLE_LINE_HEIGHT = 1.3; // line 117
 const ROW_DETAIL_SIZE = 16; // line 118
 // The mockup sets no line height on this text: the one of the font.
 const ROW_DETAIL_LINE_HEIGHT = 22;
+const CHEVRON_SIZE = 20; // line 124
+const CHEVRON_STROKE_WIDTH = 2.4;
+const CHEVRON_COLOR = '#9B9B9B';
+const CHEVRON_MARGIN_TOP = 4;
+// The mockups draw no pressed state; the same value as `Button`.
+const PRESSED_OPACITY = 0.85;
 // The texts of the states the mockup does not draw, as in "Elegir iglesia"
 // (03-elegir-iglesia.html, line 28).
 const PARAGRAPH_SIZE = 16;
@@ -50,6 +58,7 @@ type EventosOfDayProps = {
 
 /** The heading of the selected day and, under it, its eventos ordered by hora. */
 export function EventosOfDay({ date, calendario, failed, onRetry }: EventosOfDayProps) {
+  const router = useRouter();
   const eventos = calendario ? getEventosOfDay(calendario.fechas, date) : [];
 
   const renderEventos = () => {
@@ -86,6 +95,10 @@ export function EventosOfDay({ date, calendario, failed, onRetry }: EventosOfDay
             key={evento.id}
             evento={evento}
             alcanceLabel={getAlcanceLabel(evento.duenio, calendario.nombresDeDistritos)}
+            // The date goes along: a series has several, and the detail shows this one.
+            onPress={() =>
+              router.push({ pathname: '/evento/[id]', params: { id: evento.id, fecha: date } })
+            }
           />
         ))}
       </View>
@@ -119,24 +132,24 @@ type EventoRowProps = {
   evento: Evento;
   /** Where the evento comes from when it is not of the iglesia, or null. */
   alcanceLabel: string | null;
+  /** Opens the detail of the evento. */
+  onPress: () => void;
 };
 
-/**
- * An evento of the list. It opens nothing yet, so it is not a button and has
- * no chevron: the detail of an evento belongs to issue #26.
- */
-function EventoRow({ evento, alcanceLabel }: EventoRowProps) {
+/** An evento of the list, which opens its detail. */
+function EventoRow({ evento, alcanceLabel, onPress }: EventoRowProps) {
   const timeAndPlace = formatTimeAndPlace(evento);
   const lema = getLema(evento.enfasis);
 
   return (
-    <View
-      accessible
+    <Pressable
+      accessibilityRole="button"
       // One stop of the screen reader for the whole evento, in reading order.
       accessibilityLabel={[evento.titulo, timeAndPlace, lema, alcanceLabel]
         .filter((text) => text !== null)
         .join(', ')}
-      style={styles.row}
+      onPress={onPress}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
       <View style={styles.shapeBox}>
         <FormaDeEnfasis categoria={getCategoria(evento.enfasis)} size={SHAPE_SIZE} />
@@ -158,7 +171,22 @@ function EventoRow({ evento, alcanceLabel }: EventoRowProps) {
           )}
         </AppText>
       </View>
-    </View>
+      <Svg
+        width={CHEVRON_SIZE}
+        height={CHEVRON_SIZE}
+        viewBox="0 0 24 24"
+        fill="none"
+        style={styles.chevron}
+      >
+        <Path
+          d="M9 5l7 7-7 7"
+          stroke={CHEVRON_COLOR}
+          strokeWidth={CHEVRON_STROKE_WIDTH}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    </Pressable>
   );
 }
 
@@ -200,6 +228,12 @@ const styles = StyleSheet.create({
     // Under every row, the last one included, as the mockup draws it.
     borderBottomWidth: 1,
     borderBottomColor: colors.separador,
+  },
+  pressed: {
+    opacity: PRESSED_OPACITY,
+  },
+  chevron: {
+    marginTop: CHEVRON_MARGIN_TOP,
   },
   shapeBox: {
     width: SHAPE_BOX_WIDTH,
