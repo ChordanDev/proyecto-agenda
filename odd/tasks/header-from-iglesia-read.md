@@ -45,7 +45,7 @@ Branch `feat/73-header-from-iglesia-read`, stacked on `feat/69-volver-without-pr
 - RED observed: both new suites failed on the missing modules. GREEN: 2 suites, 8 tests; full run 19 suites, 255 tests.
 - Select shape verified with curl against the local Supabase: `iglesias?select=id,nombre,distrito_id,distritos(nombre,asociacion_id),iglesias_sumadas(evento_id)` returns the expected row; an unknown id returns 0 rows (`maybeSingle` gives null).
 - Checks: `npm run typecheck`, `npm run lint`, `npm test` pass.
-- Commits: see below. Engram mirror: pending/see note.
+- Commit: `8245edd` fix: calendar header from the iglesia read (#73). Engram mirror: `odd/header-from-iglesia-read/tasks`, summary (full document in this file).
 
 ## Next step
 
