@@ -1,6 +1,14 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { BackHandler, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import {
+  BackHandler,
+  Keyboard,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { accesibilidad, colors, fonts, radius, spacing } from '@/shared/theme';
 import { AppText, BackButton, Button, ScreenBackground, TextField } from '@/shared/ui';
@@ -100,6 +108,17 @@ export function PasswordRecoveryScreen() {
     sendCode.reset();
     verifyCode.reset();
     choosePassword.reset();
+  };
+
+  // An error describes the attempt made; it goes away with any new input. Only
+  // a failed request is reset: one still running must keep its callbacks.
+  const clearShownError = () => {
+    setFieldError(null);
+    for (const mutation of [sendCode, verifyCode, choosePassword]) {
+      if (mutation.isError) {
+        mutation.reset();
+      }
+    }
   };
 
   const goToStep = (next: PasswordRecoveryStep) => {
@@ -233,7 +252,7 @@ export function PasswordRecoveryScreen() {
                 label="Email"
                 value={email}
                 onChangeText={(text) => {
-                  setFieldError(null);
+                  clearShownError();
                   setEmail(text);
                 }}
                 keyboardType="email-address"
@@ -255,8 +274,14 @@ export function PasswordRecoveryScreen() {
               <CodeField
                 value={code}
                 onChange={(text) => {
-                  setFieldError(null);
-                  setCode(normalizeCode(text));
+                  clearShownError();
+                  const next = normalizeCode(text);
+                  setCode(next);
+                  // The number pad has no return key and covers "Continuar":
+                  // with the six digits in, it steps aside.
+                  if (validateCode(next).ok) {
+                    Keyboard.dismiss();
+                  }
                 }}
                 onSubmit={submit}
               />
@@ -284,7 +309,7 @@ export function PasswordRecoveryScreen() {
                 label="Contraseña nueva"
                 value={password}
                 onChangeText={(text) => {
-                  setFieldError(null);
+                  clearShownError();
                   setPassword(text);
                 }}
                 secureTextEntry={!passwordShown}
