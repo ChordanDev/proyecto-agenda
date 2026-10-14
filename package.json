@@ -15,6 +15,7 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
+    "db:casos-cargos": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/generar-casos-cargos.ts",
     "db:types": "supabase gen types typescript --local > src/shared/database.types.ts"
   },
   "dependencies": {
