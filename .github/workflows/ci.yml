@@ -76,6 +76,11 @@ jobs:
           fi
       - name: Check that the generated cargos rule test matches its table of cases
         run: |
+          # A deleted file would be regenerated untracked and slip past git diff.
+          if ! git ls-files --error-unmatch supabase/tests/cargos_regla.test.sql > /dev/null; then
+            echo "::error file=supabase/tests/cargos_regla.test.sql::The generated test is missing. Run 'npm run db:casos-cargos' and commit the result."
+            exit 1
+          fi
           node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/generar-casos-cargos.ts
           if ! git diff --exit-code supabase/tests/cargos_regla.test.sql; then
             echo "::error file=supabase/tests/cargos_regla.test.sql::The generated test is out of date with src/features/sesion/dominio/cargosAbarcanDuenio.casos.json. Run 'npm run db:casos-cargos' and commit the result."
