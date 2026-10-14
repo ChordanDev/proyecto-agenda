@@ -87,6 +87,21 @@ describe('getHasSesion', () => {
     expect(onLateAnswer).toHaveBeenCalledTimes(1);
   });
 
+  it('tells when the client fails after the stored session was used', async () => {
+    // Offline, the renewal ends in a network error after its retries.
+    let fail: (reason: unknown) => void = () => {};
+    mockGetSession.mockReturnValue(new Promise((_, reject) => (fail = reject)));
+    mockGetItem.mockResolvedValue(STORED_SESSION);
+    const onLateAnswer = jest.fn();
+
+    await expect(settleWithin(getHasSesion(onLateAnswer), ONE_SECOND)).resolves.toBe(true);
+
+    fail(new Error('network'));
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(onLateAnswer).toHaveBeenCalledTimes(1);
+  });
+
   it('fails when the client fails in time', async () => {
     mockGetSession.mockResolvedValue({ data: { session: null }, error: { message: 'broken' } });
 
