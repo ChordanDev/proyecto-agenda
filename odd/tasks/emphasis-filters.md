@@ -49,7 +49,7 @@ Branch `feat/25-emphasis-filters`, from `feat/29-login-user-calendar` (PR #76, n
 
 - T1 — RED observed: `npx jest src/features/calendario/dominio/filtroDeCategorias` failed with "Cannot find module './filtroDeCategorias'". GREEN observed after the code: 12 tests passed.
 - T2 — checks: `npm run typecheck` clean, `npm run lint` clean, `npm test` 15 suites and 176 tests passed, `npx prettier --check` clean.
-- Commits: see below.
+- Commits: `bfcf67f` feat: emphasis filters on the calendar (#25).
 - Engram mirror: `odd/emphasis-filters/tasks`.
 
 ## Next step
