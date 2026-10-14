@@ -1,4 +1,5 @@
 import {
+  getDuenioId,
   getDuenioInicial,
   getOpcionDeDuenio,
   getOpcionesDeDuenio,
@@ -138,5 +139,23 @@ describe('getOpcionDeDuenio', () => {
   it('finds nothing for a duenio the cargos do not cover', () => {
     expect(getOpcionDeDuenio(opciones, { alcance: 'iglesia', iglesiaId: 'i3' })).toBeUndefined();
     expect(getOpcionDeDuenio(opciones, null)).toBeUndefined();
+  });
+});
+
+describe('getDuenioId', () => {
+  it('gives the id of the iglesia, distrito or asociacion that owns', () => {
+    expect(getDuenioId({ alcance: 'iglesia', iglesiaId: 'i1' })).toBe('i1');
+    expect(getDuenioId({ alcance: 'distrito', distritoId: 'd1' })).toBe('d1');
+    expect(getDuenioId({ alcance: 'asociacion', asociacionId: 'a1' })).toBe('a1');
+  });
+
+  it('tells apart two options with the same nombre', () => {
+    // Two iglesias of different distritos can share a nombre.
+    const ids = [
+      { alcance: 'iglesia', iglesiaId: 'i1' } as const,
+      { alcance: 'iglesia', iglesiaId: 'i4' } as const,
+    ].map(getDuenioId);
+
+    expect(new Set(ids).size).toBe(2);
   });
 });
