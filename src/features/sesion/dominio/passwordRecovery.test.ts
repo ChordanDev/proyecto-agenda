@@ -46,7 +46,12 @@ describe('validatePassword', () => {
     expect(validatePassword('abriluno')).toEqual({ ok: true, value: 'abriluno' });
   });
 
-  it('counts characters, not bytes', () => {
+  it('counts characters, not code units', () => {
+    // Four emoji are 8 UTF-16 code units, but only 4 characters.
+    expect(validatePassword('😀😀😀😀')).toEqual({
+      ok: false,
+      message: 'Tiene que tener al menos 8 caracteres.',
+    });
     expect(validatePassword('ñandú123')).toEqual({ ok: true, value: 'ñandú123' });
   });
 
@@ -85,6 +90,9 @@ describe('getPasswordRecoveryErrorMessage', () => {
     expect(
       getPasswordRecoveryErrorMessage('email', { code: 'validation_failed', status: 400 }),
     ).toBe('Revisá el correo: falta algo o tiene un error.');
+    expect(getPasswordRecoveryErrorMessage('email', { code: 'email_address_invalid' })).toBe(
+      'Revisá el correo: falta algo o tiene un error.',
+    );
   });
 
   it('reads a wrong code and an expired one the same', () => {
