@@ -73,15 +73,17 @@ export async function getEvento(id: string): Promise<EventoDetallado | null> {
     return null;
   }
 
-  const nombreDelDuenio =
-    data.iglesias?.nombre ?? data.distritos?.nombre ?? data.asociaciones?.nombre;
+  const evento = toEvento(data);
+  const nombreDelDuenio = {
+    iglesia: data.iglesias?.nombre,
+    distrito: data.distritos?.nombre,
+    asociacion: data.asociaciones?.nombre,
+  }[evento.duenio.alcance];
 
   // The foreign keys keep a duenio from disappearing while it owns eventos.
   if (nombreDelDuenio === undefined) {
     throw new Error(`Evento ${id} has no duenio to name`);
   }
-
-  const evento = toEvento(data);
 
   return {
     evento,
