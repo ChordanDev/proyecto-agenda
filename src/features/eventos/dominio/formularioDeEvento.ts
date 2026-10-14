@@ -16,13 +16,15 @@ export type FormularioDeEvento = {
   fecha: string | null;
   /** As typed: "19:00", "19", "1930"… */
   hora: string;
+  /** Last day of an evento of several days; null for one day. A date only, no hora. */
+  fechaFin: string | null;
   lugar: string;
   descripcion: string;
   /** One of the four enfasis or `R` for the actividad regular; null until one is chosen. */
   categoria: Categoria | null;
 };
 
-export type CampoDelFormulario = 'titulo' | 'duenio' | 'fecha' | 'hora' | 'enfasis';
+export type CampoDelFormulario = 'titulo' | 'duenio' | 'fecha' | 'hora' | 'fechaFin' | 'enfasis';
 
 /** An evento ready to be saved, with every date it has. */
 export type EventoAGuardar = Omit<Evento, 'id' | 'iglesiasSumadas'> & {
@@ -97,6 +99,14 @@ export function validarFormulario(formulario: FormularioDeEvento): ResultadoDelF
   if (hora === null) {
     errores.hora = 'Escribí la hora, por ejemplo 19:00.';
   }
+  // Local `YYYY-MM-DD` dates order as plain text.
+  if (
+    formulario.fecha !== null &&
+    formulario.fechaFin !== null &&
+    formulario.fechaFin < formulario.fecha
+  ) {
+    errores.fechaFin = 'La fecha de fin no puede ser anterior a la de inicio.';
+  }
   if (formulario.categoria === null) {
     errores.enfasis = 'Elegí un énfasis o "Actividad regular".';
   }
@@ -122,7 +132,8 @@ export function validarFormulario(formulario: FormularioDeEvento): ResultadoDelF
       enfasis: ENFASIS_OF_CATEGORIA[formulario.categoria],
       duenio: formulario.duenio,
       hora,
-      fechaFin: null,
+      // An end on the first day is an evento of one day.
+      fechaFin: formulario.fechaFin === formulario.fecha ? null : formulario.fechaFin,
       repeticion,
       finDeSerie: null,
       fechas: [formulario.fecha],
@@ -141,6 +152,7 @@ export function formularioVacio(duenio: Duenio | null, fecha: string | null): Fo
     duenio,
     fecha,
     hora: '',
+    fechaFin: null,
     lugar: '',
     descripcion: '',
     categoria: null,
@@ -157,6 +169,7 @@ export function formularioDesdeEvento(
     duenio: evento.duenio,
     fecha: fechas[0] ?? null,
     hora: formatTime(evento.hora),
+    fechaFin: evento.fechaFin,
     lugar: evento.lugar ?? '',
     descripcion: evento.descripcion ?? '',
     categoria: getCategoria(evento.enfasis),
@@ -186,7 +199,7 @@ export function formatFechaDelCampo(fecha: string): string {
   return `${SHORT_WEEKDAYS[getWeekday(fecha)]} ${day} ${SHORT_MONTHS[month - 1]} ${year}`;
 }
 
-/** This form saves one date: a series or several days would lose the others. */
+/** This form saves one date and its end: a series would lose its other dates. */
 export function seEditaEnElFormulario(evento: Evento): boolean {
-  return evento.repeticion === 'ninguna' && evento.fechaFin === null;
+  return evento.repeticion === 'ninguna';
 }

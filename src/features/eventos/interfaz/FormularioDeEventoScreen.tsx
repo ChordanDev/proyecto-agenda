@@ -196,7 +196,7 @@ function Formulario({ opciones, initial, id, onSaved }: FormularioProps) {
   // The fields only show what is missing after a first attempt to save.
   const [triedToSave, setTriedToSave] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [openSheet, setOpenSheet] = useState<'duenio' | 'fecha' | null>(null);
+  const [openSheet, setOpenSheet] = useState<'duenio' | 'fecha' | 'fechaFin' | null>(null);
   const guardar = useGuardarEvento(id);
 
   const result = validarFormulario(formulario);
@@ -311,6 +311,47 @@ function Formulario({ opciones, initial, id, onSaved }: FormularioProps) {
           </View>
         </View>
 
+        <Field error={errores.fechaFin}>
+          <AppText variant="label">
+            Fecha de fin{' '}
+            <AppText variant="label" weight="regular" color="textoTenue">
+              (opcional)
+            </AppText>
+          </AppText>
+          <View style={styles.endDateRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Fecha de fin: ${
+                formulario.fechaFin ? formatFechaDelCampo(formulario.fechaFin) : 'sin fecha de fin'
+              }`}
+              onPress={() => setOpenSheet('fechaFin')}
+              style={({ pressed }) => [
+                styles.dateBox,
+                styles.endDateBox,
+                pressed && styles.pressed,
+              ]}
+            >
+              <AppText
+                variant={formulario.fechaFin ? 'cuerpoGrande' : 'cuerpo'}
+                color={formulario.fechaFin ? 'texto' : 'textoTenue'}
+                numberOfLines={1}
+              >
+                {formulario.fechaFin
+                  ? formatFechaDelCampo(formulario.fechaFin)
+                  : 'Solo si dura varios días'}
+              </AppText>
+            </Pressable>
+            {formulario.fechaFin !== null && (
+              <Button
+                label="Quitar"
+                variant="secondary"
+                onPress={() => update({ fechaFin: null })}
+                style={styles.clearButton}
+              />
+            )}
+          </View>
+        </Field>
+
         <TextField
           label="Lugar"
           value={formulario.lugar}
@@ -356,6 +397,17 @@ function Formulario({ opciones, initial, id, onSaved }: FormularioProps) {
         selected={formulario.duenio}
         onSelect={(duenio) => {
           update({ duenio });
+          setOpenSheet(null);
+        }}
+        onClose={() => setOpenSheet(null)}
+      />
+      <HojaDeFecha
+        visible={openSheet === 'fechaFin'}
+        title="Fecha de fin"
+        // Without an end yet, the sheet opens on the month of the start.
+        selected={formulario.fechaFin ?? formulario.fecha}
+        onSelect={(fechaFin) => {
+          update({ fechaFin });
           setOpenSheet(null);
         }}
         onClose={() => setOpenSheet(null)}
@@ -478,6 +530,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: DATE_PADDING_HORIZONTAL,
     borderRadius: radius.campo,
     backgroundColor: colors.campo,
+  },
+  endDateRow: {
+    flexDirection: 'row',
+    gap: DATE_TIME_GAP,
+  },
+  endDateBox: {
+    flex: 1,
+  },
+  clearButton: {
+    minHeight: accesibilidad.alturaCampo,
   },
   banner: {
     padding: BANNER_PADDING,

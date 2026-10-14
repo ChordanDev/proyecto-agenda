@@ -1,4 +1,5 @@
 import {
+  formatFechaFin,
   formatFechaYHora,
   getDuenioDelDetalle,
   getEnfasisDelDetalle,
@@ -79,5 +80,19 @@ describe('hasText', () => {
     expect(hasText(null)).toBe(false);
     expect(hasText('')).toBe(false);
     expect(hasText('   ')).toBe(false);
+  });
+});
+
+describe('formatFechaFin', () => {
+  it('says until when an evento of several days lasts, and how many days', () => {
+    expect(formatFechaFin('2026-10-30', '2026-11-01')).toBe(
+      'Hasta el domingo 1 de noviembre · 3 días',
+    );
+  });
+
+  it('counts two days', () => {
+    expect(formatFechaFin('2026-10-30', '2026-10-31')).toBe(
+      'Hasta el sábado 31 de octubre · 2 días',
+    );
   });
 });

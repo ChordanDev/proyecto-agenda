@@ -18,6 +18,7 @@ function completo(overrides: Partial<FormularioDeEvento> = {}): FormularioDeEven
     duenio: IGLESIA,
     fecha: '2026-10-17',
     hora: '19:00',
+    fechaFin: null,
     lugar: 'Templo',
     descripcion: 'Con merienda',
     categoria: 'I',
@@ -142,6 +143,52 @@ describe('validarFormulario', () => {
   });
 });
 
+describe('the fecha de fin of an evento of several days', () => {
+  it('saves an evento of several days with its single date and its end', () => {
+    const result = validarFormulario(completo({ fecha: '2026-10-30', fechaFin: '2026-11-01' }));
+
+    expect(result.ok && result.evento).toMatchObject({
+      fechas: ['2026-10-30'],
+      fechaFin: '2026-11-01',
+      repeticion: 'ninguna',
+    });
+  });
+
+  it('rejects an end before the start', () => {
+    expect(validarFormulario(completo({ fecha: '2026-10-30', fechaFin: '2026-10-29' }))).toEqual({
+      ok: false,
+      errores: { fechaFin: 'La fecha de fin no puede ser anterior a la de inicio.' },
+    });
+  });
+
+  it('saves an end on the same day as an evento of one day', () => {
+    const result = validarFormulario(completo({ fecha: '2026-10-30', fechaFin: '2026-10-30' }));
+
+    expect(result.ok && result.evento.fechaFin).toBeNull();
+  });
+
+  it('loads the end of an evento being edited', () => {
+    const formulario = formularioDesdeEvento(
+      {
+        id: 'e1',
+        titulo: 'Congreso',
+        lugar: null,
+        descripcion: null,
+        enfasis: 'nuevas_generaciones',
+        duenio: IGLESIA,
+        hora: '19:00:00',
+        fechaFin: '2026-11-01',
+        repeticion: 'ninguna',
+        finDeSerie: null,
+        iglesiasSumadas: [],
+      },
+      ['2026-10-30'],
+    );
+
+    expect(formulario).toMatchObject({ fecha: '2026-10-30', fechaFin: '2026-11-01' });
+  });
+});
+
 describe('formularioVacio', () => {
   it('starts with no enfasis chosen, and the duenio and fecha it is given', () => {
     expect(formularioVacio(IGLESIA, '2026-10-17')).toEqual({
@@ -149,6 +196,7 @@ describe('formularioVacio', () => {
       duenio: IGLESIA,
       fecha: '2026-10-17',
       hora: '',
+      fechaFin: null,
       lugar: '',
       descripcion: '',
       categoria: null,
@@ -177,6 +225,7 @@ describe('formularioDesdeEvento', () => {
       duenio: IGLESIA,
       fecha: '2026-10-17',
       hora: '19:30',
+      fechaFin: null,
       lugar: '',
       descripcion: 'Con merienda',
       categoria: 'R',
@@ -205,12 +254,12 @@ describe('formatFechaDelCampo', () => {
 });
 
 describe('seEditaEnElFormulario', () => {
-  it('edits only eventos of one date: it would save a series or several days as one', () => {
+  it('edits eventos of one date or of several days, not a series it would save as one date', () => {
     const base = { repeticion: 'ninguna', fechaFin: null } as Evento;
 
     expect(seEditaEnElFormulario(base)).toBe(true);
+    expect(seEditaEnElFormulario({ ...base, fechaFin: '2026-11-01' })).toBe(true);
     expect(seEditaEnElFormulario({ ...base, repeticion: 'semanal' })).toBe(false);
     expect(seEditaEnElFormulario({ ...base, repeticion: 'mensual' })).toBe(false);
-    expect(seEditaEnElFormulario({ ...base, fechaFin: '2026-11-01' })).toBe(false);
   });
 });

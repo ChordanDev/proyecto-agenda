@@ -5,6 +5,7 @@ import {
   formatMonthTitle,
   formatTime,
   formatTimeAndPlace,
+  formatTimeAndPlaceDelDia,
   getAlcanceLabel,
 } from './calendarioTexts';
 
@@ -155,6 +156,29 @@ describe('formatActualizado', () => {
   it('writes the weekday and the date for an older download', () => {
     expect(formatActualizado(new Date(2026, 9, 3, 7, 30), now)).toBe(
       'Actualizado el sábado 3 de octubre a las 07:30.',
+    );
+  });
+});
+
+describe('formatTimeAndPlaceDelDia', () => {
+  const evento = { hora: '19:00:00', lugar: 'Villa Carlos Paz' };
+
+  it('is the hora and lugar of an evento of one day', () => {
+    expect(formatTimeAndPlaceDelDia(evento, null)).toBe('19:00 · Villa Carlos Paz');
+  });
+
+  it('tells the first day of an evento of several days, with the hora it starts', () => {
+    expect(formatTimeAndPlaceDelDia(evento, { numero: 1, total: 3 })).toBe(
+      'Día 1 de 3 · 19:00 · Villa Carlos Paz',
+    );
+  });
+
+  it('tells the other days without the hora, which belongs to the first one', () => {
+    expect(formatTimeAndPlaceDelDia(evento, { numero: 2, total: 3 })).toBe(
+      'Día 2 de 3 · Villa Carlos Paz',
+    );
+    expect(formatTimeAndPlaceDelDia({ ...evento, lugar: null }, { numero: 3, total: 3 })).toBe(
+      'Día 3 de 3',
     );
   });
 });
