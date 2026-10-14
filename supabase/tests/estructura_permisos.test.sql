@@ -8,10 +8,16 @@
 --   3. `set local role` switches to the role under test. Each block has at
 --      least one ALLOWED case and one REJECTED case.
 --   4. How a rejection looks depends on the command:
---        - INSERT with no policy raises error 42501.
---        - UPDATE and DELETE with no policy raise nothing: they simply affect
---          zero rows. The test asserts that `returning` gives back no row, and
---          checks at the end that the data is intact.
+--        - Where the role has no privilege on the table, any write (INSERT,
+--          UPDATE or DELETE) raises error 42501. The API roles have no write
+--          privilege on the structure, so this is what happens here.
+--        - Where the role has the privilege but no policy covers the row,
+--          INSERT raises 42501, while UPDATE and DELETE raise nothing: they
+--          simply affect zero rows. The test asserts that `returning` gives
+--          back no row, and checks at the end that the data is intact.
+--      Privileges are taken away from the API roles in
+--      20261014000000_revoke_default_table_privileges.sql, and
+--      privilegios_tablas.test.sql checks exactly which ones remain.
 --
 -- Run with: npm run db:test
 
@@ -78,30 +84,30 @@ select throws_ok(
   '42501', null, 'anon cannot insert iglesias'
 );
 
--- Rejected: updating and deleting affect zero rows.
-select is_empty(
+-- Rejected: updating and deleting raise 42501 too, there is no privilege.
+select throws_ok(
   $$ update public.asociaciones set nombre = 'Cambiada' returning id $$,
-  'anon cannot update asociaciones'
+  '42501', 'permission denied for table asociaciones', 'anon cannot update asociaciones'
 );
-select is_empty(
+select throws_ok(
   $$ update public.distritos set nombre = 'Cambiado' returning id $$,
-  'anon cannot update distritos'
+  '42501', 'permission denied for table distritos', 'anon cannot update distritos'
 );
-select is_empty(
+select throws_ok(
   $$ update public.iglesias set nombre = 'Cambiada' returning id $$,
-  'anon cannot update iglesias'
+  '42501', 'permission denied for table iglesias', 'anon cannot update iglesias'
 );
-select is_empty(
+select throws_ok(
   $$ delete from public.iglesias returning id $$,
-  'anon cannot delete iglesias'
+  '42501', 'permission denied for table iglesias', 'anon cannot delete iglesias'
 );
-select is_empty(
+select throws_ok(
   $$ delete from public.distritos returning id $$,
-  'anon cannot delete distritos'
+  '42501', 'permission denied for table distritos', 'anon cannot delete distritos'
 );
-select is_empty(
+select throws_ok(
   $$ delete from public.asociaciones returning id $$,
-  'anon cannot delete asociaciones'
+  '42501', 'permission denied for table asociaciones', 'anon cannot delete asociaciones'
 );
 
 reset role;
@@ -133,18 +139,18 @@ select throws_ok(
   '42501', null, 'authenticated cannot insert iglesias'
 );
 
--- Rejected: updating and deleting affect zero rows.
-select is_empty(
+-- Rejected: updating and deleting raise 42501 too, there is no privilege.
+select throws_ok(
   $$ update public.iglesias set excluida_del_buscador = true returning id $$,
-  'authenticated cannot update iglesias'
+  '42501', 'permission denied for table iglesias', 'authenticated cannot update iglesias'
 );
-select is_empty(
+select throws_ok(
   $$ delete from public.iglesias returning id $$,
-  'authenticated cannot delete iglesias'
+  '42501', 'permission denied for table iglesias', 'authenticated cannot delete iglesias'
 );
-select is_empty(
+select throws_ok(
   $$ delete from public.distritos returning id $$,
-  'authenticated cannot delete distritos'
+  '42501', 'permission denied for table distritos', 'authenticated cannot delete distritos'
 );
 
 reset role;

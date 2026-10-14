@@ -17,9 +17,10 @@
 --      raise 42501, so the expected message tells them apart:
 --        - a policy: `new row violates row-level security policy for table …`
 --          on INSERT and on an UPDATE whose new row is not covered; zero rows
---          on an UPDATE or DELETE whose current row is not covered.
---        - a missing privilege (cargos, auth.users): `permission denied for …`,
---          whatever the command.
+--          on an UPDATE or DELETE whose current row is not covered, but only
+--          where the role has the privilege (eventos, eventos_fechas).
+--        - a missing privilege (the structure, iglesias_sumadas, cargos,
+--          auth.users): `permission denied for …`, whatever the command.
 --
 -- The structure of the fixtures:
 --
@@ -324,30 +325,31 @@ select throws_ok(
   '42501', null, 'the admin cannot insert iglesias'
 );
 
--- Rejected: updating and deleting the structure affect zero rows.
-select is_empty(
+-- Rejected: updating and deleting the structure raise 42501, there is no
+-- privilege.
+select throws_ok(
   $$ update public.asociaciones set nombre = 'Cambiada' returning id $$,
-  'the admin cannot update asociaciones'
+  '42501', 'permission denied for table asociaciones', 'the admin cannot update asociaciones'
 );
-select is_empty(
+select throws_ok(
   $$ update public.distritos set nombre = 'Cambiado' returning id $$,
-  'the admin cannot update distritos'
+  '42501', 'permission denied for table distritos', 'the admin cannot update distritos'
 );
-select is_empty(
+select throws_ok(
   $$ update public.iglesias set nombre = 'Cambiada' returning id $$,
-  'the admin cannot update iglesias'
+  '42501', 'permission denied for table iglesias', 'the admin cannot update iglesias'
 );
-select is_empty(
+select throws_ok(
   $$ delete from public.iglesias returning id $$,
-  'the admin cannot delete iglesias'
+  '42501', 'permission denied for table iglesias', 'the admin cannot delete iglesias'
 );
-select is_empty(
+select throws_ok(
   $$ delete from public.distritos returning id $$,
-  'the admin cannot delete distritos'
+  '42501', 'permission denied for table distritos', 'the admin cannot delete distritos'
 );
-select is_empty(
+select throws_ok(
   $$ delete from public.asociaciones returning id $$,
-  'the admin cannot delete asociaciones'
+  '42501', 'permission denied for table asociaciones', 'the admin cannot delete asociaciones'
 );
 
 -- Rejected: every write on cargos, for lack of the privilege.
