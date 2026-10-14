@@ -4,6 +4,10 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { CATEGORIAS, type Categoria } from '@/features/eventos/dominio/categoria';
+import {
+  NUEVO_EVENTO_BUTTON_SPACE,
+  NuevoEventoButton,
+} from '@/features/eventos/interfaz/NuevoEventoButton';
 import { AvisoSinCargos } from '@/features/sesion/interfaz/AvisoSinCargos';
 import { colors, spacing } from '@/shared/theme';
 import { AppText, Button, Card, Logo, ScreenBackground } from '@/shared/ui';
@@ -179,6 +183,8 @@ function MonthOfCalendario({ fuente, encabezadoDeUsuario }: MonthOfCalendarioPro
   // Null is "Todas". Only a usuario whose cargos cover several iglesias picks one.
   const [selectedIglesia, setSelectedIglesia] = useState<string | null>(null);
   const iglesiasDelFiltro = fuente.tipo === 'usuario' ? fuente.iglesias : NO_IGLESIAS;
+  // A usuario's cargos always cover the iglesias they see: they can load eventos.
+  const canCreate = fuente.tipo === 'usuario';
   const {
     data: allEventos,
     dataUpdatedAt,
@@ -238,7 +244,7 @@ function MonthOfCalendario({ fuente, encabezadoDeUsuario }: MonthOfCalendarioPro
       <CalendarioHeader encabezado={encabezado} />
       {/* The header stays in place and the bottom navigation is outside: only
           the month and its eventos scroll. */}
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, canCreate && styles.contentOverButton]}>
         <AvisoSinCargos />
         <View style={styles.monthRow}>
           <AppText variant="tituloPantalla" accessibilityRole="header" style={styles.monthTitle}>
@@ -287,6 +293,8 @@ function MonthOfCalendario({ fuente, encabezadoDeUsuario }: MonthOfCalendarioPro
           onRetry={() => void refetch()}
         />
       </ScrollView>
+
+      {canCreate && <NuevoEventoButton fecha={selectedDate} />}
     </>
   );
 }
@@ -342,6 +350,9 @@ const styles = StyleSheet.create({
     paddingTop: CONTENT_PADDING_TOP,
     paddingHorizontal: spacing.pantallaHorizontal,
     paddingBottom: CONTENT_PADDING_BOTTOM,
+  },
+  contentOverButton: {
+    paddingBottom: CONTENT_PADDING_BOTTOM + NUEVO_EVENTO_BUTTON_SPACE,
   },
   message: {
     gap: spacing.entreTarjetas,

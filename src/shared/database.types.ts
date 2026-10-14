@@ -193,11 +193,17 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "cargos_abarcan_duenio":
+            "borrar_evento":
+{ Args: { "evento_id": string }; Returns: undefined
+                           },
+"cargos_abarcan_duenio":
 { Args: { "duenio_asociacion_id": string,"duenio_distrito_id": string,"duenio_iglesia_id": string }; Returns: boolean
                            },
 "delete_own_usuario":
 { Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"guardar_evento":
+{ Args: { "alcance": Database["public"]['Enums']["alcance"],"descripcion"?: string,"duenio_asociacion_id"?: string,"duenio_distrito_id"?: string,"duenio_iglesia_id"?: string,"enfasis"?: Database["public"]['Enums']["enfasis"],"evento_id"?: string,"fecha_fin"?: string,"fechas": (string)[],"fin_de_serie"?: string,"hora": string,"lugar"?: string,"repeticion": Database["public"]['Enums']["repeticion"],"titulo": string }; Returns: string
                            }
           }
           Enums: {
