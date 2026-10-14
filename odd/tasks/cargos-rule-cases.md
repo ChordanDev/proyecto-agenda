@@ -42,6 +42,7 @@ Out of scope: the rule itself, migrations, the policies tests (`cargos_permisos.
 - Jest read the table first with the old domain rule: 98 tests in the sesion folder passed (83 in this file); `npm test` 15 suites, 239 passed. `npm run typecheck` and `npm run lint` clean.
 - `npx supabase test db`: `cargos_regla.test.sql ... ok` (81/81). The other three suites FAIL on this machine for an environmental reason unrelated to this change: the shared local database already has migration `20261014000000` (PR #75, revoke default table privileges) applied, and those suites' `is_empty` checks on UPDATE/DELETE raise `permission denied` (e.g. `permission denied for table asociaciones`). `db reset` was not run, to avoid dropping that state. The new file does not depend on it.
 - Generator run twice: `git diff --exit-code` clean.
+- Jorge review (advisory, APPROVED): optional finding accepted — if a PR deleted the generated file, the step regenerated it untracked and `git diff --exit-code` passed. Fix `99bcd43` (`ci: fail when the generated cargos rule test is missing (#66)`): the step first runs `git ls-files --error-unmatch` on it. Checked locally: the step passes with the file intact and fails ("missing") with it deleted in a commit.
 
 ### Manual proofs (for the PR)
 
