@@ -4,8 +4,9 @@ import { getEmailDelUsuario } from './getEmailDelUsuario';
 import { useSesion } from './useSesion';
 
 /**
- * The email of the usuario; it only reads it while there is a session. Under
- * the key of the session, so whoever invalidates the session reads it again.
+ * The email of the usuario; it only reads it while there is a session. Leaving
+ * the session (signing out or deleting the usuario) removes it, so the next
+ * usuario to sign in reads their own.
  */
 export function useEmailDelUsuario() {
   const hasSesion = useSesion() === true;
