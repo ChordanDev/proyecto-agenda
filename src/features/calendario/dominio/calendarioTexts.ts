@@ -80,3 +80,33 @@ export function getAlcanceLabel(
       return 'Asociación';
   }
 }
+
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+/**
+ * When the calendario on screen was downloaded, in the local time of the phone:
+ * "Actualizado hoy a las 18:40.", "Actualizado ayer a las 18:40." or
+ * "Actualizado el martes 6 de octubre a las 18:40.".
+ */
+export function formatActualizado(updatedAt: Date, now: Date): string {
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const time = `${String(updatedAt.getHours()).padStart(2, '0')}:${String(updatedAt.getMinutes()).padStart(2, '0')}`;
+
+  let day: string;
+  if (isSameDay(updatedAt, now)) {
+    day = 'hoy';
+  } else if (isSameDay(updatedAt, yesterday)) {
+    day = 'ayer';
+  } else {
+    const weekday = WEEKDAY_NAMES[updatedAt.getDay()].toLowerCase();
+    day = `el ${weekday} ${updatedAt.getDate()} de ${MONTH_NAMES[updatedAt.getMonth()]}`;
+  }
+
+  return `Actualizado ${day} a las ${time}.`;
+}
