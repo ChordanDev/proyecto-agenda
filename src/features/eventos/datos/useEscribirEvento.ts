@@ -1,7 +1,15 @@
 import { onlineManager, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+
+import { newId } from '@/shared/newId';
 
 import type { EventoAGuardar } from '../dominio/formularioDeEvento';
-import { borrarEvento, ErrorDeEscritura, guardarEvento } from './escribirEvento';
+import {
+  borrarEvento,
+  ErrorDeEscritura,
+  type EventoDestino,
+  guardarEvento,
+} from './escribirEvento';
 
 /** Whether the phone believes it has a connection; writing needs one. */
 export function hasConexion(): boolean {
@@ -22,15 +30,21 @@ function useInvalidarEventos() {
     ]);
 }
 
-/** Saves an evento, new (no `id`) or edited. */
+/**
+ * Saves an evento, new (no `id`) or edited. A new one gets its id once, when
+ * the form opens: tapping Guardar again after an answer that never came saves
+ * that same evento instead of a second one.
+ */
 export function useGuardarEvento(id: string | undefined) {
   const invalidar = useInvalidarEventos();
+  const [nuevoId] = useState(newId);
+  const destino: EventoDestino = id === undefined ? { crear: nuevoId } : { editar: id };
 
   return useMutation({
     // A write is never queued for later: without a connection it fails now and
     // the form keeps what was written.
     networkMode: 'always',
-    mutationFn: (evento: EventoAGuardar) => guardarEvento(evento, id),
+    mutationFn: (evento: EventoAGuardar) => guardarEvento(evento, destino),
     onSuccess: (savedId) => invalidar(savedId),
   });
 }

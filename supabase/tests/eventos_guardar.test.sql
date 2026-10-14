@@ -47,22 +47,22 @@ insert into public.eventos_fechas (evento_id, fecha) values
 
 select function_returns(
   'public', 'guardar_evento',
-  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date'],
+  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid'],
   'uuid'
 );
 select isnt_definer(
   'public', 'guardar_evento',
-  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date']
+  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid']
 );
 select function_privs_are(
   'public', 'guardar_evento',
-  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date'],
+  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid'],
   'anon', array[]::text[],
   'anon cannot execute guardar_evento'
 );
 select function_privs_are(
   'public', 'guardar_evento',
-  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date'],
+  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid'],
   'authenticated', array['EXECUTE'],
   'authenticated can execute guardar_evento'
 );
