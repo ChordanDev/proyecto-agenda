@@ -22,7 +22,14 @@ jest.mock('@/shared/supabase', () => ({
       getSession: () => mockGetSession(),
     },
   },
-  authStorage: { removeItem: (key: string) => mockRemoveStoredSession(key) },
+  // The session the code opened, valid for an hour.
+  authStorage: {
+    getItem: () =>
+      Promise.resolve(
+        JSON.stringify({ refresh_token: 'r', expires_at: Math.floor(Date.now() / 1000) + 3600 }),
+      ),
+    removeItem: (key: string) => mockRemoveStoredSession(key),
+  },
   AUTH_STORAGE_KEY: 'sb-test-auth-token',
 }));
 
