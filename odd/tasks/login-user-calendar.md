@@ -56,10 +56,10 @@ Strategy: `single-pr`, one short branch per ticket. Forecast: about 700 authored
 
 ## Progress
 
-Branch `feat/29-login-user-calendar`, from `main` at `4806557`. Review boundary: `4806557`.
+Branch `feat/29-login-user-calendar`, from `main` at `4806557`. Review boundary: `4806557`. Engram mirror: `odd/login-user-calendar/tasks`, a summary (full document in this file).
 
 - T1 — `fe30949` feat: add sign-in error and user calendar rules. RED observed first: three suites failing on the missing modules (`signInErrors`, `armarCalendarioDeUsuario`, `encabezadoDeCalendario`); GREEN after the code: 14 suites, 164 tests (134 before). `armarCalendario` is now `armarCalendarioDeIglesias([iglesia], …)`; its existing tests stay green.
-- T2 and T3 — feat: email login and user calendar (hash below). Route declaration: all inline, one writer; no trigger fired (the exploration fitted the inline budget plus a few reads, and the writes were done by this same agent that read them).
+- T2 and T3 — `26b7d9c` feat: email login and user calendar. Route declaration: all inline, one writer; no trigger fired (the exploration fitted the inline budget plus a few reads, and the writes were done by this same agent that read them).
   - `expo-secure-store` 57.0.4 installed with `npx expo install` (config plugin added to `app.json`).
   - `getCalendarioDeIglesia` split: the reading of the month moved to `getFechasDelMes`, shared with `getCalendarioDeUsuario`; `useCalendarioDeIglesia` became `useCalendario(fuente, month)`.
   - `TextField` got an optional `trailing` slot for the "Mostrar" button of the password.
