@@ -38,6 +38,13 @@ export function formatDayHeading(date: string): string {
   return `${WEEKDAY_NAMES[getWeekday(date)]} ${day} de ${MONTH_NAMES[month - 1]}`;
 }
 
+/** A date with its year, inside a sentence: "17 de octubre de 2027". */
+export function formatLongDate(date: string): string {
+  const { year, month, day } = parseLocalDate(date);
+
+  return `${day} de ${MONTH_NAMES[month - 1]} de ${year}`;
+}
+
 /** How many eventos a day has: "1 evento", "3 eventos" or "sin eventos". */
 export function formatEventosCount(count: number): string {
   if (count === 0) {

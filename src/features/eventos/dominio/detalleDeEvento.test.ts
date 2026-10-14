@@ -1,4 +1,5 @@
 import {
+  getAvisoDeBorrado,
   formatFechaFin,
   formatFechaYHora,
   getDuenioDelDetalle,
@@ -93,6 +94,21 @@ describe('formatFechaFin', () => {
   it('counts two days', () => {
     expect(formatFechaFin('2026-10-30', '2026-10-31')).toBe(
       'Hasta el sábado 31 de octubre · 2 días',
+    );
+  });
+});
+
+describe('getAvisoDeBorrado', () => {
+  it('warns that an evento is deleted from every calendario', () => {
+    expect(getAvisoDeBorrado('ninguna', 1)).toBe(
+      'Se borra de todos los calendarios donde aparece. No se puede deshacer.',
+    );
+  });
+
+  it('says how many dates of a series go, and how to only stop it repeating', () => {
+    expect(getAvisoDeBorrado('semanal', 53)).toBe(
+      'Se borran las 53 fechas de la serie, también las pasadas. No se puede deshacer.\n\n' +
+        'Si solo querés que deje de repetirse, editala y acortá "Hasta".',
     );
   });
 });

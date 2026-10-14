@@ -3,7 +3,7 @@ import { daysBetween } from '@/features/calendario/dominio/localDate';
 import { categorias } from '@/shared/theme';
 
 import { getCategoria } from './categoria';
-import type { Duenio, Enfasis } from './evento';
+import type { Duenio, Enfasis, Repeticion } from './evento';
 
 /** The row "Fecha y hora" of the detail: "Sábado 10 de octubre · 19:00". */
 export function formatFechaYHora(fecha: string, hora: string): string {
@@ -70,4 +70,19 @@ export function getDuenioDelDetalle(
 /** Whether an optional field has something to show: the detail hides empty ones. */
 export function hasText(value: string | null): value is string {
   return value !== null && value.trim() !== '';
+}
+
+/**
+ * What deleting an evento asks before going ahead. A series says how many
+ * dates go, and reminds that shortening "Hasta" only stops it repeating.
+ */
+export function getAvisoDeBorrado(repeticion: Repeticion, cantidadDeFechas: number): string {
+  if (repeticion === 'ninguna') {
+    return 'Se borra de todos los calendarios donde aparece. No se puede deshacer.';
+  }
+
+  return (
+    `Se borran las ${cantidadDeFechas} fechas de la serie, también las pasadas. No se puede deshacer.\n\n` +
+    'Si solo querés que deje de repetirse, editala y acortá "Hasta".'
+  );
 }

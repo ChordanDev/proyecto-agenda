@@ -12,15 +12,17 @@ import { useEvento } from '../datos/useEvento';
 import { usePuedeEditar } from '../datos/usePuedeEditar';
 import { getCategoria } from '../dominio/categoria';
 import { getMensajeDeError } from '../dominio/errorDeEscritura';
-import { seEditaEnElFormulario } from '../dominio/formularioDeEvento';
 import {
+  getAvisoDeBorrado,
   formatFechaFin,
   formatFechaYHora,
   getDuenioDelDetalle,
   getEnfasisDelDetalle,
   hasText,
 } from '../dominio/detalleDeEvento';
+import { formatHasta, formatRepeticionDelDetalle } from '../dominio/repeticion';
 import { avisarSinConexion } from './avisarSinConexion';
+import { REPEAT_PATHS } from './SelectorDeRepeticion';
 
 // Layout of the approved mockup, which the theme has no tokens for. The line
 // numbers are those of diseno/pantallas/05-detalle-evento.html.
@@ -158,6 +160,18 @@ function Detalle({ detallado, fecha, onDeleted }: DetalleProps) {
             }),
           },
         ]),
+    ...(evento.repeticion !== 'ninguna' && evento.finDeSerie !== null && fechas[0] !== undefined
+      ? [
+          {
+            key: 'repeticion',
+            icon: <RepeatIcon />,
+            label: 'Se repite',
+            // A series repeats from its first date.
+            value: formatRepeticionDelDetalle(evento.repeticion, fechas[0]),
+            detail: formatHasta(evento.finDeSerie),
+          },
+        ]
+      : []),
     ...(hasText(evento.lugar)
       ? [{ key: 'lugar', icon: <PlaceIcon />, label: 'Lugar', value: evento.lugar }]
       : []),
@@ -228,16 +242,14 @@ function Detalle({ detallado, fecha, onDeleted }: DetalleProps) {
           {/* The actions stay at the bottom of the screen, as in capture 5b. */}
           <View style={styles.spacer} />
           <View style={styles.actions}>
-            {seEditaEnElFormulario(evento) && (
-              <Button
-                label="Editar"
-                onPress={() => {
-                  if (avisarSinConexion()) {
-                    router.push({ pathname: '/evento/editar/[id]', params: { id: evento.id } });
-                  }
-                }}
-              />
-            )}
+            <Button
+              label="Editar"
+              onPress={() => {
+                if (avisarSinConexion()) {
+                  router.push({ pathname: '/evento/editar/[id]', params: { id: evento.id } });
+                }
+              }}
+            />
             <Pressable
               accessibilityRole="button"
               disabled={borrar.isPending}
@@ -248,7 +260,7 @@ function Detalle({ detallado, fecha, onDeleted }: DetalleProps) {
                 // Deleting always asks first.
                 Alert.alert(
                   '¿Borrar este evento?',
-                  'Se borra de todos los calendarios donde aparece. No se puede deshacer.',
+                  getAvisoDeBorrado(evento.repeticion, fechas.length),
                   [
                     { text: 'Cancelar', style: 'cancel' },
                     {
@@ -303,6 +315,17 @@ function CalendarIcon() {
     <RowIcon>
       <Rect x={3} y={5} width={18} height={16} rx={2} />
       <Path d="M3 10h18M8 3v4M16 3v4" />
+    </RowIcon>
+  );
+}
+
+/** Line 51. */
+function RepeatIcon() {
+  return (
+    <RowIcon>
+      {REPEAT_PATHS.map((d) => (
+        <Path key={d} d={d} />
+      ))}
     </RowIcon>
   );
 }
