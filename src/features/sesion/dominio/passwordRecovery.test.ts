@@ -79,10 +79,10 @@ describe('getPasswordRecoveryErrorMessage', () => {
 
   it('says to wait after too many attempts', () => {
     expect(getPasswordRecoveryErrorMessage('email', { code: 'over_email_send_rate_limit' })).toBe(
-      'Hiciste demasiados intentos. Esperá unos minutos y probá de nuevo.',
+      'Hiciste demasiados intentos. Esperá un rato (puede ser hasta una hora) y probá de nuevo.',
     );
     expect(getPasswordRecoveryErrorMessage('code', { status: 429 })).toBe(
-      'Hiciste demasiados intentos. Esperá unos minutos y probá de nuevo.',
+      'Hiciste demasiados intentos. Esperá un rato (puede ser hasta una hora) y probá de nuevo.',
     );
   });
 

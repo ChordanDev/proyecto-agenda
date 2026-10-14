@@ -18,7 +18,9 @@ const MESSAGES = {
   shortPassword: `Tiene que tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`,
   samePassword: 'Es la misma contraseña que tenías. Elegí otra.',
   network: 'No hay conexión. Revisá tu internet y probá de nuevo.',
-  rateLimited: 'Hiciste demasiados intentos. Esperá unos minutos y probá de nuevo.',
+  // The emails of the codes have a limit per hour: the wait can be that long.
+  rateLimited:
+    'Hiciste demasiados intentos. Esperá un rato (puede ser hasta una hora) y probá de nuevo.',
   generic: {
     email: 'No pudimos enviar el código. Probá de nuevo en un momento.',
     code: 'No pudimos revisar el código. Probá de nuevo en un momento.',
