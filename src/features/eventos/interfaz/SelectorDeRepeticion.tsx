@@ -6,7 +6,11 @@ import { AppText } from '@/shared/ui';
 
 import type { Repeticion } from '../dominio/evento';
 import { formatFechaDelCampo } from '../dominio/formularioDeEvento';
-import { formatFraseDeRepeticion, getOpcionesDeRepeticion } from '../dominio/repeticion';
+import {
+  formatFraseDeRepeticion,
+  formatNotaDeHasta,
+  getOpcionesDeRepeticion,
+} from '../dominio/repeticion';
 import { RadioMark } from './RadioMark';
 
 // Layout of the approved mockup, which the theme has no tokens for. The line
@@ -47,6 +51,8 @@ export const REPEAT_PATHS = [
 type SelectorDeRepeticionProps = {
   /** The first date; until it is chosen, the options name the weekday of today. */
   fecha: string;
+  /** Today, by the clock of the phone. */
+  hoy: string;
   repeticion: Repeticion;
   finDeSerie: string | null;
   /** An evento of several days cannot repeat: the options are disabled. */
@@ -61,6 +67,7 @@ type SelectorDeRepeticionProps = {
 /** How the evento repeats, its "Hasta" and the sentence that explains it with words. */
 export function SelectorDeRepeticion({
   fecha,
+  hoy,
   repeticion,
   finDeSerie,
   tieneFechaFin,
@@ -133,9 +140,7 @@ export function SelectorDeRepeticion({
               </AppText>
             ) : (
               <AppText variant="chico" style={styles.noteText}>
-                {editando
-                  ? 'Como máximo, un año desde hoy.'
-                  : 'Como máximo, un año desde la primera fecha.'}
+                {formatNotaDeHasta({ fecha, hoy, editando })}
               </AppText>
             )}
           </View>

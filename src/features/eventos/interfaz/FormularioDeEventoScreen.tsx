@@ -383,6 +383,7 @@ function Formulario({ opciones, initial, id, onSaved }: FormularioProps) {
 
       <SelectorDeRepeticion
         fecha={formulario.fecha ?? hoy}
+        hoy={hoy}
         repeticion={formulario.repeticion}
         finDeSerie={formulario.finDeSerie}
         tieneFechaFin={formulario.fechaFin !== null && formulario.fechaFin !== formulario.fecha}

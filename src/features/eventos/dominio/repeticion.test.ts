@@ -1,6 +1,7 @@
 import {
   formatFraseDeRepeticion,
   formatHasta,
+  formatNotaDeHasta,
   formatRepeticionDelDetalle,
   getFechasDeSerie,
   getHastaSugerido,
@@ -218,6 +219,26 @@ describe('a monthly series', () => {
     );
     expect(formatRepeticionDelDetalle('mensual', '2026-10-31')).toBe(
       'El último sábado de cada mes',
+    );
+  });
+});
+
+describe('formatNotaDeHasta', () => {
+  it('tells a new series it can go a year from its first date', () => {
+    expect(formatNotaDeHasta({ fecha: '2026-12-05', hoy: '2026-10-14', editando: false })).toBe(
+      'Como máximo, un año desde la primera fecha.',
+    );
+  });
+
+  it('tells a series being edited the latest day, a year from the edit', () => {
+    expect(formatNotaDeHasta({ fecha: '2026-01-07', hoy: '2026-10-14', editando: true })).toBe(
+      'Como máximo, el 14 de octubre de 2027.',
+    );
+  });
+
+  it('tells a series being edited that starts later the latest day, a year from its first date', () => {
+    expect(formatNotaDeHasta({ fecha: '2026-12-05', hoy: '2026-10-14', editando: true })).toBe(
+      'Como máximo, el 5 de diciembre de 2027.',
     );
   });
 });
