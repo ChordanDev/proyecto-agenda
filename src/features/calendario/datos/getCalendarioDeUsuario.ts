@@ -17,8 +17,14 @@ function unique(values: string[]): string[] {
   return [...new Set(values)];
 }
 
-/** The eventos of the month owned by, or sumados to, the iglesias. */
-async function getOwnedOrSumada(iglesias: readonly IglesiaEnEstructura[]): Promise<string | null> {
+/**
+ * The filter of `getFechasDelMes` for the eventos owned by, or sumados to, the
+ * iglesias; null reads them all. It does not depend on the month, so it is read
+ * once for every month.
+ */
+export async function getOwnedOrSumada(
+  iglesias: readonly IglesiaEnEstructura[],
+): Promise<string | null> {
   if (iglesias.length > MAX_IGLESIAS_TO_NARROW) {
     return null;
   }
@@ -47,11 +53,13 @@ async function getOwnedOrSumada(iglesias: readonly IglesiaEnEstructura[]): Promi
 
 /**
  * Reads the calendario of a usuario for a month: the union of the calendarios
- * of the iglesias their cargos cover, each evento once.
+ * of the iglesias their cargos cover, each evento once. `ownedOrSumada` comes
+ * from `getOwnedOrSumada` for those iglesias, so a month only reads eventos.
  */
 export async function getCalendarioDeUsuario(
   cargos: readonly Cargo[],
   iglesias: readonly IglesiaEnEstructura[],
+  ownedOrSumada: string | null,
   month: Month,
 ): Promise<Calendario> {
   const covered = getIglesiasDeCargos(cargos, iglesias);
@@ -60,10 +68,7 @@ export async function getCalendarioDeUsuario(
     return { fechas: [], nombresDeDistritos: {} };
   }
 
-  const { fechas, nombresDeDistritos } = await getFechasDelMes(
-    await getOwnedOrSumada(covered),
-    month,
-  );
+  const { fechas, nombresDeDistritos } = await getFechasDelMes(ownedOrSumada, month);
 
   return { fechas: armarCalendarioDeUsuario(cargos, covered, fechas), nombresDeDistritos };
 }
