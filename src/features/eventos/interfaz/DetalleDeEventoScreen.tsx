@@ -1,20 +1,25 @@
 import { useRouter } from 'expo-router';
 import { Fragment, type ReactNode } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 import { categorias, colors, fontSize, radius, spacing } from '@/shared/theme';
 import { AppText, BackButton, Button, Card, FormaDeEnfasis, ScreenBackground } from '@/shared/ui';
 
 import type { EventoDetallado } from '../datos/getEvento';
+import { getTipoDeError, useBorrarEvento } from '../datos/useEscribirEvento';
 import { useEvento } from '../datos/useEvento';
+import { usePuedeEditar } from '../datos/usePuedeEditar';
 import { getCategoria } from '../dominio/categoria';
+import { getMensajeDeError } from '../dominio/errorDeEscritura';
+import { seEditaEnElFormulario } from '../dominio/formularioDeEvento';
 import {
   formatFechaYHora,
   getDuenioDelDetalle,
   getEnfasisDelDetalle,
   hasText,
 } from '../dominio/detalleDeEvento';
+import { avisarSinConexion } from './avisarSinConexion';
 
 // Layout of the approved mockup, which the theme has no tokens for. The line
 // numbers are those of diseno/pantallas/05-detalle-evento.html.
@@ -38,6 +43,10 @@ const ROW_TEXTS_GAP = 2; // line 45
 const DESCRIPTION_PADDING = 18; // line 69
 const DESCRIPTION_GAP = 8;
 const DESCRIPTION_LINE_HEIGHT = 1.5; // line 71
+const ACTIONS_GAP = 8; // line 104
+const DELETE_HEIGHT = 56; // line 109
+// The mockups draw no pressed state; the same value as `Button`.
+const PRESSED_OPACITY = 0.85;
 // The texts of the states the mockup does not draw, as in "Elegir iglesia"
 // (03-elegir-iglesia.html, line 28).
 const PARAGRAPH_SIZE = 16;
@@ -70,7 +79,7 @@ export function DetalleDeEventoScreen({ id, fecha }: DetalleDeEventoScreenProps)
 
   const renderContent = () => {
     if (data) {
-      return <Detalle detallado={data} fecha={fecha} />;
+      return <Detalle detallado={data} fecha={fecha} onDeleted={goBack} />;
     }
 
     // States the mockup does not draw.
@@ -118,8 +127,17 @@ export function DetalleDeEventoScreen({ id, fecha }: DetalleDeEventoScreenProps)
   );
 }
 
-function Detalle({ detallado, fecha }: { detallado: EventoDetallado; fecha: string | undefined }) {
+type DetalleProps = {
+  detallado: EventoDetallado;
+  fecha: string | undefined;
+  onDeleted: () => void;
+};
+
+function Detalle({ detallado, fecha, onDeleted }: DetalleProps) {
   const { evento, nombreDelDuenio, fechas } = detallado;
+  const router = useRouter();
+  const puedeEditar = usePuedeEditar(detallado.duenioEnEstructura);
+  const borrar = useBorrarEvento(evento.id);
   const categoria = getCategoria(evento.enfasis);
   const enfasis = getEnfasisDelDetalle(evento.enfasis);
   const duenio = getDuenioDelDetalle(evento.duenio, nombreDelDuenio);
@@ -200,6 +218,60 @@ function Detalle({ detallado, fecha }: { detallado: EventoDetallado; fecha: stri
           <AppText style={styles.descriptionText}>{evento.descripcion}</AppText>
         </View>
       )}
+
+      {puedeEditar && (
+        <>
+          {/* The actions stay at the bottom of the screen, as in capture 5b. */}
+          <View style={styles.spacer} />
+          <View style={styles.actions}>
+            {seEditaEnElFormulario(evento) && (
+              <Button
+                label="Editar"
+                onPress={() => {
+                  if (avisarSinConexion()) {
+                    router.push({ pathname: '/evento/editar/[id]', params: { id: evento.id } });
+                  }
+                }}
+              />
+            )}
+            <Pressable
+              accessibilityRole="button"
+              disabled={borrar.isPending}
+              onPress={() => {
+                if (!avisarSinConexion()) {
+                  return;
+                }
+                // Deleting always asks first.
+                Alert.alert(
+                  '¿Borrar este evento?',
+                  'Se borra de todos los calendarios donde aparece. No se puede deshacer.',
+                  [
+                    { text: 'Cancelar', style: 'cancel' },
+                    {
+                      text: 'Borrar',
+                      style: 'destructive',
+                      onPress: () =>
+                        borrar.mutate(undefined, {
+                          onSuccess: onDeleted,
+                          onError: (error) =>
+                            Alert.alert(
+                              'No se pudo borrar',
+                              getMensajeDeError(getTipoDeError(error)),
+                            ),
+                        }),
+                    },
+                  ],
+                );
+              }}
+              style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}
+            >
+              <AppText variant="cuerpoGrande" weight="bold" color="peligro">
+                {borrar.isPending ? 'Borrando…' : 'Borrar'}
+              </AppText>
+            </Pressable>
+          </View>
+        </>
+      )}
     </>
   );
 }
@@ -261,7 +333,24 @@ const styles = StyleSheet.create({
     paddingTop: HEADER_PADDING_TOP,
     paddingHorizontal: spacing.pantallaHorizontal,
   },
+  spacer: {
+    flex: 1,
+  },
+  actions: {
+    gap: ACTIONS_GAP,
+  },
+  deleteButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: DELETE_HEIGHT,
+    borderRadius: radius.boton,
+    backgroundColor: colors.superficie,
+  },
+  pressed: {
+    opacity: PRESSED_OPACITY,
+  },
   content: {
+    flexGrow: 1,
     gap: spacing.entreTarjetas,
     paddingTop: CONTENT_PADDING_TOP,
     paddingHorizontal: spacing.pantallaHorizontal,
