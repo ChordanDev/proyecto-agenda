@@ -6,7 +6,7 @@ import Svg, { Path } from 'react-native-svg';
 import { colors, spacing } from '@/shared/theme';
 import { AppText, Button, Card, Logo, ScreenBackground } from '@/shared/ui';
 
-import { useCalendarioDeIglesia } from '../datos/useCalendarioDeIglesia';
+import { useCalendario, type FuenteDeCalendario } from '../datos/useCalendario';
 import { useIglesiaDeCalendario } from '../datos/useIglesiaDeCalendario';
 import { formatMonthTitle } from '../dominio/calendarioTexts';
 import type { Month } from '../dominio/getMonthRange';
@@ -50,12 +50,14 @@ const PRESSED_OPACITY = 0.85;
 const SAFE_AREA_EDGES = ['top', 'left', 'right'] as const;
 
 /**
- * The calendario of the iglesia elegida, a month at a time: the grid with the
- * markers of each day and, under it, the eventos of the selected day.
+ * The calendario of the iglesia elegida (a hermano) or of everything the cargos
+ * of the usuario cover, a month at a time: the grid with the markers of each
+ * day and, under it, the eventos of the selected day.
  */
 export function CalendarioScreen() {
   const router = useRouter();
-  const { iglesiaId, iglesia, refetch } = useIglesiaDeCalendario();
+  const origen = useIglesiaDeCalendario();
+  const encabezado = origen.estado === 'listo' ? origen.encabezado : undefined;
 
   return (
     <ScreenBackground edges={SAFE_AREA_EDGES}>
@@ -63,45 +65,62 @@ export function CalendarioScreen() {
         <View style={styles.logoBox}>
           <Logo />
         </View>
-        {iglesia !== undefined && (
+        {encabezado !== undefined && (
           <View style={styles.headerTexts}>
             <AppText variant="tituloEncabezado" accessibilityRole="header">
-              {iglesia.nombre}
+              {encabezado.titulo}
             </AppText>
-            <AppText variant="subtitulo">{iglesia.distrito}</AppText>
+            <AppText variant="subtitulo">{encabezado.subtitulo}</AppText>
           </View>
         )}
       </View>
 
-      {iglesiaId === null ? (
-        // A state the mockup does not draw: a session without an iglesia
-        // elegida also opens on the calendar.
+      {origen.estado === 'listo' ? (
+        <MonthOfCalendario fuente={origen.fuente} onRetry={origen.onRetry} />
+      ) : (
+        // States the mockup does not draw.
         <View style={styles.content}>
           <Card style={styles.message}>
-            <AppText color="textoSecundario" style={styles.paragraph}>
-              Elegí tu iglesia para ver su calendario.
-            </AppText>
-            <Button label="Elegir mi iglesia" onPress={() => router.push('/choose-iglesia')} />
+            {origen.estado === 'sin-iglesia' && (
+              <>
+                <AppText color="textoSecundario" style={styles.paragraph}>
+                  Elegí tu iglesia para ver su calendario.
+                </AppText>
+                <Button label="Elegir mi iglesia" onPress={() => router.push('/choose-iglesia')} />
+              </>
+            )}
+            {origen.estado === 'cargando' && (
+              <AppText color="textoSecundario" style={styles.paragraph}>
+                Cargando tu calendario…
+              </AppText>
+            )}
+            {origen.estado === 'sin-iglesias-asignadas' && (
+              <AppText color="textoSecundario" style={styles.paragraph}>
+                Todavía no tenés iglesias asignadas. Consultá con la asociación.
+              </AppText>
+            )}
+            {origen.estado === 'error' && (
+              <>
+                <AppText color="textoSecundario" style={styles.paragraph}>
+                  No se pudo cargar tu calendario. Revisá la conexión y probá de nuevo.
+                </AppText>
+                <Button label="Reintentar" variant="secondary" onPress={origen.refetch} />
+              </>
+            )}
           </Card>
         </View>
-      ) : (
-        <MonthOfCalendario
-          iglesiaId={iglesiaId}
-          // Without the iglesias the header has no nombres: a retry reads them too.
-          onRetry={iglesia === undefined ? refetch : undefined}
-        />
       )}
     </ScreenBackground>
   );
 }
 
 type MonthOfCalendarioProps = {
-  iglesiaId: string;
+  fuente: FuenteDeCalendario;
   /** Something else to read again when the person retries a failed load. */
   onRetry: (() => void) | undefined;
 };
 
-function MonthOfCalendario({ iglesiaId, onRetry }: MonthOfCalendarioProps) {
+function MonthOfCalendario({ fuente, onRetry }: MonthOfCalendarioProps) {
   const today = useToday();
   const [month, setMonth] = useState(() => getMonthOf(today));
   const [selectedDate, setSelectedDate] = useState(today);
@@ -116,12 +135,7 @@ function MonthOfCalendario({ iglesiaId, onRetry }: MonthOfCalendarioProps) {
       setMonth(getMonthOf(newSelectedDate));
     }
   }
-  const {
-    data: calendario,
-    isError,
-    isFetching,
-    refetch,
-  } = useCalendarioDeIglesia(iglesiaId, month);
+  const { data: calendario, isError, isFetching, refetch } = useCalendario(fuente, month);
 
   const showMonth = (newMonth: Month) => {
     setMonth(newMonth);

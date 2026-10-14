@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useIglesiaElegida } from '@/features/iglesias/datos/useIglesiaElegida';
 
 import { getFirstScreen, type FirstScreen } from '../dominio/getFirstScreen';
-import { getHasSesion } from './getHasSesion';
+import { sesionQueryOptions } from './sesionQuery';
 
 /**
  * The screen the app opens on, or `undefined` while the iglesia elegida and the
@@ -12,16 +12,7 @@ import { getHasSesion } from './getHasSesion';
  */
 export function useFirstScreen(): FirstScreen | undefined {
   const iglesiaElegida = useIglesiaElegida();
-  const sesion = useQuery({
-    queryKey: ['sesion'],
-    queryFn: getHasSesion,
-    // The client answers from what it holds, without a request.
-    networkMode: 'always',
-    retry: false,
-    // Nothing changes the session yet, and whoever signs in or out will
-    // invalidate this query: reading it again on every mount adds nothing.
-    staleTime: Infinity,
-  });
+  const sesion = useQuery(sesionQueryOptions);
 
   // Known once both reads have settled, whatever the outcome. A read that
   // failed is fetched again when another screen asks for it, which makes it
