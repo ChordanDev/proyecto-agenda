@@ -4,6 +4,7 @@ import { supabase } from '@/shared/supabase';
 
 import type { FechaDeEvento } from '../dominio/armarCalendario';
 import { getMonthRange, type Month } from '../dominio/getMonthRange';
+import { armarNombresDeDistritos } from '../dominio/nombresDeDistritos';
 
 type EventoRow = Database['public']['Tables']['eventos']['Row'];
 
@@ -103,13 +104,7 @@ export async function getFechasDelMes(
   }
 
   const rows = [...(insideTheMonth.data ?? []), ...(startedBefore.data ?? [])];
-  const nombresDeDistritos: Record<string, string> = {};
-
   const fechas = rows.map((row): FechaDeEvento => {
-    if (row.eventos.duenio_distrito_id && row.eventos.distritos) {
-      nombresDeDistritos[row.eventos.duenio_distrito_id] = row.eventos.distritos.nombre;
-    }
-
     const evento: Evento = {
       id: row.eventos.id,
       titulo: row.eventos.titulo,
@@ -126,6 +121,13 @@ export async function getFechasDelMes(
 
     return { fecha: row.fecha, evento };
   });
+
+  const nombresDeDistritos = armarNombresDeDistritos(
+    rows.map((row) => ({
+      duenioDistritoId: row.eventos.duenio_distrito_id,
+      nombreDeDistrito: row.eventos.distritos?.nombre ?? null,
+    })),
+  );
 
   return { fechas, nombresDeDistritos };
 }
