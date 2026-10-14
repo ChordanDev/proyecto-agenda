@@ -54,6 +54,12 @@ function readMonth(
 }
 
 /**
+ * The calendario of an iglesia elegida that was deleted: it has no months to
+ * read. Module level, so it keeps its identity between renders.
+ */
+const SIN_IGLESIA = armarCalendarioDeIglesia(null, [], {});
+
+/**
  * The calendario of the source for a month. The iglesia (its distrito, its
  * asociacion and the eventos sumados to it) is read once per source, and each
  * month only reads its eventos. Both stay valid for the vigencia of the query
@@ -85,8 +91,7 @@ export function useCalendario(fuente: FuenteDeCalendario, month: Month) {
   });
 
   return {
-    // An iglesia elegida that was deleted has no months to read.
-    data: lecturaData === null ? armarCalendarioDeIglesia(null, [], {}) : mes.data,
+    data: lecturaData === null ? SIN_IGLESIA : mes.data,
     isError: lectura.isError || mes.isError,
     isFetching: lectura.isFetching || mes.isFetching,
     refetch: () => (lectura.isError ? lectura.refetch() : mes.refetch()),
