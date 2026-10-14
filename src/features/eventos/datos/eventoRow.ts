@@ -9,7 +9,7 @@ type EventoRow = Database['public']['Tables']['eventos']['Row'];
  * set (constraint eventos_duenio_matches_alcance), but the generated types
  * cannot know it.
  */
-export function toDuenio(
+function toDuenio(
   row: Pick<
     EventoRow,
     'id' | 'alcance' | 'duenio_iglesia_id' | 'duenio_distrito_id' | 'duenio_asociacion_id'

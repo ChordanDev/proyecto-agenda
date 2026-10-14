@@ -1,12 +1,9 @@
-import type { Duenio, Evento } from '@/features/eventos/dominio/evento';
-import type { Database } from '@/shared/database.types';
+import { toEvento } from '@/features/eventos/datos/eventoRow';
 import { supabase } from '@/shared/supabase';
 
 import type { FechaDeEvento } from '../dominio/armarCalendario';
 import { getMonthRange, type Month } from '../dominio/getMonthRange';
 import { armarNombresDeDistritos } from '../dominio/nombresDeDistritos';
-
-type EventoRow = Database['public']['Tables']['eventos']['Row'];
 
 /** The calendario of an iglesia or of a usuario for a month. */
 export type Calendario = {
@@ -35,32 +32,6 @@ const FECHA_COLUMNS = `
     distritos (nombre)
   )
 ` as const;
-
-/**
- * The database guarantees that the column of the alcance is the one that is
- * set (constraint eventos_duenio_matches_alcance), but the generated types
- * cannot know it.
- */
-function toDuenio(
-  row: Pick<
-    EventoRow,
-    'id' | 'alcance' | 'duenio_iglesia_id' | 'duenio_distrito_id' | 'duenio_asociacion_id'
-  >,
-): Duenio {
-  if (row.alcance === 'iglesia' && row.duenio_iglesia_id) {
-    return { alcance: 'iglesia', iglesiaId: row.duenio_iglesia_id };
-  }
-
-  if (row.alcance === 'distrito' && row.duenio_distrito_id) {
-    return { alcance: 'distrito', distritoId: row.duenio_distrito_id };
-  }
-
-  if (row.alcance === 'asociacion' && row.duenio_asociacion_id) {
-    return { alcance: 'asociacion', asociacionId: row.duenio_asociacion_id };
-  }
-
-  throw new Error(`Evento ${row.id} has no duenio for its alcance (${row.alcance})`);
-}
 
 /**
  * Reads the dates of eventos that can belong to the calendario, with a filter
@@ -105,21 +76,7 @@ export async function getFechasDelMes(
 
   const rows = [...(insideTheMonth.data ?? []), ...(startedBefore.data ?? [])];
   const fechas = rows.map((row): FechaDeEvento => {
-    const evento: Evento = {
-      id: row.eventos.id,
-      titulo: row.eventos.titulo,
-      lugar: row.eventos.lugar,
-      descripcion: row.eventos.descripcion,
-      enfasis: row.eventos.enfasis,
-      duenio: toDuenio(row.eventos),
-      hora: row.eventos.hora,
-      fechaFin: row.eventos.fecha_fin,
-      repeticion: row.eventos.repeticion,
-      finDeSerie: row.eventos.fin_de_serie,
-      iglesiasSumadas: row.eventos.iglesias_sumadas.map((sumada) => sumada.iglesia_id),
-    };
-
-    return { fecha: row.fecha, evento };
+    return { fecha: row.fecha, evento: toEvento(row.eventos) };
   });
 
   const nombresDeDistritos = armarNombresDeDistritos(
