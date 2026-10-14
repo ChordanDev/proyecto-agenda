@@ -22,6 +22,7 @@ import {
   formatFechaDelCampo,
   formularioDesdeEvento,
   formularioVacio,
+  seEditaEnElFormulario,
   validarFormulario,
   type FormularioDeEvento,
 } from '../dominio/formularioDeEvento';
@@ -87,6 +88,18 @@ export function FormularioDeEventoScreen({ modo }: { modo: ModoDelFormulario }) 
   };
 
   const renderContent = () => {
+    // The detail hides Editar for these eventos; a link must not reach the form either.
+    if (modo.tipo === 'editar' && evento.data && !seEditaEnElFormulario(evento.data.evento)) {
+      return (
+        <Card style={styles.message}>
+          <AppText color="textoSecundario" style={styles.paragraph}>
+            Este evento todavía no se puede editar.
+          </AppText>
+          <Button label="Volver" variant="secondary" onPress={leave} />
+        </Card>
+      );
+    }
+
     if (opciones.data && (modo.tipo === 'nuevo' || evento.data)) {
       const initial =
         modo.tipo === 'nuevo' || !evento.data

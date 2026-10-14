@@ -210,6 +210,7 @@ describe('seEditaEnElFormulario', () => {
 
     expect(seEditaEnElFormulario(base)).toBe(true);
     expect(seEditaEnElFormulario({ ...base, repeticion: 'semanal' })).toBe(false);
+    expect(seEditaEnElFormulario({ ...base, repeticion: 'mensual' })).toBe(false);
     expect(seEditaEnElFormulario({ ...base, fechaFin: '2026-11-01' })).toBe(false);
   });
 });
