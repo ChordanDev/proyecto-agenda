@@ -1,11 +1,11 @@
-import { QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { useFirstScreen } from '@/features/sesion/datos/useFirstScreen';
-import { queryClient } from '@/shared/queryClient';
+import { persistOptions, queryClient } from '@/shared/queryClient';
 import { useDesignFonts } from '@/shared/ui/fonts';
 
 // The splash screen stays up until the fonts of the design are ready and the
@@ -14,10 +14,10 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
       <StatusBar style="dark" />
       <RootStack />
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
 

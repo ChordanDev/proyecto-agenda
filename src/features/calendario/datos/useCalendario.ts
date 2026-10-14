@@ -94,6 +94,8 @@ export function useCalendario(fuente: FuenteDeCalendario, month: Month) {
     data: lecturaData === null ? SIN_IGLESIA : mes.data,
     isError: lectura.isError || mes.isError,
     isFetching: lectura.isFetching || mes.isFetching,
+    // When the calendario on screen was downloaded, 0 while nothing was.
+    dataUpdatedAt: lecturaData === null ? lectura.dataUpdatedAt : mes.dataUpdatedAt,
     refetch: () => (lectura.isError ? lectura.refetch() : mes.refetch()),
   };
 }

@@ -1,4 +1,5 @@
 import {
+  formatActualizado,
   formatDayHeading,
   formatEventosCount,
   formatMonthTitle,
@@ -132,5 +133,28 @@ describe('getAlcanceLabel', () => {
     const duenio = { alcance: 'iglesia', iglesiaId: 'distrito-norte' } as const;
 
     expect(getAlcanceLabel(duenio, nombresDeDistritos)).toBeNull();
+  });
+});
+
+describe('formatActualizado', () => {
+  // Dates in the local time of the phone, as the user reads them.
+  const now = new Date(2026, 9, 6, 20, 15);
+
+  it('says "hoy" for a download of today', () => {
+    expect(formatActualizado(new Date(2026, 9, 6, 18, 40), now)).toBe(
+      'Actualizado hoy a las 18:40.',
+    );
+  });
+
+  it('says "ayer" for a download of yesterday, across a month', () => {
+    expect(formatActualizado(new Date(2026, 8, 30, 9, 5), new Date(2026, 9, 1, 8, 0))).toBe(
+      'Actualizado ayer a las 09:05.',
+    );
+  });
+
+  it('writes the weekday and the date for an older download', () => {
+    expect(formatActualizado(new Date(2026, 9, 3, 7, 30), now)).toBe(
+      'Actualizado el sábado 3 de octubre a las 07:30.',
+    );
   });
 });

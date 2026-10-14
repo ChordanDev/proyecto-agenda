@@ -7,6 +7,7 @@ import { CATEGORIAS, type Categoria } from '@/features/eventos/dominio/categoria
 import { AvisoSinCargos } from '@/features/sesion/interfaz/AvisoSinCargos';
 import { colors, spacing } from '@/shared/theme';
 import { AppText, Button, Card, Logo, ScreenBackground } from '@/shared/ui';
+import { useOnlineStatus } from '@/shared/useOnlineStatus';
 
 import { useCalendario, type FuenteDeCalendario } from '../datos/useCalendario';
 import { useIglesiaDeCalendario } from '../datos/useIglesiaDeCalendario';
@@ -26,6 +27,7 @@ import {
   getSelectedDate,
   getSelectedDateAfterTodayChange,
 } from '../dominio/monthNavigation';
+import { ActualizadoLine } from './ActualizadoLine';
 import { EventosOfDay } from './EventosOfDay';
 import { FiltroDeCategorias } from './FiltroDeCategorias';
 import { FiltroDeIglesia } from './FiltroDeIglesia';
@@ -177,7 +179,14 @@ function MonthOfCalendario({ fuente, encabezadoDeUsuario }: MonthOfCalendarioPro
   // Null is "Todas". Only a usuario whose cargos cover several iglesias picks one.
   const [selectedIglesia, setSelectedIglesia] = useState<string | null>(null);
   const iglesiasDelFiltro = fuente.tipo === 'usuario' ? fuente.iglesias : NO_IGLESIAS;
-  const { data: allEventos, isError, isFetching, refetch } = useCalendario(fuente, month);
+  const {
+    data: allEventos,
+    dataUpdatedAt,
+    isError,
+    isFetching,
+    refetch,
+  } = useCalendario(fuente, month);
+  const online = useOnlineStatus();
   // The header comes with the calendario of the month, built from the read of
   // the iglesia: the last one stays while the next month loads.
   const encabezadoLeido =
@@ -258,6 +267,10 @@ function MonthOfCalendario({ fuente, encabezadoDeUsuario }: MonthOfCalendarioPro
         )}
 
         <FiltroDeCategorias selected={selectedCategorias} onChange={setSelectedCategorias} />
+
+        {!online && dataUpdatedAt > 0 && (
+          <ActualizadoLine updatedAt={dataUpdatedAt} now={new Date()} />
+        )}
 
         <MonthGrid
           month={month}
