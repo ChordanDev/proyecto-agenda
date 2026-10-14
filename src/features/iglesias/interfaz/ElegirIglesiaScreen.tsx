@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   AccessibilityInfo,
@@ -59,9 +59,11 @@ const SAVE_ERROR = 'No se pudo guardar la iglesia. Probá de nuevo.';
 /**
  * The hermano looks for their iglesia by its nombre, picks it and confirms it
  * with "Continuar": only then it is stored on the phone as the iglesia elegida.
+ * Ajustes opens it with `desde=ajustes` to change the iglesia elegida.
  */
 export function ElegirIglesiaScreen() {
   const router = useRouter();
+  const fromAjustes = useLocalSearchParams<{ desde?: string }>().desde === 'ajustes';
   const { data: iglesias, isError, isFetching, refetch } = useIglesias();
   const elegirIglesia = useElegirIglesia();
   const firstScreen = useFirstScreen();
@@ -93,7 +95,13 @@ export function ElegirIglesiaScreen() {
     if (router.canDismiss()) {
       router.dismissAll();
     }
-    router.replace('/calendario');
+    if (fromAjustes) {
+      // The tabs are already under this screen: a replace would not reach the
+      // tab of the calendario, so it switches to it instead.
+      router.navigate('/calendario');
+    } else {
+      router.replace('/calendario');
+    }
   };
 
   // Goes to the previous screen or, when this is the only one of the stack,
@@ -202,7 +210,9 @@ export function ElegirIglesiaScreen() {
             Elegí tu iglesia
           </AppText>
           <AppText color="textoSecundario" style={styles.paragraph}>
-            Queda guardada. Podés cambiarla cuando quieras en Ajustes.
+            {fromAjustes
+              ? 'El calendario pasa a mostrar la iglesia que elijas.'
+              : 'Queda guardada. Podés cambiarla cuando quieras en Ajustes.'}
           </AppText>
         </View>
 
