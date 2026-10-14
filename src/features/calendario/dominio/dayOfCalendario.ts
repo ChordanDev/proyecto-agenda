@@ -2,7 +2,7 @@ import { CATEGORIAS, getCategoria, type Categoria } from '@/features/eventos/dom
 import type { Evento } from '@/features/eventos/dominio/evento';
 
 import type { FechaDeEvento } from './armarCalendario';
-import { expandirDias, type DiaDelRango } from './diasDeEvento';
+import { getDiaDelEvento, type DiaDelRango } from './diasDeEvento';
 
 /** An evento in the list of a day, with the day of its range if it lasts several. */
 export type EventoDelDia = { evento: Evento; diaDelRango: DiaDelRango | null };
@@ -24,14 +24,17 @@ export function getEventosDelDia(
   calendario: readonly FechaDeEvento[],
   date: string,
 ): EventoDelDia[] {
-  return expandirDias(calendario)
-    .filter(({ fecha }) => fecha === date)
+  return calendario
+    .flatMap((fechaDeEvento): EventoDelDia[] => {
+      const dia = getDiaDelEvento(fechaDeEvento, date);
+
+      return dia === undefined ? [] : [{ evento: fechaDeEvento.evento, ...dia }];
+    })
     .sort(
       (a, b) =>
         compareText(a.evento.hora, b.evento.hora) ||
         a.evento.titulo.localeCompare(b.evento.titulo, 'es'),
-    )
-    .map(({ evento, diaDelRango }) => ({ evento, diaDelRango }));
+    );
 }
 
 /** The eventos of a day: see `getEventosDelDia`. */

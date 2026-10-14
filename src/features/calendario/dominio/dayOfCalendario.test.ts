@@ -2,6 +2,7 @@ import type { Evento } from '@/features/eventos/dominio/evento';
 
 import type { FechaDeEvento } from './armarCalendario';
 import { getDayMarkers, getEventosDelDia, getEventosOfDay } from './dayOfCalendario';
+import { toLocalDate } from './localDate';
 
 function fecha(fechaLocal: string, overrides: Partial<Evento> = {}): FechaDeEvento {
   return {
@@ -150,5 +151,23 @@ describe('an evento of several days', () => {
       'Congreso de Jóvenes',
       'Concierto',
     ]);
+  });
+});
+
+describe('an evento whose end is very far away', () => {
+  // Nothing limits the fecha de fin. The days of the range are never built:
+  // whether the evento is on a day is plain arithmetic (Jorge, SP-1 in PR #100).
+  it('builds the days of a month in well under 100 ms', () => {
+    const sinFin = fecha('2026-10-01', { titulo: 'Sin fin', fechaFin: '9999-12-31' });
+    const noviembre = Array.from({ length: 30 }, (_, index) => toLocalDate(2026, 11, index + 1));
+
+    const start = Date.now();
+    for (const day of noviembre) {
+      getDayMarkers([sinFin], day);
+      getEventosDelDia([sinFin], day);
+    }
+
+    expect(Date.now() - start).toBeLessThan(100);
+    expect(getEventosDelDia([sinFin], '2026-11-15')[0].diaDelRango?.numero).toBe(46);
   });
 });

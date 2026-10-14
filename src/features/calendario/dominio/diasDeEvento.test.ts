@@ -1,7 +1,8 @@
 import type { Evento } from '@/features/eventos/dominio/evento';
 
 import type { FechaDeEvento } from './armarCalendario';
-import { expandirDias } from './diasDeEvento';
+import { getDiaDelEvento } from './diasDeEvento';
+import { daysBetween } from './localDate';
 
 function fecha(fechaLocal: string, overrides: Partial<Evento> = {}): FechaDeEvento {
   return {
@@ -23,49 +24,51 @@ function fecha(fechaLocal: string, overrides: Partial<Evento> = {}): FechaDeEven
   };
 }
 
-const days = (fechas: FechaDeEvento[]) =>
-  expandirDias(fechas).map(({ fecha: dia, diaDelRango }) => [dia, diaDelRango]);
-
-describe('expandirDias', () => {
-  it('leaves an evento of one day on its date, with no "Día N de M"', () => {
-    expect(days([fecha('2026-10-10')])).toEqual([['2026-10-10', null]]);
+describe('getDiaDelEvento', () => {
+  it('puts an evento of one day on its date only, with no "Día N de M"', () => {
+    expect(getDiaDelEvento(fecha('2026-10-10'), '2026-10-10')).toEqual({ diaDelRango: null });
+    expect(getDiaDelEvento(fecha('2026-10-10'), '2026-10-11')).toBeUndefined();
   });
 
-  it('marks an evento of several days on each day of the range, saying which day it is', () => {
-    expect(days([fecha('2026-10-30', { fechaFin: '2026-11-01' })])).toEqual([
-      ['2026-10-30', { numero: 1, total: 3 }],
-      ['2026-10-31', { numero: 2, total: 3 }],
-      ['2026-11-01', { numero: 3, total: 3 }],
-    ]);
+  it('puts an evento of several days on each day of its range, saying which day it is', () => {
+    const congreso = fecha('2026-10-30', { fechaFin: '2026-11-01' });
+
+    expect(getDiaDelEvento(congreso, '2026-10-30')).toEqual({
+      diaDelRango: { numero: 1, total: 3 },
+    });
+    expect(getDiaDelEvento(congreso, '2026-10-31')).toEqual({
+      diaDelRango: { numero: 2, total: 3 },
+    });
+    expect(getDiaDelEvento(congreso, '2026-11-01')).toEqual({
+      diaDelRango: { numero: 3, total: 3 },
+    });
   });
 
-  it('keeps the evento of every day of the range', () => {
-    const congreso = fecha('2026-10-30', { fechaFin: '2026-10-31' });
+  it('leaves out the days before and after the range', () => {
+    const congreso = fecha('2026-10-30', { fechaFin: '2026-11-01' });
 
-    expect(expandirDias([congreso]).map(({ evento }) => evento)).toEqual([
-      congreso.evento,
-      congreso.evento,
-    ]);
+    expect(getDiaDelEvento(congreso, '2026-10-29')).toBeUndefined();
+    expect(getDiaDelEvento(congreso, '2026-11-02')).toBeUndefined();
   });
 
   it('takes an end on the first day as an evento of one day', () => {
-    expect(days([fecha('2026-10-30', { fechaFin: '2026-10-30' })])).toEqual([['2026-10-30', null]]);
+    expect(getDiaDelEvento(fecha('2026-10-30', { fechaFin: '2026-10-30' }), '2026-10-30')).toEqual({
+      diaDelRango: null,
+    });
   });
 
   it('ignores an end before the start instead of losing the evento', () => {
-    expect(days([fecha('2026-10-30', { fechaFin: '2026-10-29' })])).toEqual([['2026-10-30', null]]);
+    const roto = fecha('2026-10-30', { fechaFin: '2026-10-29' });
+
+    expect(getDiaDelEvento(roto, '2026-10-30')).toEqual({ diaDelRango: null });
+    expect(getDiaDelEvento(roto, '2026-10-29')).toBeUndefined();
   });
 
-  it('expands each evento of the list', () => {
-    expect(
-      days([
-        fecha('2026-10-10', { titulo: 'Culto' }),
-        fecha('2026-10-11', { titulo: 'Retiro', fechaFin: '2026-10-12' }),
-      ]),
-    ).toEqual([
-      ['2026-10-10', null],
-      ['2026-10-11', { numero: 1, total: 2 }],
-      ['2026-10-12', { numero: 2, total: 2 }],
-    ]);
+  it('counts the days of a range of any length without building them', () => {
+    const sinFin = fecha('2026-10-01', { fechaFin: '9999-12-31' });
+
+    expect(getDiaDelEvento(sinFin, '2026-11-15')).toEqual({
+      diaDelRango: { numero: 46, total: daysBetween('2026-10-01', '9999-12-31') + 1 },
+    });
   });
 });
