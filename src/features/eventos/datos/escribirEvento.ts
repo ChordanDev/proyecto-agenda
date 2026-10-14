@@ -81,7 +81,8 @@ export async function guardarEvento(
   });
 
   if (error) {
-    throw await toErrorDeEscritura(error, id);
+    // A create sent again ends as an edit of its own id: either id is the one to read.
+    throw await toErrorDeEscritura(error, 'editar' in destino ? destino.editar : destino.crear);
   }
 
   return data;
