@@ -1,6 +1,10 @@
 import { supabase } from '@/shared/supabase';
 
-import { clasificarError, type TipoDeError } from '../dominio/errorDeEscritura';
+import {
+  clasificarError,
+  necesitaReleerElEvento,
+  type TipoDeError,
+} from '../dominio/errorDeEscritura';
 import type { EventoAGuardar } from '../dominio/formularioDeEvento';
 
 /** A write of an evento that failed, with what the person can do about it. */
@@ -14,8 +18,27 @@ export class ErrorDeEscritura extends Error {
   }
 }
 
-function toErrorDeEscritura(error: { code?: string; message: string }): ErrorDeEscritura {
-  return new ErrorDeEscritura(clasificarError(error.code, error.message), error.message);
+type ApiError = { code?: string; message: string };
+
+/** Whether the evento is still there; undefined when it cannot be read. */
+async function getEventoExiste(id: string): Promise<boolean | undefined> {
+  const { data, error } = await supabase.from('eventos').select('id').eq('id', id).maybeSingle();
+
+  return error ? undefined : data !== null;
+}
+
+/**
+ * The failure of a write of the evento `id`. When the error does not say whether
+ * the evento still exists, it reads it again to tell.
+ */
+async function toErrorDeEscritura(error: ApiError, id?: string): Promise<ErrorDeEscritura> {
+  const eventoExiste =
+    id !== undefined && necesitaReleerElEvento(error.code) ? await getEventoExiste(id) : undefined;
+
+  return new ErrorDeEscritura(
+    clasificarError(error.code, error.message, { eventoExiste }),
+    error.message,
+  );
 }
 
 /** A null of the domain is an argument left out: the function defaults it to null. */
@@ -48,17 +71,24 @@ export async function guardarEvento(evento: EventoAGuardar, id?: string): Promis
   });
 
   if (error) {
-    throw toErrorDeEscritura(error);
+    throw await toErrorDeEscritura(error, id);
   }
 
   return data;
 }
 
-/** Deletes an evento with its dates (public.borrar_evento). */
+/**
+ * Deletes an evento with its dates (public.borrar_evento). An evento someone
+ * else deleted meanwhile is already what was asked for.
+ */
 export async function borrarEvento(id: string): Promise<void> {
   const { error } = await supabase.rpc('borrar_evento', { evento_id: id });
 
   if (error) {
-    throw toErrorDeEscritura(error);
+    const failure = await toErrorDeEscritura(error, id);
+
+    if (failure.tipo !== 'no-existe') {
+      throw failure;
+    }
   }
 }
