@@ -300,6 +300,26 @@ describe('a weekly series', () => {
   });
 });
 
+describe('a monthly series', () => {
+  it('saves one date per month, with the same rules of "Hasta" as a weekly one', () => {
+    const result = validar(
+      completo({ fecha: '2026-10-17', repeticion: 'mensual', finDeSerie: '2026-12-31' }),
+    );
+
+    expect(result.ok && result.evento).toMatchObject({
+      repeticion: 'mensual',
+      finDeSerie: '2026-12-31',
+      fechas: ['2026-10-17', '2026-11-21', '2026-12-19'],
+    });
+    expect(
+      validar(completo({ fecha: '2026-10-17', repeticion: 'mensual', finDeSerie: '2027-10-18' })),
+    ).toEqual({
+      ok: false,
+      errores: { finDeSerie: '"Hasta" puede ser, como máximo, el 17 de octubre de 2027.' },
+    });
+  });
+});
+
 describe('formularioVacio', () => {
   it('starts with no enfasis chosen, and the duenio and fecha it is given', () => {
     expect(formularioVacio(IGLESIA, '2026-10-17')).toEqual({
