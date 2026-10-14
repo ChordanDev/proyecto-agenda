@@ -14,7 +14,7 @@ body{margin:0;font-family:'Noto Sans','Segoe UI',system-ui,sans-serif;color:#222
 a{color:#1B3550}a:hover{color:#10233A}
 </style>
 </helmet>
-<div style="width: 390px; height: 1820px; box-sizing: border-box; background: linear-gradient(180deg, #2F557F 0px, #E6EBF1 190px, #C9D4E0 100%); display: flex; flex-direction: column; font-family: 'Noto Sans', 'Segoe UI', system-ui, sans-serif; color: #222222">
+<div style="width: 390px; height: 1885px; box-sizing: border-box; background: linear-gradient(180deg, #2F557F 0px, #E6EBF1 190px, #C9D4E0 100%); display: flex; flex-direction: column; font-family: 'Noto Sans', 'Segoe UI', system-ui, sans-serif; color: #222222">
 
   <header style="flex-shrink: 0; padding: 22px 16px 0; display: flex; align-items: center; gap: 12px">
     <a href="Calendario.dc.html" aria-label="Cancelar" style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: #FFFFFF; display: flex; align-items: center; justify-content: center; color: #1B3550">
@@ -30,6 +30,20 @@ a{color:#1B3550}a:hover{color:#10233A}
         <label for="titulo" style="font-size: 16px; font-weight: 700">Título</label>
         <input id="titulo" type="text" value="Culto joven" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
       </div>
+      <!-- Dueño: opens the sheet in 6b with the levels the cargos cover. With a single possible dueño it comes chosen and shows no arrow. -->
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span id="tDuenio" style="font-size: 16px; font-weight: 700">Dueño</span>
+        <button type="button" aria-labelledby="tDuenio" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 6px 12px 6px 16px; font-family: inherit; text-align: left; cursor: pointer; color: #222222">
+          <span style="display: flex; flex-direction: column; line-height: 1.2; min-width: 0">
+            <span style="font-size: 18px">{{ duenio.nombre }}</span>
+            <span style="font-size: 14px; color: #4A4A4A">{{ duenio.detalle }}</span>
+          </span>
+          <sc-if value="{{ variosDuenios }}" hint-placeholder-val="{{ true }}">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B3550" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+          </sc-if>
+        </button>
+        <span style="font-size: 14px; line-height: 1.4; color: #4A4A4A">{{ duenio.seVe }}</span>
+      </div>
       <div style="display: grid; grid-template-columns: 3fr 2fr; gap: 12px">
         <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0">
           <label for="fecha" style="font-size: 16px; font-weight: 700">Fecha</label>
@@ -39,6 +53,14 @@ a{color:#1B3550}a:hover{color:#10233A}
           <label for="hora" style="font-size: 16px; font-weight: 700">Hora</label>
           <input id="hora" type="text" value="19:00" style="height: 56px; width: 100%; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 14px; font-size: 18px; font-family: inherit; color: #222222">
         </div>
+      </div>
+      <!-- Fecha de fin: date only, no end time. It excludes repetición: one is disabled while the other is set. -->
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label for="fechaFin" style="font-size: 16px; font-weight: 700; color: {{ finColor }}">Fecha de fin <span style="font-weight: 400; color: #717171">(opcional)</span></label>
+        <input id="fechaFin" type="text" value="{{ fechaFin }}" disabled="{{ seRepite }}" placeholder="Solo si dura varios días" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: {{ finFondo }}; padding: 0 16px; font-size: 17px; font-family: inherit; color: #222222">
+        <sc-if value="{{ seRepite }}" hint-placeholder-val="{{ true }}">
+          <span style="font-size: 14px; line-height: 1.4; color: #4A4A4A">Un evento que se repite no puede durar varios días.</span>
+        </sc-if>
       </div>
       <div style="display: flex; flex-direction: column; gap: 8px">
         <label for="lugar" style="font-size: 16px; font-weight: 700">Lugar</label>
@@ -51,7 +73,7 @@ a{color:#1B3550}a:hover{color:#10233A}
     </div>
 
     <div role="radiogroup" aria-labelledby="tEnfasis" style="display: flex; flex-direction: column; padding: 16px 16px 4px; border-radius: 20px; background: #FFFFFF">
-      <span id="tEnfasis" style="font-size: 16px; font-weight: 700; margin-bottom: 4px">Categoría</span>
+      <span id="tEnfasis" style="font-size: 16px; font-weight: 700; margin-bottom: 4px">Énfasis</span>
       <sc-for list="{{ enfasis }}" as="en" hint-placeholder-count="5">
         <button type="button" role="radio" aria-checked="{{ en.checked }}" onClick="{{ en.pick }}" style="display: flex; align-items: center; gap: 14px; min-height: 60px; padding: 8px 0; border: 0; border-bottom: 1px solid #EEEEEE; background: transparent; font-family: inherit; text-align: left; cursor: pointer; color: #222222">
           <span style="width: 26px; height: 26px; flex-shrink: 0; display: flex; align-items: center; justify-content: center">
@@ -77,8 +99,11 @@ a{color:#1B3550}a:hover{color:#10233A}
 
     <div role="radiogroup" aria-labelledby="tRep" style="display: flex; flex-direction: column; padding: 16px 16px 4px; border-radius: 20px; background: #FFFFFF">
       <span id="tRep" style="font-size: 16px; font-weight: 700; margin-bottom: 4px">Repetición</span>
+      <sc-if value="{{ tieneFin }}" hint-placeholder-val="{{ false }}">
+        <span style="font-size: 14px; line-height: 1.4; color: #4A4A4A; margin-bottom: 4px">Un evento de varios días no puede repetirse.</span>
+      </sc-if>
       <sc-for list="{{ repes }}" as="r" hint-placeholder-count="3">
-        <button type="button" role="radio" aria-checked="{{ r.checked }}" onClick="{{ r.pick }}" style="display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 8px 0; border: 0; border-bottom: 1px solid #EEEEEE; background: transparent; font-family: inherit; text-align: left; cursor: pointer; color: #222222">
+        <button type="button" role="radio" aria-checked="{{ r.checked }}" disabled="{{ r.disabled }}" onClick="{{ r.pick }}" style="opacity: {{ r.opacity }}; display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 8px 0; border: 0; border-bottom: 1px solid #EEEEEE; background: transparent; font-family: inherit; text-align: left; cursor: pointer; color: #222222">
           <span style="flex: 1; min-width: 0; font-size: 17px; font-weight: 700">{{ r.label }}</span>
           <sc-if value="{{ r.sel }}" hint-placeholder-val="{{ false }}">
             <span style="width: 26px; height: 26px; border-radius: 50%; background: #2F557F; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
@@ -88,12 +113,26 @@ a{color:#1B3550}a:hover{color:#10233A}
           </sc-if>
         </button>
       </sc-for>
+      <!-- Hasta: required for a serie, suggested one year after the first date and capped there. Editing a serie caps it one year after the day of the edit. -->
+      <sc-if value="{{ seRepite }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 14px">
+          <label for="hasta" style="font-size: 16px; font-weight: 700">Hasta</label>
+          <input id="hasta" type="text" value="{{ hasta }}" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
+          <span style="font-size: 14px; line-height: 1.4; color: #4A4A4A">Como máximo, un año desde la primera fecha.</span>
+        </div>
+        <div role="status" style="display: flex; gap: 10px; align-items: flex-start; margin: 14px 0 12px; padding: 12px 14px; border-radius: 12px; background: #E3EAF2; color: #1B3550">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px"><path d="M17 2l4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="M7 22l-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg>
+          <span style="font-size: 16px; line-height: 1.4; font-weight: 600">{{ frase }}</span>
+        </div>
+      </sc-if>
     </div>
 
+    <!-- v2 (#14): sharing with other iglesias. Kept here so it does not need a new design; off in v1. -->
+    <sc-if value="{{ conCompartir }}" hint-placeholder-val="{{ false }}">
     <div style="display: flex; flex-direction: column; gap: 12px; padding: 18px 16px; border-radius: 20px; background: #FFFFFF">
       <div style="display: flex; flex-direction: column; gap: 4px">
         <span style="font-size: 16px; font-weight: 700">Compartir con otras iglesias</span>
-        <span style="font-size: 15px; line-height: 1.4; color: #4A4A4A">Se publica en Iglesia Central. Sumá otras para que también lo vean.</span>
+        <span style="font-size: 15px; line-height: 1.4; color: #4A4A4A">Se publica en {{ duenio.nombre }}. Sumá otras para que también lo vean.</span>
       </div>
 
       <sc-if value="{{ hayElegidas }}" hint-placeholder-val="{{ true }}">
@@ -133,17 +172,21 @@ a{color:#1B3550}a:hover{color:#10233A}
         </sc-if>
       </div>
     </div>
+    </sc-if>
 
     <a href="Calendario.dc.html" style="display: flex; align-items: center; justify-content: center; min-height: 58px; border-radius: 14px; background: #1B3550; color: #FFFFFF; font-size: 18px; font-weight: 700; text-decoration: none">Crear evento</a>
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1820}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1885}}'>
 class Component extends DCLogic {
   renderVals() {
     const st = this.state || {};
+    // The capture shows one chosen; the app opens with none and cannot save until one is (#33).
     const enSel = st.en || 'I';
-    const rep = st.rep || 'no';
+    const rep = st.rep || 'mes';
+    const fechaFin = st.fin || '';
+    const conCompartir = false; // v2
     const elegidasIds = st.eleg || ['rosas'];
     const q = st.q || '';
 
@@ -174,13 +217,30 @@ class Component extends DCLogic {
 
     // Fecha elegida: sábado 17 de octubre de 2026
     const dia = 17, nombreDia = 'sábado', plural = 'sábados';
-    const ordinales = ['1.er', '2.º', '3.er', '4.º', 'último'];
+    // The fifth of its kind in the month becomes "the last" (#14).
+    const ordinales = ['primer', 'segundo', 'tercer', 'cuarto', 'último'];
     const pos = ordinales[Math.min(Math.ceil(dia / 7), 5) - 1];
+    const tieneFin = fechaFin !== '';
+    const seRepite = rep !== 'no';
     const repes = [
       { id: 'no', label: 'No se repite' },
       { id: 'sem', label: 'Cada semana, los ' + plural },
       { id: 'mes', label: 'Cada mes, el ' + pos + ' ' + nombreDia }
-    ].map((r) => ({ ...r, sel: r.id === rep, notSel: r.id !== rep, checked: r.id === rep ? 'true' : 'false', pick: () => this.setState({ rep: r.id }) }));
+    ].map((r) => {
+      const disabled = tieneFin && r.id !== 'no';
+      return { ...r, disabled, opacity: disabled ? 0.45 : 1, sel: r.id === rep, notSel: r.id !== rep, checked: r.id === rep ? 'true' : 'false', pick: () => this.setState({ rep: r.id }) };
+    });
+
+    // Hasta: one year after the first date, sábado 17 de octubre de 2026.
+    const hasta = 'Dom 17 oct 2027';
+    const hastaLargo = '17 de octubre de 2027';
+    const frase = rep === 'sem'
+      ? 'Se repite todos los ' + plural + ', hasta el ' + hastaLargo + '.'
+      : 'Se repite el ' + pos + ' ' + nombreDia + ' de cada mes, hasta el ' + hastaLargo + '.';
+
+    // Dueño: the levels the cargos cover (a pastor of Distrito Norte here).
+    const duenio = { nombre: 'Iglesia Central', detalle: 'Distrito Norte', seVe: 'Se ve en el calendario de esta iglesia.' };
+    const variosDuenios = true;
 
     const elegidas = IGL.filter((ig) => elegidasIds.includes(ig.id)).map((ig) => ({
       ...ig,
@@ -199,6 +259,9 @@ class Component extends DCLogic {
 
     return {
       enfasis, repes, elegidas, resultados, q,
+      duenio, variosDuenios, fechaFin, tieneFin, seRepite, hasta, frase, conCompartir,
+      finColor: seRepite ? '#717171' : '#222222',
+      finFondo: seRepite ? '#F5F6F8' : '#EEF1F5',
       hayElegidas: elegidas.length > 0,
       sinResultados: resultados.length === 0,
       listaTitulo: q.trim() ? 'Resultados, de la más cercana a la más lejana' : 'Más cercanas',
