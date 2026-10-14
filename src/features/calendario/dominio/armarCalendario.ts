@@ -54,27 +54,31 @@ function compareFechas(a: FechaDeEvento, b: FechaDeEvento): number {
 }
 
 /**
- * Builds the calendario of an iglesia out of dates of eventos: keeps the ones
- * that belong to it, each (evento, date) pair once, ordered by date, then hora,
- * then titulo.
+ * Builds the calendario of several iglesias at once: keeps the dates of the
+ * eventos that belong to at least one of them, each (evento, date) pair once
+ * however many of the iglesias see it, ordered by date, then hora, then titulo.
  *
  * The calendario is never stored: it follows from the structure received, so an
  * iglesia that moves to another distrito gets the eventos of the new one and
  * loses those of the old one.
  */
-export function armarCalendario(
-  iglesia: IglesiaEnEstructura,
+export function armarCalendarioDeIglesias(
+  iglesias: readonly IglesiaEnEstructura[],
   fechas: readonly FechaDeEvento[],
 ): FechaDeEvento[] {
-  // An evento can arrive twice: the input may repeat a row, and an iglesia
-  // sumada may also depend on the duenio.
+  // An evento can arrive twice: the input may repeat a row, an iglesia sumada
+  // may also depend on the duenio, and the duenio can be seen by several
+  // iglesias.
   const seen = new Set<string>();
   const calendario: FechaDeEvento[] = [];
 
   for (const fechaDeEvento of fechas) {
     const key = `${fechaDeEvento.evento.id}|${fechaDeEvento.fecha}`;
 
-    if (seen.has(key) || !belongsToCalendario(iglesia, fechaDeEvento.evento)) {
+    if (
+      seen.has(key) ||
+      !iglesias.some((iglesia) => belongsToCalendario(iglesia, fechaDeEvento.evento))
+    ) {
       continue;
     }
 
@@ -83,4 +87,12 @@ export function armarCalendario(
   }
 
   return calendario.sort(compareFechas);
+}
+
+/** The calendario of a single iglesia: see `armarCalendarioDeIglesias`. */
+export function armarCalendario(
+  iglesia: IglesiaEnEstructura,
+  fechas: readonly FechaDeEvento[],
+): FechaDeEvento[] {
+  return armarCalendarioDeIglesias([iglesia], fechas);
 }
