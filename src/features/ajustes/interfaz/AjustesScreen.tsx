@@ -113,7 +113,7 @@ export function AjustesScreen() {
         )}
       </ScrollView>
 
-      {confirmingDelete && <ConfirmDelete onCancel={() => setConfirmingDelete(false)} />}
+      {confirmingDelete && <ConfirmDelete onClose={() => setConfirmingDelete(false)} />}
     </ScreenBackground>
   );
 }
@@ -156,14 +156,14 @@ function UsuarioCard({ usuario }: { usuario: DescripcionDeUsuario }) {
 }
 
 /** Asks before deleting the usuario: it cannot be undone. */
-function ConfirmDelete({ onCancel }: { onCancel: () => void }) {
+function ConfirmDelete({ onClose }: { onClose: () => void }) {
   const deleteOwnUsuario = useDeleteOwnUsuario();
   const leaveToFirstScreen = useLeaveToFirstScreen();
   // Once it is being deleted, there is nothing left to cancel.
   const busy = deleteOwnUsuario.isPending || deleteOwnUsuario.isSuccess;
   const cancel = () => {
     if (!busy) {
-      onCancel();
+      onClose();
     }
   };
 
@@ -190,7 +190,16 @@ function ConfirmDelete({ onCancel }: { onCancel: () => void }) {
             accessibilityRole="button"
             accessibilityState={{ disabled: busy }}
             disabled={busy}
-            onPress={() => deleteOwnUsuario.mutate(undefined, { onSuccess: leaveToFirstScreen })}
+            onPress={() =>
+              deleteOwnUsuario.mutate(undefined, {
+                // Ajustes stays mounted under the calendario: the dialog closes
+                // before leaving, or it would stay on top.
+                onSuccess: () => {
+                  onClose();
+                  leaveToFirstScreen();
+                },
+              })
+            }
             style={({ pressed }) => [
               styles.dialogButton,
               styles.deleteButton,
