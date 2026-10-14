@@ -12,6 +12,7 @@ import { useIglesiaDeCalendario } from '../datos/useIglesiaDeCalendario';
 import { formatMonthTitle } from '../dominio/calendarioTexts';
 import { getEncabezadoDeCalendario, type Encabezado } from '../dominio/encabezadoDeCalendario';
 import { filterFechasByCategorias } from '../dominio/filtroDeCategorias';
+import { filterFechasByIglesia, hasFiltroDeIglesia } from '../dominio/filtroDeIglesia';
 import type { Month } from '../dominio/getMonthRange';
 import {
   getMonthOf,
@@ -22,6 +23,7 @@ import {
 } from '../dominio/monthNavigation';
 import { EventosOfDay } from './EventosOfDay';
 import { FiltroDeCategorias } from './FiltroDeCategorias';
+import { FiltroDeIglesia } from './FiltroDeIglesia';
 import { MonthGrid } from './MonthGrid';
 import { useToday } from './useToday';
 
@@ -49,6 +51,10 @@ const PARAGRAPH_SIZE = 16;
 const PARAGRAPH_LINE_HEIGHT = 1.45;
 // The mockups draw no pressed state; the same value as `Button`.
 const PRESSED_OPACITY = 0.85;
+
+// A hermano has a single iglesia, so no filter by iglesia. Module level, so it
+// keeps its identity between renders.
+const NO_IGLESIAS: FuenteDeIglesias = [];
 
 // The bottom navigation takes care of the bottom edge.
 const SAFE_AREA_EDGES = ['top', 'left', 'right'] as const;
@@ -137,6 +143,8 @@ function SinIglesia() {
   );
 }
 
+type FuenteDeIglesias = Extract<FuenteDeCalendario, { tipo: 'usuario' }>['iglesias'];
+
 type MonthOfCalendarioProps = {
   fuente: FuenteDeCalendario;
   /** The header of a usuario; the one of an iglesia elegida comes with its calendario. */
@@ -160,6 +168,9 @@ function MonthOfCalendario({ fuente, encabezadoDeUsuario }: MonthOfCalendarioPro
   }
   // Everything is shown until the person hides something.
   const [selectedCategorias, setSelectedCategorias] = useState<Categoria[]>([...CATEGORIAS]);
+  // Null is "Todas". Only a usuario whose cargos cover several iglesias picks one.
+  const [selectedIglesia, setSelectedIglesia] = useState<string | null>(null);
+  const iglesiasDelFiltro = fuente.tipo === 'usuario' ? fuente.iglesias : NO_IGLESIAS;
   const { data: allEventos, isError, isFetching, refetch } = useCalendario(fuente, month);
   // The header comes from the read of the iglesia, which goes with each month:
   // the last one read stays while the next month loads.
@@ -176,13 +187,17 @@ function MonthOfCalendario({ fuente, encabezadoDeUsuario }: MonthOfCalendarioPro
   }
   const encabezado = encabezadoLeido ?? ultimoEncabezado;
   // The same filtered fechas feed the markers of the grid and the list of the day.
+  // Both filters work on the fechas already read, so the month is read once.
   const calendario = useMemo(
     () =>
       allEventos && {
         ...allEventos,
-        fechas: filterFechasByCategorias(allEventos.fechas, selectedCategorias),
+        fechas: filterFechasByCategorias(
+          filterFechasByIglesia(allEventos.fechas, iglesiasDelFiltro, selectedIglesia),
+          selectedCategorias,
+        ),
       },
-    [allEventos, selectedCategorias],
+    [allEventos, iglesiasDelFiltro, selectedIglesia, selectedCategorias],
   );
 
   const showMonth = (newMonth: Month) => {
@@ -225,6 +240,14 @@ function MonthOfCalendario({ fuente, encabezadoDeUsuario }: MonthOfCalendarioPro
             />
           </View>
         </View>
+
+        {hasFiltroDeIglesia(iglesiasDelFiltro) && (
+          <FiltroDeIglesia
+            iglesias={iglesiasDelFiltro}
+            selected={selectedIglesia}
+            onChange={setSelectedIglesia}
+          />
+        )}
 
         <FiltroDeCategorias selected={selectedCategorias} onChange={setSelectedCategorias} />
 
