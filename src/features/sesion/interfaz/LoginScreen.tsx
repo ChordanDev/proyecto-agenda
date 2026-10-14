@@ -31,6 +31,9 @@ const MEMBER_DETAIL_LINE_HEIGHT = 1.4;
 const MEMBER_BUTTON_HEIGHT = 46; // line 54
 const MEMBER_BUTTON_PADDING = 14;
 const ERROR_SIZE = 16;
+const RECOVERY_LINK_HEIGHT = 48; // line 45
+const RECOVERY_LINK_MARGIN_TOP = -6;
+const RECOVERY_LINK_SIZE = 16;
 // The mockups draw no pressed state; the same value as `Button`.
 const PRESSED_OPACITY = 0.85;
 
@@ -148,6 +151,17 @@ export function LoginScreen() {
           </View>
 
           <Button label="Ingresar" disabled={signIn.isPending} onPress={submit} />
+
+          {/* First access and password recovery share one flow. */}
+          <Pressable
+            accessibilityRole="link"
+            onPress={() => router.push('/choose-password')}
+            style={({ pressed }) => [styles.recoveryLink, pressed && styles.pressed]}
+          >
+            <AppText color="azulOscuro" weight="bold" style={styles.recoveryLinkLabel}>
+              Es mi primera vez u olvidé mi contraseña
+            </AppText>
+          </Pressable>
         </View>
 
         <View style={styles.spacer} />
@@ -222,6 +236,17 @@ const styles = StyleSheet.create({
   },
   error: {
     fontSize: ERROR_SIZE,
+  },
+  recoveryLink: {
+    minHeight: RECOVERY_LINK_HEIGHT,
+    marginTop: RECOVERY_LINK_MARGIN_TOP,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recoveryLinkLabel: {
+    fontSize: RECOVERY_LINK_SIZE,
+    textAlign: 'center',
+    textDecorationLine: 'underline',
   },
   spacer: {
     flex: 1,
