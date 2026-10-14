@@ -5,6 +5,7 @@ Diseño aprobado de "Agenda de iglesia". Es la referencia visual para implementa
 ## Qué hay acá
 - `pantallas/` — una página HTML por pantalla (mockups de 390 px de ancho). Son **especificación**, no código para reutilizar: tomar de ahí colores, tamaños, espaciados, textos y estructura, y traducirlos a componentes RN.
   - Están en un formato propio del editor de diseño (`<x-dc>`, `{{ variables }}`, `<sc-if>`, `<sc-for>`). Los datos de ejemplo y la lógica de cada pantalla están en el `<script>` del final.
+  - `02b-elegir-contrasena.html` es el flujo de primer acceso y recuperación ("Es mi primera vez u olvidé mi contraseña"): una pantalla con tres pasos, `paso` 1 a 3, con sus capturas `2b`, `2c` y `2d`.
   - `04b-calendario-pastor.html` reutiliza `04a-calendario.html` con `rol="pastor"`: es la misma pantalla con filtro por iglesia, botón "Nuevo evento" y la pestaña Gestión.
 - `capturas/` — PNG de cada pantalla (exportar desde el lienzo de diseño: Share › Export).
   - `6b · Crear evento (dueño).png` es la hoja que se abre al tocar "Dueño" en Crear evento: los niveles que abarcan los cargos de quien carga, agrupados en Asociación, Distrito e Iglesias.
