@@ -1,14 +1,16 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+import { CATEGORIAS, type Categoria } from '@/features/eventos/dominio/categoria';
 import { colors, spacing } from '@/shared/theme';
 import { AppText, Button, Card, Logo, ScreenBackground } from '@/shared/ui';
 
 import { useCalendario, type FuenteDeCalendario } from '../datos/useCalendario';
 import { useIglesiaDeCalendario } from '../datos/useIglesiaDeCalendario';
 import { formatMonthTitle } from '../dominio/calendarioTexts';
+import { filterFechasByCategorias } from '../dominio/filtroDeCategorias';
 import type { Month } from '../dominio/getMonthRange';
 import {
   getMonthOf,
@@ -18,6 +20,7 @@ import {
   getSelectedDateAfterTodayChange,
 } from '../dominio/monthNavigation';
 import { EventosOfDay } from './EventosOfDay';
+import { FiltroDeCategorias } from './FiltroDeCategorias';
 import { MonthGrid } from './MonthGrid';
 import { useToday } from './useToday';
 
@@ -135,7 +138,18 @@ function MonthOfCalendario({ fuente, onRetry }: MonthOfCalendarioProps) {
       setMonth(getMonthOf(newSelectedDate));
     }
   }
-  const { data: calendario, isError, isFetching, refetch } = useCalendario(fuente, month);
+  // Everything is shown until the person hides something.
+  const [selectedCategorias, setSelectedCategorias] = useState<Categoria[]>([...CATEGORIAS]);
+  const { data: allEventos, isError, isFetching, refetch } = useCalendario(fuente, month);
+  // The same filtered fechas feed the markers of the grid and the list of the day.
+  const calendario = useMemo(
+    () =>
+      allEventos && {
+        ...allEventos,
+        fechas: filterFechasByCategorias(allEventos.fechas, selectedCategorias),
+      },
+    [allEventos, selectedCategorias],
+  );
 
   const showMonth = (newMonth: Month) => {
     setMonth(newMonth);
@@ -168,6 +182,8 @@ function MonthOfCalendario({ fuente, onRetry }: MonthOfCalendarioProps) {
           />
         </View>
       </View>
+
+      <FiltroDeCategorias selected={selectedCategorias} onChange={setSelectedCategorias} />
 
       <MonthGrid
         month={month}
