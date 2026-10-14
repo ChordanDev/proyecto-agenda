@@ -151,3 +151,15 @@ export function getOpcionDeDuenio(
 export function countOpciones(opciones: OpcionesDeDuenio): number {
   return allOpciones(opciones).length;
 }
+
+/** The id of the iglesia, distrito or asociacion that owns: unlike its nombre, unique. */
+export function getDuenioId(duenio: Duenio): string {
+  switch (duenio.alcance) {
+    case 'iglesia':
+      return duenio.iglesiaId;
+    case 'distrito':
+      return duenio.distritoId;
+    case 'asociacion':
+      return duenio.asociacionId;
+  }
+}

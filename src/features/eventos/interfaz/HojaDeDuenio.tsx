@@ -6,6 +6,7 @@ import { AppText } from '@/shared/ui';
 
 import type { Duenio } from '../dominio/evento';
 import {
+  getDuenioId,
   getOpcionDeDuenio,
   type OpcionDeDuenio,
   type OpcionesDeDuenio,
@@ -72,7 +73,7 @@ export function HojaDeDuenio({
 
               return (
                 <Pressable
-                  key={opcion.nombre}
+                  key={getDuenioId(opcion.duenio)}
                   accessibilityRole="radio"
                   accessibilityState={{ checked }}
                   accessibilityLabel={`${opcion.nombre}, ${opcion.detalle}`}
