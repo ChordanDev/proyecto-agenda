@@ -100,30 +100,30 @@ select throws_ok(
   '42501', null, 'anon cannot insert iglesias_sumadas'
 );
 
--- Rejected: updating and deleting affect zero rows.
-select is_empty(
+-- Rejected: updating and deleting raise 42501 too, anon has no write privilege.
+select throws_ok(
   $$ update public.eventos set titulo = 'Cambiado' returning id $$,
-  'anon cannot update eventos'
+  '42501', 'permission denied for table eventos', 'anon cannot update eventos'
 );
-select is_empty(
+select throws_ok(
   $$ update public.eventos_fechas set fecha = '2026-12-25' returning evento_id $$,
-  'anon cannot update eventos_fechas'
+  '42501', 'permission denied for table eventos_fechas', 'anon cannot update eventos_fechas'
 );
-select is_empty(
+select throws_ok(
   $$ update public.iglesias_sumadas set iglesia_id = '11111111-0000-4000-8000-000000000003' returning evento_id $$,
-  'anon cannot update iglesias_sumadas'
+  '42501', 'permission denied for table iglesias_sumadas', 'anon cannot update iglesias_sumadas'
 );
-select is_empty(
+select throws_ok(
   $$ delete from public.iglesias_sumadas returning evento_id $$,
-  'anon cannot delete iglesias_sumadas'
+  '42501', 'permission denied for table iglesias_sumadas', 'anon cannot delete iglesias_sumadas'
 );
-select is_empty(
+select throws_ok(
   $$ delete from public.eventos_fechas returning evento_id $$,
-  'anon cannot delete eventos_fechas'
+  '42501', 'permission denied for table eventos_fechas', 'anon cannot delete eventos_fechas'
 );
-select is_empty(
+select throws_ok(
   $$ delete from public.eventos returning id $$,
-  'anon cannot delete eventos'
+  '42501', 'permission denied for table eventos', 'anon cannot delete eventos'
 );
 
 reset role;
@@ -166,7 +166,9 @@ select throws_ok(
   '42501', null, 'authenticated cannot insert iglesias_sumadas'
 );
 
--- Rejected: updating and deleting affect zero rows.
+-- Rejected: with the privilege on eventos and eventos_fechas but no cargo,
+-- updating and deleting affect zero rows. iglesias_sumadas has no write
+-- privilege, so there they raise 42501.
 select is_empty(
   $$ update public.eventos set titulo = 'Cambiado' returning id $$,
   'authenticated cannot update eventos'
@@ -175,13 +177,13 @@ select is_empty(
   $$ update public.eventos_fechas set fecha = '2026-12-25' returning evento_id $$,
   'authenticated cannot update eventos_fechas'
 );
-select is_empty(
+select throws_ok(
   $$ update public.iglesias_sumadas set iglesia_id = '11111111-0000-4000-8000-000000000003' returning evento_id $$,
-  'authenticated cannot update iglesias_sumadas'
+  '42501', 'permission denied for table iglesias_sumadas', 'authenticated cannot update iglesias_sumadas'
 );
-select is_empty(
+select throws_ok(
   $$ delete from public.iglesias_sumadas returning evento_id $$,
-  'authenticated cannot delete iglesias_sumadas'
+  '42501', 'permission denied for table iglesias_sumadas', 'authenticated cannot delete iglesias_sumadas'
 );
 select is_empty(
   $$ delete from public.eventos_fechas returning evento_id $$,
