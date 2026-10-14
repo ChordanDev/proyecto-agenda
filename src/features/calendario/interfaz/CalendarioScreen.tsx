@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { CATEGORIAS, type Categoria } from '@/features/eventos/dominio/categoria';
+import { AvisoSinCargos } from '@/features/sesion/interfaz/AvisoSinCargos';
 import { colors, spacing } from '@/shared/theme';
 import { AppText, Button, Card, Logo, ScreenBackground } from '@/shared/ui';
 
@@ -89,6 +90,7 @@ export function CalendarioScreen() {
       <CalendarioHeader encabezado={undefined} />
       {/* States the mockup does not draw. */}
       <View style={styles.content}>
+        <AvisoSinCargos />
         {origen.estado === 'sin-iglesia' && <SinIglesia />}
         <Card style={styles.message}>
           {origen.estado === 'cargando' && (
@@ -215,6 +217,7 @@ function MonthOfCalendario({ fuente, encabezadoDeUsuario }: MonthOfCalendarioPro
       <>
         <CalendarioHeader encabezado={undefined} />
         <View style={styles.content}>
+          <AvisoSinCargos />
           <SinIglesia />
         </View>
       </>
@@ -227,6 +230,7 @@ function MonthOfCalendario({ fuente, encabezadoDeUsuario }: MonthOfCalendarioPro
       {/* The header stays in place and the bottom navigation is outside: only
           the month and its eventos scroll. */}
       <ScrollView contentContainerStyle={styles.content}>
+        <AvisoSinCargos />
         <View style={styles.monthRow}>
           <AppText variant="tituloPantalla" accessibilityRole="header" style={styles.monthTitle}>
             {formatMonthTitle(month)}

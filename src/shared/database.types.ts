@@ -195,6 +195,9 @@ isOneToOne: false
           Functions: {
             "cargos_abarcan_duenio":
 { Args: { "duenio_asociacion_id": string,"duenio_distrito_id": string,"duenio_iglesia_id": string }; Returns: boolean
+                           },
+"delete_own_usuario":
+{ Args: Record<PropertyKey, never>; Returns: undefined
                            }
           }
           Enums: {

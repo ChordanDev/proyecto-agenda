@@ -32,7 +32,8 @@ export type OrigenDeCalendario =
 /**
  * The calendario this phone shows. With a session it is the one of the
  * usuario's cargos, and the iglesia elegida of the phone is ignored; without
- * one it is the one of the iglesia elegida of the hermano.
+ * one, or for a usuario without cargos, it is the one of the iglesia elegida,
+ * as for a hermano.
  *
  * The iglesia elegida is not read here: its calendario reads it by id, with its
  * nombres, and tells when it no longer exists, so that the screen offers to
@@ -48,7 +49,10 @@ export function useIglesiaDeCalendario(): OrigenDeCalendario {
     enabled: hasSesion,
   });
 
-  if (hasSesion) {
+  // A usuario without cargos sees the calendario as a hermano.
+  const sinCargos = cargos.data?.length === 0;
+
+  if (hasSesion && !sinCargos) {
     if (cargos.isError || estructura.isError) {
       return {
         estado: 'error',
