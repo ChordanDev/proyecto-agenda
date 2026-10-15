@@ -47,6 +47,43 @@ function selectFechas(ownedOrSumada: string | null) {
   return ownedOrSumada === null ? query : query.or(ownedOrSumada, { referencedTable: 'eventos' });
 }
 
+type FechasQuery = ReturnType<typeof selectFechas>;
+
+/**
+ * Rows per page. PostgREST cuts each response at `max_rows` (1000, see
+ * `supabase/config.toml`) and still answers 200, so a page never asks for more.
+ */
+const PAGE_SIZE = 1000;
+
+/**
+ * Reads every date that `filter` keeps, page by page, until a page comes back
+ * short. The order by the primary key keeps the pages from overlapping or
+ * skipping rows.
+ */
+async function readAllFechas(
+  ownedOrSumada: string | null,
+  filter: (query: FechasQuery) => FechasQuery,
+) {
+  const rows = [];
+
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await filter(selectFechas(ownedOrSumada))
+      .order('evento_id')
+      .order('fecha')
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error) {
+      throw new Error(`Could not read the calendario: ${error.message}`);
+    }
+
+    rows.push(...data);
+
+    if (data.length < PAGE_SIZE) {
+      return rows;
+    }
+  }
+}
+
 /**
  * Reads the dates of the eventos that can belong to a calendario for a month,
  * before the rule of `armarCalendario` keeps the ones that do.
@@ -64,17 +101,13 @@ export async function getFechasDelMes(
   // PostgREST cannot combine in one `or` a column of eventos_fechas (fecha)
   // with a column of the embedded eventos (fecha_fin), hence the two requests.
   const [insideTheMonth, startedBefore] = await Promise.all([
-    selectFechas(ownedOrSumada).gte('fecha', firstDay).lte('fecha', lastDay),
-    selectFechas(ownedOrSumada).lt('fecha', firstDay).gte('eventos.fecha_fin', firstDay),
+    readAllFechas(ownedOrSumada, (query) => query.gte('fecha', firstDay).lte('fecha', lastDay)),
+    readAllFechas(ownedOrSumada, (query) =>
+      query.lt('fecha', firstDay).gte('eventos.fecha_fin', firstDay),
+    ),
   ]);
 
-  const error = insideTheMonth.error ?? startedBefore.error;
-
-  if (error) {
-    throw new Error(`Could not read the calendario: ${error.message}`);
-  }
-
-  const rows = [...(insideTheMonth.data ?? []), ...(startedBefore.data ?? [])];
+  const rows = [...insideTheMonth, ...startedBefore];
   const fechas = rows.map((row): FechaDeEvento => {
     return { fecha: row.fecha, evento: toEvento(row.eventos) };
   });
