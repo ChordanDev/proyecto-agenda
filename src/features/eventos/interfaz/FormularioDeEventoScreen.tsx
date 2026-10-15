@@ -22,6 +22,7 @@ import { getDuenioDelDetalle } from '../dominio/detalleDeEvento';
 import { getMensajeDeError } from '../dominio/errorDeEscritura';
 import {
   cambiarDuenio,
+  elegirLugar,
   formatFechaDelCampo,
   formularioDesdeEvento,
   getNombreDelLugar,
@@ -482,7 +483,8 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
           nombreDelDuenio={opcionDeDuenio.nombre}
           selected={formulario.lugar}
           onSelect={(lugar) => {
-            update({ lugar });
+            // A late "Guardar lugar" of a duenio no longer chosen is ignored.
+            setFormulario((current) => elegirLugar(current, lugar));
             setOpenSheet(null);
           }}
           onClose={() => setOpenSheet(null)}
