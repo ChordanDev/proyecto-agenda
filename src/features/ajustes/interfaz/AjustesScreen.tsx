@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useDeleteOwnUsuario, useSignOut } from '@/features/sesion/datos/useLeaveSesion';
+import { useSesion } from '@/features/sesion/datos/useSesion';
 import { useLeaveToFirstScreen } from '@/features/sesion/interfaz/useLeaveToFirstScreen';
 import { colors, fontSize, radius, spacing } from '@/shared/theme';
 import { AppText, Button, Logo, ScreenBackground } from '@/shared/ui';
@@ -30,12 +31,12 @@ const CARD_ROW_GAP = 12;
 const CARD_TEXTS_GAP = 2; // line 32
 const CHANGE_HEIGHT = 46; // line 36
 const CHANGE_LABEL_SIZE = 16;
-const USUARIO_CARD_GAP = 14; // line 66
-const AVATAR_SIZE = 44; // line 68
+const USUARIO_CARD_GAP = 14; // line 84
+const AVATAR_SIZE = 44; // line 86
 const AVATAR_LABEL_SIZE = 15;
-const DELETE_HEIGHT = 52; // line 76
+const DELETE_HEIGHT = 52; // line 96
 const DELETE_LABEL_SIZE = 16;
-// The confirmation of "Eliminar mi cuenta" (lines 89-99).
+// The confirmation of "Eliminar mi cuenta" (lines 111-121).
 const OVERLAY_COLOR = 'rgba(16,35,58,0.55)';
 const OVERLAY_PADDING_HORIZONTAL = 20;
 const DIALOG_RADIUS = 22;
@@ -58,12 +59,14 @@ const PRESSED_OPACITY = 0.85;
 const SAFE_AREA_EDGES = ['top', 'left', 'right'] as const;
 
 /**
- * Ajustes: the iglesia elegida of this phone, which can be changed from here,
- * and, with a session, signing out and "Eliminar mi cuenta".
+ * Ajustes: the iglesia elegida of this phone, which can be changed from here;
+ * with a session, signing out and "Eliminar mi cuenta", and without one, the
+ * way into Ingresar.
  */
 export function AjustesScreen() {
   const router = useRouter();
   const miIglesia = useMiIglesia();
+  const hasSesion = useSesion();
   const usuario = useUsuario();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
@@ -92,6 +95,22 @@ export function AjustesScreen() {
         <Section title="Mi iglesia">
           <MiIglesiaCard miIglesia={miIglesia} onChange={changeIglesia} />
         </Section>
+
+        {/* Only without a session: whoever chose an iglesia as a hermano and
+            later got a cargo has no Bienvenida left to sign in from. Hidden
+            while the session is still being read, so it does not flash. */}
+        {hasSesion === false && (
+          <View style={[styles.card, styles.cardRow]}>
+            <AppText variant="cuerpoGrande" weight="bold" style={styles.cardTexts}>
+              ¿Sos encargado o pastor?
+            </AppText>
+            <ChangeButton
+              label="Ingresar"
+              accessibilityLabel="Ingresar"
+              onPress={() => router.push('/login')}
+            />
+          </View>
+        )}
 
         {/* Only with a session: the hermano sees Mi iglesia alone. */}
         {usuario && (
@@ -301,7 +320,7 @@ type ChangeButtonProps = {
   onPress: () => void;
 };
 
-/** The small button at the right of the card ("Cambiar"), smaller than `Button`. */
+/** The small button at the right of a card ("Cambiar", "Ingresar"), smaller than `Button`. */
 function ChangeButton({ label, accessibilityLabel, onPress }: ChangeButtonProps) {
   return (
     <Pressable
