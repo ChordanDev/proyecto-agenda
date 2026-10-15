@@ -37,6 +37,14 @@ a{color:#1B3550}a:hover{color:#10233A}
       </div>
     </section>
 
+    <!-- Only without a sesion: the way into Ingresar for whoever already chose an iglesia. -->
+    <sc-if value="{{ sinSesion }}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-radius: 20px; background: #FFFFFF">
+      <span style="flex: 1; min-width: 0; font-size: 18px; font-weight: 700">¿Sos encargado o pastor?</span>
+      <a href="Login.dc.html" style="display: inline-flex; align-items: center; min-height: 46px; padding: 0 16px; border-radius: 12px; background: #E3EAF2; font-size: 16px; font-weight: 700; text-decoration: none; color: #1B3550; flex-shrink: 0">Ingresar</a>
+    </div>
+    </sc-if>
+
     <!-- v2: event reminders. Kept here so they do not need a new design; off in v1. -->
     <sc-if value="{{ conNotificaciones }}" hint-placeholder-val="{{ false }}">
     <section style="display: flex; flex-direction: column; gap: 10px">
@@ -123,7 +131,7 @@ class Component extends DCLogic {
     const confirmando = !!st.confirmando;
     return {
       on: !off, off, toggle: () => this.setState({ off: !off }),
-      conNotificaciones, conSesion, confirmando,
+      conNotificaciones, conSesion, sinSesion: !conSesion, confirmando,
       pedirEliminar: () => this.setState({ confirmando: true }),
       cancelar: () => this.setState({ confirmando: false })
     };
