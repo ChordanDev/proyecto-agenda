@@ -4,6 +4,7 @@ export { BackButton } from './BackButton';
 export { BottomBar } from './BottomBar';
 export { Button } from './Button';
 export { Card } from './Card';
+export { ConfirmDialog, DialogText } from './ConfirmDialog';
 export { FormaDeEnfasis, type Categoria } from './FormaDeEnfasis';
 export { Logo } from './Logo';
 export { ScreenBackground } from './ScreenBackground';

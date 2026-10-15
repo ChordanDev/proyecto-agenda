@@ -1,12 +1,12 @@
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { colors, radius, spacing } from '@/shared/theme';
 import { AppText, Button } from '@/shared/ui';
 
 import { useCargos } from '../datos/useCargos';
-import { useSignOut } from '../datos/useLeaveSesion';
 import { useSesion } from '../datos/useSesion';
-import { useLeaveToFirstScreen } from './useLeaveToFirstScreen';
+import { ConfirmSignOut } from './ConfirmSignOut';
 
 // A notice the mockups do not draw: the colors of the warnings of the theme, and
 // the text of "Elegir iglesia" (03-elegir-iglesia.html, line 28).
@@ -20,8 +20,7 @@ const PARAGRAPH_LINE_HEIGHT = 1.45;
 export function AvisoSinCargos() {
   const hasSesion = useSesion() === true;
   const { data: cargos } = useCargos();
-  const signOut = useSignOut();
-  const leaveToFirstScreen = useLeaveToFirstScreen();
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
 
   if (!hasSesion || cargos?.length !== 0) {
     return null;
@@ -33,17 +32,12 @@ export function AvisoSinCargos() {
         Todavía no tenés cargos asignados, así que ves el calendario como cualquier hermano.
         Consultá con la asociación.
       </AppText>
-      {signOut.isError && (
-        <AppText color="peligro" accessibilityRole="alert">
-          No se pudo cerrar la sesión. Probá de nuevo.
-        </AppText>
-      )}
       <Button
         label="Cerrar sesión"
         variant="secondary"
-        disabled={signOut.isPending}
-        onPress={() => signOut.mutate(undefined, { onSuccess: leaveToFirstScreen })}
+        onPress={() => setConfirmingSignOut(true)}
       />
+      {confirmingSignOut && <ConfirmSignOut onClose={() => setConfirmingSignOut(false)} />}
     </View>
   );
 }
