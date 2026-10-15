@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -41,12 +42,39 @@ type HojaInferiorProps = {
   visible: boolean;
   title: string;
   intro?: string;
+  /**
+   * Keeps the end of the content in view, also when the keyboard makes the
+   * sheet smaller: a field and its button at the end stay above the keyboard.
+   */
+  scrollToEnd?: boolean;
   onClose: () => void;
   children: ReactNode;
 };
 
 /** A sheet that rises from the bottom over a dark scrim, with a title and a close button. */
-export function HojaInferior({ visible, title, intro, onClose, children }: HojaInferiorProps) {
+export function HojaInferior({
+  visible,
+  title,
+  intro,
+  scrollToEnd = false,
+  onClose,
+  children,
+}: HojaInferiorProps) {
+  const scrollRef = useRef<ScrollView>(null);
+  const keepEndInView = () => {
+    if (scrollToEnd) scrollRef.current?.scrollToEnd({ animated: true });
+  };
+
+  // The keyboard shrinks the sheet after the content was laid out: scroll again
+  // once it is up.
+  useEffect(() => {
+    if (!scrollToEnd) return;
+    const subscription = Keyboard.addListener('keyboardDidShow', () =>
+      scrollRef.current?.scrollToEnd({ animated: true }),
+    );
+    return () => subscription.remove();
+  }, [scrollToEnd]);
+
   return (
     <Modal
       visible={visible}
@@ -94,7 +122,14 @@ export function HojaInferior({ visible, title, intro, onClose, children }: HojaI
               {intro}
             </AppText>
           )}
-          <ScrollView keyboardShouldPersistTaps="handled">{children}</ScrollView>
+          <ScrollView
+            ref={scrollRef}
+            keyboardShouldPersistTaps="handled"
+            onContentSizeChange={keepEndInView}
+            onLayout={keepEndInView}
+          >
+            {children}
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>

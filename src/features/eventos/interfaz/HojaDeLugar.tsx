@@ -28,11 +28,19 @@ const ROW_MIN_HEIGHT = 60;
 const ROW_PADDING_VERTICAL = 8;
 const ROW_GAP = 14;
 const ROW_TEXTS_GAP = 1;
-const ADD_GAP = 12;
+// "+ Agregar lugar" is a button apart from the rows, so it does not read as one
+// more lugar (capture 6c); the new lugar is written in its own box (6d).
+const ADD_MARGIN_TOP = 16;
+const ADD_MIN_HEIGHT = 56;
+const ADD_GAP = 10;
+const ADD_RADIUS = 14;
 const ADD_ICON_SIZE = 22;
 const ADD_STROKE_WIDTH = 2.8;
-const NEW_PADDING_TOP = 14;
+const NEW_MARGIN_TOP = 16;
+const NEW_PADDING = 16;
 const NEW_GAP = 10;
+const NEW_RADIUS = 16;
+const NEW_BORDER_COLOR = '#D5DBE3';
 // The mockups draw no pressed state; the same value as `Button`.
 const PRESSED_OPACITY = 0.85;
 
@@ -130,6 +138,8 @@ export function HojaDeLugar({
       visible={visible}
       title="¿Dónde es?"
       intro={`Lugares de ${nombreDelDuenio}.`}
+      // The field and "Guardar lugar" stay above the keyboard.
+      scrollToEnd={agregando}
       onClose={close}
     >
       <View accessibilityRole="radiogroup">
@@ -227,12 +237,19 @@ const styles = StyleSheet.create({
   add: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: ADD_GAP,
-    minHeight: ROW_MIN_HEIGHT,
-    paddingVertical: ROW_PADDING_VERTICAL,
+    minHeight: ADD_MIN_HEIGHT,
+    marginTop: ADD_MARGIN_TOP,
+    borderRadius: ADD_RADIUS,
+    backgroundColor: colors.azulSuave,
   },
   nuevo: {
     gap: NEW_GAP,
-    paddingTop: NEW_PADDING_TOP,
+    marginTop: NEW_MARGIN_TOP,
+    padding: NEW_PADDING,
+    borderRadius: NEW_RADIUS,
+    borderWidth: 1,
+    borderColor: NEW_BORDER_COLOR,
   },
 });
