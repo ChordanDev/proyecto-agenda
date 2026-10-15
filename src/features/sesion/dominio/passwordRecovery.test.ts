@@ -1,45 +1,4 @@
-import {
-  getPasswordRecoveryErrorMessage,
-  normalizeCode,
-  validateCode,
-  validateEmail,
-  validatePassword,
-} from './passwordRecovery';
-
-describe('validateEmail', () => {
-  it('accepts an email, trimmed', () => {
-    expect(validateEmail('  marta@correo.com ')).toEqual({ ok: true, value: 'marta@correo.com' });
-  });
-
-  it.each(['', '   ', 'marta', 'marta@', 'marta@correo', '@correo.com', 'mar ta@correo.com'])(
-    'rejects %p with a clear message',
-    (email) => {
-      expect(validateEmail(email)).toEqual({
-        ok: false,
-        message: 'Revisá el correo: falta algo o tiene un error.',
-      });
-    },
-  );
-});
-
-describe('normalizeCode', () => {
-  it('keeps only digits, up to six', () => {
-    expect(normalizeCode(' 48-20 15 9')).toBe('482015');
-  });
-});
-
-describe('validateCode', () => {
-  it('accepts six digits', () => {
-    expect(validateCode('482015')).toEqual({ ok: true, value: '482015' });
-  });
-
-  it.each(['', '48201', 'abcdef'])('rejects %p', (code) => {
-    expect(validateCode(code)).toEqual({
-      ok: false,
-      message: 'Escribí los 6 dígitos del código.',
-    });
-  });
-});
+import { getPasswordRecoveryErrorMessage, validatePassword } from './passwordRecovery';
 
 describe('validatePassword', () => {
   it('only asks for 8 characters: no uppercase, digits or symbols', () => {

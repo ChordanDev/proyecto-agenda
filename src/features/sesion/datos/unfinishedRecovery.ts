@@ -2,6 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { signOut } from './signOut';
 
+// The password flow is out of the app since #126, but this guard stays: it is
+// kept with that flow, and an older version of the app may have left the mark.
+// The sign-in with a code clears the mark (verifySignInCode), so it never signs
+// out a session that a code opened there.
+//
 // A right code signs the usuario in before they choose a password. This mark
 // lives on the phone from just before the code is checked until the password
 // is stored, so a flow left at the last step (the app closed, a swipe back) is

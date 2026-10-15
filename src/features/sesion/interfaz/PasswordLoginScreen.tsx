@@ -9,7 +9,7 @@ import { useSignIn } from '../datos/useSignIn';
 import { validateCredentials } from '../dominio/signInErrors';
 
 // Layout of the approved mockup, which the theme has no tokens for. The line
-// numbers are those of diseno/pantallas/02-login.html.
+// numbers are those of diseno/pantallas/02-login.html before #126.
 const HEADER_PADDING_TOP = 22; // line 18
 const LOGO_BOX_SIZE = 52; // line 21
 const CONTENT_PADDING_TOP = 34; // line 25
@@ -38,10 +38,15 @@ const RECOVERY_LINK_SIZE = 16;
 const PRESSED_OPACITY = 0.85;
 
 /**
+ * Out of the app since #126: the sign-in is only with a code by email (see
+ * LoginScreen), with no password. This screen is kept, with no route to it, in
+ * case the password comes back; so is its link to /choose-password, a route
+ * removed by #126 too.
+ *
  * Sign-in of encargados, pastores and admins with email and password. It takes
  * them to the calendar of everything their cargos cover.
  */
-export function LoginScreen() {
+export function PasswordLoginScreen() {
   const router = useRouter();
   const signIn = useSignIn();
   const [email, setEmail] = useState('');

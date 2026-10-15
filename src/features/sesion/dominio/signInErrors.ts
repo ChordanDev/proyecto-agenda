@@ -1,3 +1,8 @@
+// The messages and checks of the sign-in with a password are out of the app
+// since #126: the sign-in is only with a code by email. They are kept, with no
+// screen using them, in case the password comes back. SignInErrorInfo is still
+// what the sign-in with a code reads.
+
 /**
  * What the app knows about a failed sign-in, as plain data: the datos layer
  * copies it from the error of the auth service so that this file knows nothing

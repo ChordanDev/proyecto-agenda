@@ -4,6 +4,9 @@ import { choosePassword, sendCode, verifyCode } from './passwordRecovery';
 import { discardUnfinishedRecovery } from './unfinishedRecovery';
 import { forgetSesion } from './useLeaveSesion';
 
+// Out of the app since #126: the sign-in is only with a code by email, with no
+// password. Kept, with no screen using it, in case the password comes back.
+
 // Every step talks to the auth service: a failed connection must come back as
 // an error to show, not wait for a network that may not return.
 
