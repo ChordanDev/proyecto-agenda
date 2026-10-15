@@ -5,12 +5,16 @@ import { signOut } from './signOut';
 
 /**
  * What the app knows once the session is gone: there is none, and the data of
- * the usuario does not stay behind for whoever signs in next.
+ * the usuario does not stay behind for whoever signs in next. Removing a query
+ * also drops it from the copy saved on the phone. The calendario of the iglesia
+ * elegida stays: any hermano may see it, and it is what there is to show offline.
  */
 export function forgetSesion(queryClient: QueryClient) {
   queryClient.setQueryData(['sesion'], false);
   queryClient.removeQueries({ queryKey: ['sesion', 'email'] });
   queryClient.removeQueries({ queryKey: ['cargos'] });
+  // Its key does not say whose cargos it was read with.
+  queryClient.removeQueries({ queryKey: ['calendario', 'usuario'] });
 }
 
 /** Signs out on this phone. */
