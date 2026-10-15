@@ -52,13 +52,17 @@ type FechasQuery = ReturnType<typeof selectFechas>;
 /**
  * Rows per page. PostgREST cuts each response at `max_rows` (1000, see
  * `supabase/config.toml`) and still answers 200, so a page never asks for more.
+ * The hosted project must keep `max_rows` at 1000 or more: with less, a full
+ * page would come back short and the read would stop early without a warning.
  */
 const PAGE_SIZE = 1000;
 
 /**
  * Reads every date that `filter` keeps, page by page, until a page comes back
  * short. The order by the primary key keeps the pages from overlapping or
- * skipping rows.
+ * skipping rows while the dates do not change between pages; a save in between
+ * (which deletes and inserts the dates of its evento) can leave a date out
+ * until the next read.
  */
 async function readAllFechas(
   ownedOrSumada: string | null,
