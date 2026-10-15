@@ -28,6 +28,7 @@ import {
 import { useElegirIglesia } from '../datos/useElegirIglesia';
 import { useIglesias } from '../datos/useIglesias';
 import { buscarIglesias, type Iglesia } from '../dominio/buscarIglesias';
+import { estadoSinIglesias } from '../dominio/estadoSinIglesias';
 import { aceptaCambios, puedeConfirmar } from '../dominio/puedeConfirmar';
 
 // Layout of the approved mockup, which the theme has no tokens for. The line
@@ -64,7 +65,7 @@ const SAVE_ERROR = 'No se pudo guardar la iglesia. Probá de nuevo.';
 export function ElegirIglesiaScreen() {
   const router = useRouter();
   const fromAjustes = useLocalSearchParams<{ desde?: string }>().desde === 'ajustes';
-  const { data: iglesias, isError, isFetching, refetch } = useIglesias();
+  const { data: iglesias, fetchStatus, refetch } = useIglesias();
   const elegirIglesia = useElegirIglesia();
   const firstScreen = useFirstScreen();
   const [searchText, setSearchText] = useState('');
@@ -158,17 +159,19 @@ export function ElegirIglesiaScreen() {
 
   const renderIglesias = () => {
     if (iglesias === undefined) {
-      if (isError && !isFetching) {
-        return (
-          <Card style={styles.message}>
-            <AppText color="textoSecundario" style={styles.paragraph}>
-              No se pudieron cargar las iglesias. Revisá la conexión y probá de nuevo.
-            </AppText>
-            <Button label="Reintentar" variant="secondary" onPress={() => refetch()} />
-          </Card>
-        );
+      if (estadoSinIglesias(fetchStatus) === 'cargando') {
+        return <Message>Cargando iglesias…</Message>;
       }
-      return <Message>Cargando iglesias…</Message>;
+      // Offline the query waits for the connection and reads them again by
+      // itself when it is back; "Reintentar" is there in the meantime.
+      return (
+        <Card style={styles.message}>
+          <AppText color="textoSecundario" style={styles.paragraph}>
+            No se pudieron cargar las iglesias. Revisá la conexión y probá de nuevo.
+          </AppText>
+          <Button label="Reintentar" variant="secondary" onPress={() => refetch()} />
+        </Card>
+      );
     }
     // An empty text returns every iglesia the search can show.
     if (buscarIglesias(iglesias, '').length === 0) {
