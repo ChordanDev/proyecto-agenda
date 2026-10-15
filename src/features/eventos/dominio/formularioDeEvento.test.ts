@@ -403,6 +403,16 @@ describe('formularioDesdeEvento', () => {
     expect(formulario.lugar).toEqual({ tipo: 'escrito', nombre: 'Salon jovenes' });
   });
 
+  it('keeps the written lugar of an evento saved on the phone before lugarId existed', () => {
+    // The cache of the phone can hold an evento read before this field: it has no lugarId.
+    const { lugarId: _lugarId, ...sinLugarId } = { ...evento, lugar: 'Salon jovenes' };
+    const formulario = formularioDesdeEvento(sinLugarId as Evento, ['2026-10-17']);
+
+    expect(formulario.lugar).toEqual({ tipo: 'escrito', nombre: 'Salon jovenes' });
+    const result = validar(formulario);
+    expect(result.ok && result.evento).toMatchObject({ lugar: 'Salon jovenes', lugarId: null });
+  });
+
   it('saves back the same evento when nothing is changed', () => {
     const result = validar(formularioDesdeEvento(evento, ['2026-10-17']));
 

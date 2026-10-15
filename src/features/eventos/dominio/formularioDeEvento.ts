@@ -219,7 +219,8 @@ function getLugarElegido(evento: Evento): LugarElegido | null {
     return null;
   }
 
-  return evento.lugarId === null
+  // `== null`: an evento saved on the phone before lugarId existed has none at all.
+  return evento.lugarId == null
     ? { tipo: 'escrito', nombre: evento.lugar }
     : {
         tipo: 'guardado',
