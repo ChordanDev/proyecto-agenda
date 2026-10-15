@@ -101,4 +101,10 @@ describe('verifySignInCode', () => {
 
     expect(mockSignOut).not.toHaveBeenCalled();
   });
+
+  it('signs in even when the phone fails to clear that mark', async () => {
+    jest.spyOn(AsyncStorage, 'removeItem').mockRejectedValueOnce(new Error('storage full'));
+
+    await expect(verifySignInCode({ email: EMAIL, code: '482015' })).resolves.toBeUndefined();
+  });
 });

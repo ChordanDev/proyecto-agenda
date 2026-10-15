@@ -71,6 +71,7 @@ export async function verifySignInCode({
 }): Promise<void> {
   await runStep('code', () => supabase.auth.verifyOtp({ email, token: code, type: 'email' }));
   // A password flow left halfway by an older version of the app would sign
-  // this session out the next time the app opens.
-  await markRecoveryFinished();
+  // this session out the next time the app opens. The session is already open:
+  // failing to clear the mark must not fail the sign-in, whose code is spent.
+  await markRecoveryFinished().catch(() => undefined);
 }
