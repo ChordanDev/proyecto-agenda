@@ -21,10 +21,11 @@ export type EventoDetallado = {
  * iglesias_sumadas, and PostgREST cannot tell the two apart by itself.
  */
 const EVENTO_COLUMNS = `
-  id, titulo, lugar, descripcion, enfasis, alcance,
+  id, titulo, lugar, lugar_id, descripcion, enfasis, alcance,
   duenio_iglesia_id, duenio_distrito_id, duenio_asociacion_id,
   hora, fecha_fin, repeticion, fin_de_serie,
   iglesias_sumadas (iglesia_id),
+  lugares (nombre),
   eventos_fechas (fecha),
   iglesias!eventos_duenio_iglesia_id_fkey (nombre, distrito_id, distritos (asociacion_id)),
   distritos!eventos_duenio_distrito_id_fkey (nombre, asociacion_id),

@@ -21,8 +21,10 @@ import { useOpcionesDeDuenio } from '../datos/useOpcionesDeDuenio';
 import { getDuenioDelDetalle } from '../dominio/detalleDeEvento';
 import { getMensajeDeError } from '../dominio/errorDeEscritura';
 import {
+  cambiarDuenio,
   formatFechaDelCampo,
   formularioDesdeEvento,
+  getNombreDelLugar,
   formularioVacio,
   validarFormulario,
   type FormularioDeEvento,
@@ -36,6 +38,7 @@ import {
 import { HojaDeDuenio } from './HojaDeDuenio';
 import { getHastaSugerido } from '../dominio/repeticion';
 import { HojaDeFecha } from './HojaDeFecha';
+import { HojaDeLugar } from './HojaDeLugar';
 import { SelectorDeEnfasis } from './SelectorDeEnfasis';
 import { SelectorDeRepeticion } from './SelectorDeRepeticion';
 
@@ -190,9 +193,9 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
   // The fields only show what is missing after a first attempt to save.
   const [triedToSave, setTriedToSave] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [openSheet, setOpenSheet] = useState<'duenio' | 'fecha' | 'fechaFin' | 'finDeSerie' | null>(
-    null,
-  );
+  const [openSheet, setOpenSheet] = useState<
+    'duenio' | 'fecha' | 'fechaFin' | 'finDeSerie' | 'lugar' | null
+  >(null);
   const guardar = useGuardarEvento(id);
   const hoy = useToday();
   const editando = id !== undefined;
@@ -202,6 +205,7 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
   const errores = triedToSave && !result.ok ? result.errores : {};
   const opcionDeDuenio = getOpcionDeDuenio(opciones, formulario.duenio);
   const severalDuenios = countOpciones(opciones) > 1;
+  const nombreDelLugar = getNombreDelLugar(formulario.lugar);
 
   const update = (changes: Partial<FormularioDeEvento>) => {
     setFormulario((current) => ({ ...current, ...changes }));
@@ -371,11 +375,37 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
           )}
         </Field>
 
-        <TextField
-          label="Lugar"
-          value={formulario.lugar}
-          onChangeText={(lugar) => update({ lugar })}
-        />
+        <View style={styles.field}>
+          <AppText variant="label">
+            Lugar{' '}
+            <AppText variant="label" weight="regular" color="textoTenue">
+              (opcional)
+            </AppText>
+          </AppText>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Lugar: ${nombreDelLugar ?? 'sin lugar'}`}
+            accessibilityState={{ disabled: opcionDeDuenio === undefined }}
+            // The list is the one of the duenio: without one there is nothing to list.
+            disabled={opcionDeDuenio === undefined}
+            onPress={() => setOpenSheet('lugar')}
+            style={({ pressed }) => [styles.picker, pressed && styles.pressed]}
+          >
+            <AppText
+              variant="cuerpoGrande"
+              color={nombreDelLugar === null ? 'textoTenue' : 'texto'}
+              style={styles.pickerTexts}
+            >
+              {nombreDelLugar ?? 'Elegir lugar'}
+            </AppText>
+            <Chevron />
+          </Pressable>
+          {opcionDeDuenio === undefined && (
+            <AppText variant="chico" style={styles.hint}>
+              Primero elegí de quién es el evento.
+            </AppText>
+          )}
+        </View>
 
         <TextField
           label="Descripción"
@@ -439,11 +469,25 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
         opciones={opciones}
         selected={formulario.duenio}
         onSelect={(duenio) => {
-          update({ duenio });
+          // The lugar chosen is emptied when it is not one of the new duenio.
+          setFormulario((current) => cambiarDuenio(current, duenio));
           setOpenSheet(null);
         }}
         onClose={() => setOpenSheet(null)}
       />
+      {opcionDeDuenio && (
+        <HojaDeLugar
+          visible={openSheet === 'lugar'}
+          duenio={opcionDeDuenio.duenio}
+          nombreDelDuenio={opcionDeDuenio.nombre}
+          selected={formulario.lugar}
+          onSelect={(lugar) => {
+            update({ lugar });
+            setOpenSheet(null);
+          }}
+          onClose={() => setOpenSheet(null)}
+        />
+      )}
       <HojaDeFecha
         visible={openSheet === 'finDeSerie'}
         title="Hasta"

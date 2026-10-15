@@ -1,8 +1,10 @@
 import { formatLongDate, formatTime } from '@/features/calendario/dominio/calendarioTexts';
 import { getWeekday, parseLocalDate } from '@/features/calendario/dominio/localDate';
+import type { LugarElegido } from '@/features/lugares/dominio/lugar';
 
 import { getCategoria, type Categoria } from './categoria';
 import type { Duenio, Enfasis, Evento, Repeticion } from './evento';
+import { getDuenioId } from './opcionesDeDuenio';
 import { getFechasDeSerie, getTopeDeHasta } from './repeticion';
 
 /**
@@ -23,7 +25,8 @@ export type FormularioDeEvento = {
   repeticion: Repeticion;
   /** "Hasta": the last day the series can have a date on. Only used when it repeats. */
   finDeSerie: string | null;
-  lugar: string;
+  /** Optional: null is "Sin lugar". */
+  lugar: LugarElegido | null;
   descripcion: string;
   /** One of the four enfasis or `R` for the actividad regular; null until one is chosen. */
   categoria: Categoria | null;
@@ -82,6 +85,15 @@ export function parseHora(text: string): string | null {
   const pad = (value: number) => String(value).padStart(2, '0');
 
   return `${pad(hours)}:${pad(minutes)}:00`;
+}
+
+/** What the field of the lugar shows; null for "Sin lugar". */
+export function getNombreDelLugar(lugar: LugarElegido | null): string | null {
+  if (lugar === null) {
+    return null;
+  }
+
+  return lugar.tipo === 'guardado' ? lugar.lugar.nombre : lugar.nombre;
 }
 
 /** An optional text: trimmed, and missing when nothing is left. */
@@ -162,7 +174,9 @@ export function validarFormulario(
     ok: true,
     evento: {
       titulo,
-      lugar: optionalText(formulario.lugar),
+      // A lugar of the list is saved by its id; its nombre is what the evento shows.
+      lugar: getNombreDelLugar(formulario.lugar),
+      lugarId: formulario.lugar?.tipo === 'guardado' ? formulario.lugar.lugar.id : null,
       descripcion: optionalText(formulario.descripcion),
       enfasis: ENFASIS_OF_CATEGORIA[formulario.categoria],
       duenio: formulario.duenio,
@@ -190,10 +204,42 @@ export function formularioVacio(duenio: Duenio | null, fecha: string | null): Fo
     fechaFin: null,
     repeticion: 'ninguna',
     finDeSerie: null,
-    lugar: '',
+    lugar: null,
     descripcion: '',
     categoria: null,
   };
+}
+
+/**
+ * The lugar of an evento for its form. Its lugar of the list is one of its own
+ * duenio: the database does not let it be another.
+ */
+function getLugarElegido(evento: Evento): LugarElegido | null {
+  if (evento.lugar === null) {
+    return null;
+  }
+
+  return evento.lugarId === null
+    ? { tipo: 'escrito', nombre: evento.lugar }
+    : {
+        tipo: 'guardado',
+        lugar: { id: evento.lugarId, nombre: evento.lugar, duenio: evento.duenio },
+      };
+}
+
+/**
+ * Chooses another duenio. A lugar of the list belongs to a duenio, so the one
+ * chosen is emptied when it is not of the new one. A lugar written by hand is
+ * of no list and stays.
+ */
+export function cambiarDuenio(formulario: FormularioDeEvento, duenio: Duenio): FormularioDeEvento {
+  const { lugar } = formulario;
+  const lugarDeOtro =
+    lugar?.tipo === 'guardado' &&
+    (lugar.lugar.duenio.alcance !== duenio.alcance ||
+      getDuenioId(lugar.lugar.duenio) !== getDuenioId(duenio));
+
+  return { ...formulario, duenio, lugar: lugarDeOtro ? null : lugar };
 }
 
 /** The form of an evento being edited, loaded with what it has. */
@@ -210,7 +256,7 @@ export function formularioDesdeEvento(
     fechaFin: evento.fechaFin,
     repeticion: evento.repeticion,
     finDeSerie: evento.finDeSerie,
-    lugar: evento.lugar ?? '',
+    lugar: getLugarElegido(evento),
     descripcion: evento.descripcion ?? '',
     categoria: getCategoria(evento.enfasis),
   };

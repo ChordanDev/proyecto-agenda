@@ -18,6 +18,7 @@ function fecha(fechaLocal: string, titulo: string, overrides: Partial<Evento> = 
       id: 'evento-' + titulo,
       titulo,
       lugar: null,
+      lugarId: null,
       descripcion: null,
       enfasis: null,
       duenio: { alcance: 'iglesia', iglesiaId: cordobaCentral.id },

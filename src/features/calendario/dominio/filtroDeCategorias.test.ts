@@ -16,6 +16,7 @@ function fecha(titulo: string, enfasis: Evento['enfasis']): FechaDeEvento {
       id: 'evento-' + titulo,
       titulo,
       lugar: null,
+      lugarId: null,
       descripcion: null,
       enfasis,
       duenio: { alcance: 'iglesia', iglesiaId: 'iglesia-cordoba-central' },

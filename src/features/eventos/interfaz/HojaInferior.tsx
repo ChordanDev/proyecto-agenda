@@ -1,5 +1,13 @@
 import type { ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { colors, radius } from '@/shared/theme';
@@ -47,7 +55,11 @@ export function HojaInferior({ visible, title, intro, onClose, children }: HojaI
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <View style={styles.scrim}>
+      {/* A field in the sheet ("+ Agregar lugar") rises above the keyboard. */}
+      <KeyboardAvoidingView
+        style={styles.scrim}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         {/* Tapping the dark area closes the sheet, as the back button does. */}
         <Pressable
           accessibilityRole="button"
@@ -82,9 +94,9 @@ export function HojaInferior({ visible, title, intro, onClose, children }: HojaI
               {intro}
             </AppText>
           )}
-          <ScrollView>{children}</ScrollView>
+          <ScrollView keyboardShouldPersistTaps="handled">{children}</ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

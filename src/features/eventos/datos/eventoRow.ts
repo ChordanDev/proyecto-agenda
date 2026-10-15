@@ -36,6 +36,7 @@ type EventoColumns = Pick<
   | 'id'
   | 'titulo'
   | 'lugar'
+  | 'lugar_id'
   | 'descripcion'
   | 'enfasis'
   | 'alcance'
@@ -46,14 +47,20 @@ type EventoColumns = Pick<
   | 'fecha_fin'
   | 'repeticion'
   | 'fin_de_serie'
-> & { iglesias_sumadas: { iglesia_id: string }[] };
+> & {
+  iglesias_sumadas: { iglesia_id: string }[];
+  /** The lugar of the list; null when the evento has none or its lugar is written by hand. */
+  lugares: { nombre: string } | null;
+};
 
 /** An evento as read from the database, in the shape of the domain. */
 export function toEvento(row: EventoColumns): Evento {
   return {
     id: row.id,
     titulo: row.titulo,
-    lugar: row.lugar,
+    // An evento has a lugar of the list or a written one, never both.
+    lugar: row.lugares?.nombre ?? row.lugar,
+    lugarId: row.lugar_id,
     descripcion: row.descripcion,
     enfasis: row.enfasis,
     duenio: toDuenio(row),

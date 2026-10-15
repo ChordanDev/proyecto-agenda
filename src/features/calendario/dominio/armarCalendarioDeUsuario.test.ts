@@ -107,6 +107,7 @@ function evento(overrides: Partial<Evento>): Evento {
     id: 'evento-' + (overrides.titulo ?? 'sin-titulo'),
     titulo: 'Culto de oración',
     lugar: null,
+    lugarId: null,
     descripcion: null,
     enfasis: null,
     duenio: { alcance: 'iglesia', iglesiaId: central.id },

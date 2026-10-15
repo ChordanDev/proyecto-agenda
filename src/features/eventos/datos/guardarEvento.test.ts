@@ -10,6 +10,7 @@ jest.mock('@/shared/supabase', () => ({
 const EVENTO: EventoAGuardar = {
   titulo: 'Culto joven',
   lugar: null,
+  lugarId: null,
   descripcion: null,
   enfasis: null,
   duenio: { alcance: 'iglesia', iglesiaId: 'i1' },
@@ -33,6 +34,24 @@ describe('guardarEvento', () => {
     for (const [, args] of mockRpc.mock.calls) {
       expect(args).toMatchObject({ nuevo_evento_id: 'n1', evento_id: undefined });
     }
+  });
+
+  it('saves a lugar of the list by its id, without a written lugar', async () => {
+    await guardarEvento({ ...EVENTO, lugar: 'Templo', lugarId: 'l1' }, { crear: 'n1' });
+
+    expect(mockRpc).toHaveBeenCalledWith(
+      'guardar_evento',
+      expect.objectContaining({ lugar_id: 'l1', lugar: undefined }),
+    );
+  });
+
+  it('saves the lugar an old evento has written by hand as text', async () => {
+    await guardarEvento({ ...EVENTO, lugar: 'Salon jovenes', lugarId: null }, { editar: 'e1' });
+
+    expect(mockRpc).toHaveBeenCalledWith(
+      'guardar_evento',
+      expect.objectContaining({ lugar_id: undefined, lugar: 'Salon jovenes' }),
+    );
   });
 
   it('edits an evento by its id', async () => {

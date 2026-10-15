@@ -16,6 +16,8 @@ const DISTRITO_ROW = {
   id: 'e1',
   titulo: 'Congreso de jóvenes',
   lugar: null,
+  lugar_id: null,
+  lugares: null,
   descripcion: null,
   enfasis: null,
   alcance: 'distrito',
@@ -46,6 +48,21 @@ describe('getEvento', () => {
     };
 
     expect((await getEvento('e1'))?.nombreDelDuenio).toBe('Centro');
+  });
+
+  it('names the lugar of the list of the evento', async () => {
+    mockRow = { ...DISTRITO_ROW, lugar_id: 'l1', lugares: { nombre: 'Templo' } };
+
+    expect((await getEvento('e1'))?.evento).toMatchObject({ lugar: 'Templo', lugarId: 'l1' });
+  });
+
+  it('keeps the lugar an old evento has written by hand', async () => {
+    mockRow = { ...DISTRITO_ROW, lugar: 'Salon jovenes' };
+
+    expect((await getEvento('e1'))?.evento).toMatchObject({
+      lugar: 'Salon jovenes',
+      lugarId: null,
+    });
   });
 
   it('fails when the duenio of its alcance was not read', async () => {

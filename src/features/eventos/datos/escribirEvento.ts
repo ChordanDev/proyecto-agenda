@@ -66,7 +66,9 @@ export async function guardarEvento(
     evento_id: 'editar' in destino ? destino.editar : undefined,
     nuevo_evento_id: 'crear' in destino ? destino.crear : undefined,
     titulo: evento.titulo,
-    lugar: orOmitted(evento.lugar),
+    // A lugar of the list goes by its id; only a lugar written by hand goes as text.
+    lugar: evento.lugarId === null ? orOmitted(evento.lugar) : undefined,
+    lugar_id: orOmitted(evento.lugarId),
     descripcion: orOmitted(evento.descripcion),
     enfasis: orOmitted(evento.enfasis),
     alcance: duenio.alcance,

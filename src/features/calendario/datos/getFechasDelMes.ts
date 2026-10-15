@@ -25,10 +25,11 @@ export type Calendario = {
 const FECHA_COLUMNS = `
   fecha,
   eventos!inner (
-    id, titulo, lugar, descripcion, enfasis, alcance,
+    id, titulo, lugar, lugar_id, descripcion, enfasis, alcance,
     duenio_iglesia_id, duenio_distrito_id, duenio_asociacion_id,
     hora, fecha_fin, repeticion, fin_de_serie,
     iglesias_sumadas (iglesia_id),
+    lugares (nombre),
     distritos (nombre)
   )
 ` as const;
