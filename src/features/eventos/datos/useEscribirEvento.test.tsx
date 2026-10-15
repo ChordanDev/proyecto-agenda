@@ -1,4 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+// react-test-renderer is deprecated in React 19; when React is upgraded, move
+// this test to renderHook from @testing-library/react-native.
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 import type { EventoAGuardar } from '../dominio/formularioDeEvento';
