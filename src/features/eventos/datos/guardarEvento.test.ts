@@ -29,6 +29,7 @@ describe('guardarEvento', () => {
     await guardarEvento(EVENTO, { crear: 'n1' });
     await guardarEvento(EVENTO, { crear: 'n1' });
 
+    expect(mockRpc).toHaveBeenCalledTimes(2);
     for (const [, args] of mockRpc.mock.calls) {
       expect(args).toMatchObject({ nuevo_evento_id: 'n1', evento_id: undefined });
     }
