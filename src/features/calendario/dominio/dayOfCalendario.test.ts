@@ -11,6 +11,7 @@ function fecha(fechaLocal: string, overrides: Partial<Evento> = {}): FechaDeEven
       id: 'evento-' + (overrides.titulo ?? 'sin-titulo'),
       titulo: 'Culto de oración',
       lugar: null,
+      lugarId: null,
       descripcion: null,
       enfasis: null,
       duenio: { alcance: 'iglesia', iglesiaId: 'iglesia-cordoba-central' },

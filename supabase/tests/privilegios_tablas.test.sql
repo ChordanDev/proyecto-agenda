@@ -18,7 +18,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(36);
+select plan(40);
 
 -- Exact privileges ---------------------------------------------------------------
 
@@ -96,6 +96,16 @@ select is(
   coalesce((
     select array_agg(p order by p)
     from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    where has_table_privilege('anon', 'public.lugares', p)
+  ), array[]::text[]),
+  array['SELECT']::text[],
+  'anon has exactly the expected privileges on lugares'
+);
+
+select is(
+  coalesce((
+    select array_agg(p order by p)
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
     where has_table_privilege('authenticated', 'public.asociaciones', p)
   ), array[]::text[]),
   array['SELECT']::text[],
@@ -162,6 +172,16 @@ select is(
   'authenticated has exactly the expected privileges on cargos'
 );
 
+select is(
+  coalesce((
+    select array_agg(p order by p)
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    where has_table_privilege('authenticated', 'public.lugares', p)
+  ), array[]::text[]),
+  array['INSERT', 'SELECT']::text[],
+  'authenticated has exactly the expected privileges on lugares'
+);
+
 -- Truncate --------------------------------------------------------------------
 -- The privilege check comes first, so the tables are not touched.
 
@@ -195,6 +215,10 @@ select throws_ok(
   $$ truncate public.cargos $$,
   '42501', 'permission denied for table cargos', 'anon cannot truncate cargos'
 );
+select throws_ok(
+  $$ truncate public.lugares $$,
+  '42501', 'permission denied for table lugares', 'anon cannot truncate lugares'
+);
 
 reset role;
 
@@ -227,6 +251,10 @@ select throws_ok(
 select throws_ok(
   $$ truncate public.cargos $$,
   '42501', 'permission denied for table cargos', 'authenticated cannot truncate cargos'
+);
+select throws_ok(
+  $$ truncate public.lugares $$,
+  '42501', 'permission denied for table lugares', 'authenticated cannot truncate lugares'
 );
 
 reset role;

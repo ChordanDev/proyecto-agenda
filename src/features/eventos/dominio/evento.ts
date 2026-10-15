@@ -23,7 +23,10 @@ export type Duenio =
 export type Evento = {
   id: string;
   titulo: string;
+  /** Nombre of its lugar: one of the list of its duenio, or written by hand in an old evento. */
   lugar: string | null;
+  /** The lugar of the list of its duenio; null when it has none or its lugar is written by hand. */
+  lugarId: string | null;
   descripcion: string | null;
   /** Null means "Actividad regular". */
   enfasis: Enfasis | null;

@@ -11,6 +11,7 @@ function fecha(fechaLocal: string, overrides: Partial<Evento> = {}): FechaDeEven
       id: 'evento-' + (overrides.titulo ?? 'sin-titulo'),
       titulo: 'Congreso de Jóvenes',
       lugar: null,
+      lugarId: null,
       descripcion: null,
       enfasis: 'nuevas_generaciones',
       duenio: { alcance: 'asociacion', asociacionId: 'a1' },

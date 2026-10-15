@@ -1,5 +1,14 @@
-import type { ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, type ReactNode } from 'react';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { colors, radius } from '@/shared/theme';
@@ -33,12 +42,39 @@ type HojaInferiorProps = {
   visible: boolean;
   title: string;
   intro?: string;
+  /**
+   * Keeps the end of the content in view, also when the keyboard makes the
+   * sheet smaller: a field and its button at the end stay above the keyboard.
+   */
+  scrollToEnd?: boolean;
   onClose: () => void;
   children: ReactNode;
 };
 
 /** A sheet that rises from the bottom over a dark scrim, with a title and a close button. */
-export function HojaInferior({ visible, title, intro, onClose, children }: HojaInferiorProps) {
+export function HojaInferior({
+  visible,
+  title,
+  intro,
+  scrollToEnd = false,
+  onClose,
+  children,
+}: HojaInferiorProps) {
+  const scrollRef = useRef<ScrollView>(null);
+  const keepEndInView = () => {
+    if (scrollToEnd) scrollRef.current?.scrollToEnd({ animated: true });
+  };
+
+  // The keyboard shrinks the sheet after the content was laid out: scroll again
+  // once it is up.
+  useEffect(() => {
+    if (!scrollToEnd) return;
+    const subscription = Keyboard.addListener('keyboardDidShow', () =>
+      scrollRef.current?.scrollToEnd({ animated: true }),
+    );
+    return () => subscription.remove();
+  }, [scrollToEnd]);
+
   return (
     <Modal
       visible={visible}
@@ -47,7 +83,11 @@ export function HojaInferior({ visible, title, intro, onClose, children }: HojaI
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <View style={styles.scrim}>
+      {/* A field in the sheet ("+ Agregar lugar") rises above the keyboard. */}
+      <KeyboardAvoidingView
+        style={styles.scrim}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         {/* Tapping the dark area closes the sheet, as the back button does. */}
         <Pressable
           accessibilityRole="button"
@@ -82,9 +122,16 @@ export function HojaInferior({ visible, title, intro, onClose, children }: HojaI
               {intro}
             </AppText>
           )}
-          <ScrollView>{children}</ScrollView>
+          <ScrollView
+            ref={scrollRef}
+            keyboardShouldPersistTaps="handled"
+            onContentSizeChange={keepEndInView}
+            onLayout={keepEndInView}
+          >
+            {children}
+          </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

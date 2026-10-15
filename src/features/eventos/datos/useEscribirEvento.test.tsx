@@ -15,6 +15,7 @@ jest.mock('@/shared/supabase', () => ({
 const EVENTO: EventoAGuardar = {
   titulo: 'Culto joven',
   lugar: null,
+  lugarId: null,
   descripcion: null,
   enfasis: null,
   duenio: { alcance: 'iglesia', iglesiaId: 'i1' },

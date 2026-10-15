@@ -26,6 +26,7 @@ function fecha(titulo: string, overrides: Partial<Evento> = {}): FechaDeEvento {
       id: 'evento-' + titulo,
       titulo,
       lugar: null,
+      lugarId: null,
       descripcion: null,
       enfasis: null,
       duenio: { alcance: 'iglesia', iglesiaId: central.id },

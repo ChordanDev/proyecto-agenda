@@ -82,6 +82,16 @@ insert into public.cargos (id, usuario_id, iglesia_id, distrito_id, asociacion_i
 -- enfasis), and they belong to several iglesias and distritos, so that the
 -- calendario of one iglesia differs from the calendario of another.
 
+-- Lugares guardados, chosen from a list in the form of an evento. Most eventos
+-- below keep their lugar as written text, as the eventos saved before the list.
+insert into public.lugares (id, nombre, duenio_iglesia_id, duenio_distrito_id, duenio_asociacion_id) values
+  ('f0000000-0000-4000-8000-000000000001', 'Templo', '10000000-0000-4000-8000-000000000001', null, null),
+  ('f0000000-0000-4000-8000-000000000002', 'Salón de jóvenes', '10000000-0000-4000-8000-000000000001', null, null),
+  ('f0000000-0000-4000-8000-000000000003', 'Plaza San Martín', '10000000-0000-4000-8000-000000000001', null, null),
+  ('f0000000-0000-4000-8000-000000000004', 'Templo', '10000000-0000-4000-8000-000000000002', null, null),
+  ('f0000000-0000-4000-8000-000000000005', 'Camping Los Quebrachos', null, 'd0000000-0000-4000-8000-000000000002', null),
+  ('f0000000-0000-4000-8000-000000000006', 'Sede de la asociación', null, null, 'a0000000-0000-4000-8000-000000000001');
+
 -- Alcance asociacion: seen in every iglesia.
 insert into public.eventos (id, titulo, lugar, descripcion, enfasis, alcance, duenio_asociacion_id, hora, fecha_fin) values
   -- Several days, across the end of the month: from Friday 30 October to Sunday 1 November.
@@ -114,6 +124,11 @@ insert into public.eventos (id, titulo, lugar, descripcion, enfasis, alcance, du
   ('e0000000-0000-4000-8000-000000000013', 'Seminario de mayordomía', 'Iglesia Villa María Centro, Mendoza 1340', 'Para tesoreros y directores de mayordomía.', 'liderazgo', 'iglesia', '10000000-0000-4000-8000-000000000007', '16:00', 'ninguna', null),
   -- Río Cuarto Central.
   ('e0000000-0000-4000-8000-000000000014', 'Bautismo de primavera', 'Iglesia Río Cuarto Central, Sobremonte 960', null, 'discipulado', 'iglesia', '10000000-0000-4000-8000-000000000010', '10:30', 'ninguna', null);
+
+-- An evento with a lugar of the list instead of a written one.
+update public.eventos
+set lugar = null, lugar_id = 'f0000000-0000-4000-8000-000000000001'
+where id = 'e0000000-0000-4000-8000-000000000009';
 
 -- One row per date. An evento that does not repeat has a single row, also when
 -- it lasts several days: the rest of its days come from eventos.fecha_fin.

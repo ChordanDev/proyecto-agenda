@@ -91,14 +91,14 @@ isOneToOne: false
                   ]
                 },"eventos": {
                   Row: {
-                    "alcance": Database["public"]['Enums']["alcance"],"descripcion": string | null,"duenio_asociacion_id": string | null,"duenio_distrito_id": string | null,"duenio_iglesia_id": string | null,"enfasis": Database["public"]['Enums']["enfasis"] | null,"fecha_fin": string | null,"fin_de_serie": string | null,"hora": string,"id": string,"lugar": string | null,"repeticion": Database["public"]['Enums']["repeticion"],"titulo": string
+                    "alcance": Database["public"]['Enums']["alcance"],"descripcion": string | null,"duenio_asociacion_id": string | null,"duenio_distrito_id": string | null,"duenio_iglesia_id": string | null,"enfasis": Database["public"]['Enums']["enfasis"] | null,"fecha_fin": string | null,"fin_de_serie": string | null,"hora": string,"id": string,"lugar": string | null,"lugar_id": string | null,"repeticion": Database["public"]['Enums']["repeticion"],"titulo": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "alcance": Database["public"]['Enums']["alcance"],"descripcion"?: string | null,"duenio_asociacion_id"?: string | null,"duenio_distrito_id"?: string | null,"duenio_iglesia_id"?: string | null,"enfasis"?: Database["public"]['Enums']["enfasis"] | null,"fecha_fin"?: string | null,"fin_de_serie"?: string | null,"hora": string,"id"?: string,"lugar"?: string | null,"repeticion"?: Database["public"]['Enums']["repeticion"],"titulo": string
+                    "alcance": Database["public"]['Enums']["alcance"],"descripcion"?: string | null,"duenio_asociacion_id"?: string | null,"duenio_distrito_id"?: string | null,"duenio_iglesia_id"?: string | null,"enfasis"?: Database["public"]['Enums']["enfasis"] | null,"fecha_fin"?: string | null,"fin_de_serie"?: string | null,"hora": string,"id"?: string,"lugar"?: string | null,"lugar_id"?: string | null,"repeticion"?: Database["public"]['Enums']["repeticion"],"titulo": string
                   }
                   Update: {
-                    "alcance"?: Database["public"]['Enums']["alcance"],"descripcion"?: string | null,"duenio_asociacion_id"?: string | null,"duenio_distrito_id"?: string | null,"duenio_iglesia_id"?: string | null,"enfasis"?: Database["public"]['Enums']["enfasis"] | null,"fecha_fin"?: string | null,"fin_de_serie"?: string | null,"hora"?: string,"id"?: string,"lugar"?: string | null,"repeticion"?: Database["public"]['Enums']["repeticion"],"titulo"?: string
+                    "alcance"?: Database["public"]['Enums']["alcance"],"descripcion"?: string | null,"duenio_asociacion_id"?: string | null,"duenio_distrito_id"?: string | null,"duenio_iglesia_id"?: string | null,"enfasis"?: Database["public"]['Enums']["enfasis"] | null,"fecha_fin"?: string | null,"fin_de_serie"?: string | null,"hora"?: string,"id"?: string,"lugar"?: string | null,"lugar_id"?: string | null,"repeticion"?: Database["public"]['Enums']["repeticion"],"titulo"?: string
                   }
                   Relationships: [
                     {
@@ -118,6 +118,12 @@ isOneToOne: false
       columns: ["duenio_iglesia_id"]
 isOneToOne: false
       referencedRelation: "iglesias"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "eventos_lugar_id_fkey"
+      columns: ["lugar_id"]
+isOneToOne: false
+      referencedRelation: "lugares"
       referencedColumns: ["id"]
     }
                   ]
@@ -187,6 +193,38 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"lugares": {
+                  Row: {
+                    "duenio_asociacion_id": string | null,"duenio_distrito_id": string | null,"duenio_iglesia_id": string | null,"id": string,"nombre": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "duenio_asociacion_id"?: string | null,"duenio_distrito_id"?: string | null,"duenio_iglesia_id"?: string | null,"id"?: string,"nombre": string
+                  }
+                  Update: {
+                    "duenio_asociacion_id"?: string | null,"duenio_distrito_id"?: string | null,"duenio_iglesia_id"?: string | null,"id"?: string,"nombre"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "lugares_duenio_asociacion_id_fkey"
+      columns: ["duenio_asociacion_id"]
+isOneToOne: false
+      referencedRelation: "asociaciones"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "lugares_duenio_distrito_id_fkey"
+      columns: ["duenio_distrito_id"]
+isOneToOne: false
+      referencedRelation: "distritos"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "lugares_duenio_iglesia_id_fkey"
+      columns: ["duenio_iglesia_id"]
+isOneToOne: false
+      referencedRelation: "iglesias"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
@@ -203,7 +241,24 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
 "guardar_evento":
-{ Args: { "alcance": Database["public"]['Enums']["alcance"],"descripcion"?: string,"duenio_asociacion_id"?: string,"duenio_distrito_id"?: string,"duenio_iglesia_id"?: string,"enfasis"?: Database["public"]['Enums']["enfasis"],"evento_id"?: string,"fecha_fin"?: string,"fechas": (string)[],"fin_de_serie"?: string,"hora": string,"lugar"?: string,"nuevo_evento_id"?: string,"repeticion": Database["public"]['Enums']["repeticion"],"titulo": string }; Returns: string
+{ Args: { "alcance": Database["public"]['Enums']["alcance"],"descripcion"?: string,"duenio_asociacion_id"?: string,"duenio_distrito_id"?: string,"duenio_iglesia_id"?: string,"enfasis"?: Database["public"]['Enums']["enfasis"],"evento_id"?: string,"fecha_fin"?: string,"fechas": (string)[],"fin_de_serie"?: string,"hora": string,"lugar"?: string,"lugar_id"?: string,"nuevo_evento_id"?: string,"repeticion": Database["public"]['Enums']["repeticion"],"titulo": string }; Returns: string
+                           },
+"guardar_lugar":
+{ Args: { "duenio_asociacion_id"?: string,"duenio_distrito_id"?: string,"duenio_iglesia_id"?: string,"nombre": string }; Returns: {
+              "duenio_asociacion_id": string | null,
+"duenio_distrito_id": string | null,
+"duenio_iglesia_id": string | null,
+"id": string,
+"nombre": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "lugares"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"lugar_nombre_key":
+{ Args: { "nombre": string }; Returns: string
                            }
           }
           Enums: {

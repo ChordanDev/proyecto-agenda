@@ -1,5 +1,8 @@
+import type { Lugar } from '@/features/lugares/dominio/lugar';
+
 import type { Evento } from './evento';
 import {
+  cambiarDuenio,
   formatFechaDelCampo,
   formularioDesdeEvento,
   formularioVacio,
@@ -9,6 +12,8 @@ import {
 } from './formularioDeEvento';
 
 const IGLESIA = { alcance: 'iglesia', iglesiaId: 'i1' } as const;
+const OTRA_IGLESIA = { alcance: 'iglesia', iglesiaId: 'i2' } as const;
+const TEMPLO: Lugar = { id: 'l1', nombre: 'Templo', duenio: IGLESIA };
 
 /** Today, for the caps of "Hasta": the rules receive it. */
 const HOY = '2026-10-14';
@@ -27,7 +32,7 @@ function completo(overrides: Partial<FormularioDeEvento> = {}): FormularioDeEven
     fechaFin: null,
     repeticion: 'ninguna',
     finDeSerie: null,
-    lugar: 'Templo',
+    lugar: { tipo: 'guardado', lugar: TEMPLO },
     descripcion: 'Con merienda',
     categoria: 'I',
     ...overrides,
@@ -68,6 +73,7 @@ describe('validarFormulario', () => {
       evento: {
         titulo: 'Culto joven',
         lugar: 'Templo',
+        lugarId: 'l1',
         descripcion: 'Con merienda',
         enfasis: 'nuevas_generaciones',
         duenio: IGLESIA,
@@ -87,13 +93,24 @@ describe('validarFormulario', () => {
   });
 
   it('trims the texts and saves the empty optional ones as missing', () => {
-    const result = validar(completo({ titulo: '  Culto joven  ', lugar: '   ', descripcion: '' }));
+    const result = validar(completo({ titulo: '  Culto joven  ', descripcion: '' }));
 
     expect(result.ok && result.evento).toMatchObject({
       titulo: 'Culto joven',
-      lugar: null,
       descripcion: null,
     });
+  });
+
+  it('saves an evento without lugar, which is optional', () => {
+    const result = validar(completo({ lugar: null }));
+
+    expect(result.ok && result.evento).toMatchObject({ lugar: null, lugarId: null });
+  });
+
+  it('keeps the lugar an old evento has written by hand', () => {
+    const result = validar(completo({ lugar: { tipo: 'escrito', nombre: 'Salon jovenes' } }));
+
+    expect(result.ok && result.evento).toMatchObject({ lugar: 'Salon jovenes', lugarId: null });
   });
 
   it('cannot save without a titulo', () => {
@@ -179,6 +196,7 @@ describe('the fecha de fin of an evento of several days', () => {
         id: 'e1',
         titulo: 'Congreso',
         lugar: null,
+        lugarId: null,
         descripcion: null,
         enfasis: 'nuevas_generaciones',
         duenio: IGLESIA,
@@ -280,6 +298,7 @@ describe('a weekly series', () => {
         id: 'e1',
         titulo: 'Culto de oración',
         lugar: null,
+        lugarId: null,
         descripcion: null,
         enfasis: null,
         duenio: IGLESIA,
@@ -330,7 +349,7 @@ describe('formularioVacio', () => {
       fechaFin: null,
       repeticion: 'ninguna',
       finDeSerie: null,
-      lugar: '',
+      lugar: null,
       descripcion: '',
       categoria: null,
     });
@@ -342,6 +361,7 @@ describe('formularioDesdeEvento', () => {
     id: 'e1',
     titulo: 'Culto joven',
     lugar: null,
+    lugarId: null,
     descripcion: 'Con merienda',
     enfasis: null,
     duenio: IGLESIA,
@@ -361,10 +381,36 @@ describe('formularioDesdeEvento', () => {
       fechaFin: null,
       repeticion: 'ninguna',
       finDeSerie: null,
-      lugar: '',
+      lugar: null,
       descripcion: 'Con merienda',
       categoria: 'R',
     });
+  });
+
+  it('loads the lugar of the list of the evento', () => {
+    const formulario = formularioDesdeEvento({ ...evento, lugar: 'Templo', lugarId: 'l1' }, [
+      '2026-10-17',
+    ]);
+
+    expect(formulario.lugar).toEqual({ tipo: 'guardado', lugar: TEMPLO });
+  });
+
+  it('loads the lugar an old evento has written by hand', () => {
+    const formulario = formularioDesdeEvento({ ...evento, lugar: 'Salon jovenes', lugarId: null }, [
+      '2026-10-17',
+    ]);
+
+    expect(formulario.lugar).toEqual({ tipo: 'escrito', nombre: 'Salon jovenes' });
+  });
+
+  it('keeps the written lugar of an evento saved on the phone before lugarId existed', () => {
+    // The cache of the phone can hold an evento read before this field: it has no lugarId.
+    const { lugarId: _lugarId, ...sinLugarId } = { ...evento, lugar: 'Salon jovenes' };
+    const formulario = formularioDesdeEvento(sinLugarId as Evento, ['2026-10-17']);
+
+    expect(formulario.lugar).toEqual({ tipo: 'escrito', nombre: 'Salon jovenes' });
+    const result = validar(formulario);
+    expect(result.ok && result.evento).toMatchObject({ lugar: 'Salon jovenes', lugarId: null });
   });
 
   it('saves back the same evento when nothing is changed', () => {
@@ -373,11 +419,43 @@ describe('formularioDesdeEvento', () => {
     expect(result.ok && result.evento).toMatchObject({
       titulo: evento.titulo,
       lugar: null,
+      lugarId: null,
       descripcion: evento.descripcion,
       enfasis: null,
       hora: '19:30:00',
       fechas: ['2026-10-17'],
     });
+  });
+});
+
+describe('cambiarDuenio', () => {
+  it('changes the duenio and keeps a lugar of that same duenio', () => {
+    const formulario = cambiarDuenio(completo({ duenio: null }), IGLESIA);
+
+    expect(formulario).toMatchObject({
+      duenio: IGLESIA,
+      lugar: { tipo: 'guardado', lugar: TEMPLO },
+    });
+  });
+
+  it('empties the lugar when it is not one of the new duenio', () => {
+    const formulario = cambiarDuenio(completo(), OTRA_IGLESIA);
+
+    expect(formulario).toMatchObject({ duenio: OTRA_IGLESIA, lugar: null });
+  });
+
+  it('keeps the lugar written by hand, which is of no list', () => {
+    const escrito = { tipo: 'escrito', nombre: 'Salon jovenes' } as const;
+    const formulario = cambiarDuenio(completo({ lugar: escrito }), OTRA_IGLESIA);
+
+    expect(formulario.lugar).toEqual(escrito);
+  });
+
+  it('keeps everything else of the form', () => {
+    const { duenio: _duenio, lugar: _lugar, ...resto } = cambiarDuenio(completo(), OTRA_IGLESIA);
+    const { duenio: _before, lugar: _l, ...antes } = completo();
+
+    expect(resto).toEqual(antes);
   });
 });
 

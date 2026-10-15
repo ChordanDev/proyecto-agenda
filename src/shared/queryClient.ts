@@ -58,6 +58,7 @@ export const persistOptions: Omit<PersistQueryClientOptions, 'queryClient'> = {
   maxAge: Infinity,
   // Raise it when the shape of a saved query changes, so an old cache that the
   // new code cannot read is dropped instead of shown.
-  buster: '1',
+  // '2': eventos gained lugarId (#129).
+  buster: '2',
   dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
 };

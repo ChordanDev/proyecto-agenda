@@ -12,7 +12,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(38);
+select plan(44);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -39,30 +39,40 @@ insert into public.eventos (id, titulo, alcance, duenio_iglesia_id, hora) values
   ('eeeeeeee-0000-4000-8000-000000000001', 'Evento propio', 'iglesia', '11111111-0000-4000-8000-000000000001', '19:00'),
   ('eeeeeeee-0000-4000-8000-000000000002', 'Evento ajeno', 'iglesia', '11111111-0000-4000-8000-000000000002', '19:00');
 
+-- An evento saved before the list of lugares, with its lugar written as text.
+insert into public.eventos (id, titulo, lugar, alcance, duenio_iglesia_id, hora) values
+  ('eeeeeeee-0000-4000-8000-000000000003', 'Evento viejo', 'Salon jovenes', 'iglesia', '11111111-0000-4000-8000-000000000001', '19:00');
+
 insert into public.eventos_fechas (evento_id, fecha) values
   ('eeeeeeee-0000-4000-8000-000000000001', '2026-11-14'),
-  ('eeeeeeee-0000-4000-8000-000000000002', '2026-11-14');
+  ('eeeeeeee-0000-4000-8000-000000000002', '2026-11-14'),
+  ('eeeeeeee-0000-4000-8000-000000000003', '2026-11-14');
+
+-- A lugar of the iglesia of the encargado and one of the other iglesia.
+insert into public.lugares (id, nombre, duenio_iglesia_id) values
+  ('ffffffff-0000-4000-8000-000000000001', 'Templo', '11111111-0000-4000-8000-000000000001'),
+  ('ffffffff-0000-4000-8000-000000000002', 'Salón ajeno', '11111111-0000-4000-8000-000000000002');
 
 -- The functions themselves ---------------------------------------------------------
 
 select function_returns(
   'public', 'guardar_evento',
-  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid'],
+  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid', 'uuid'],
   'uuid'
 );
 select isnt_definer(
   'public', 'guardar_evento',
-  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid']
+  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid', 'uuid']
 );
 select function_privs_are(
   'public', 'guardar_evento',
-  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid'],
+  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid', 'uuid'],
   'anon', array[]::text[],
   'anon cannot execute guardar_evento'
 );
 select function_privs_are(
   'public', 'guardar_evento',
-  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid'],
+  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid', 'uuid'],
   'authenticated', array['EXECUTE'],
   'authenticated can execute guardar_evento'
 );
@@ -234,6 +244,74 @@ select results_eq(
      where eventos.id = 'eeeeeeee-0000-4000-8000-000000000001' order by fecha $$,
   $$ values ('Evento propio, cambiado', '2026-11-21'::date), ('Evento propio, cambiado', '2026-11-28'::date) $$,
   'when an edit fails, the evento keeps its columns and its dates'
+);
+
+-- Allowed: creating an evento with a lugar of the list of its duenio.
+select isnt(
+  public.guardar_evento(
+    nuevo_evento_id => 'eeeeeeee-0000-4000-8000-000000000004',
+    titulo => 'En el templo',
+    alcance => 'iglesia',
+    duenio_iglesia_id => '11111111-0000-4000-8000-000000000001',
+    hora => '10:00',
+    repeticion => 'ninguna',
+    lugar_id => 'ffffffff-0000-4000-8000-000000000001',
+    fechas => array['2026-12-05']::date[]),
+  null,
+  'the encargado creates an evento with a lugar of their iglesia'
+);
+select results_eq(
+  $$ select lugar, lugar_id from public.eventos where id = 'eeeeeeee-0000-4000-8000-000000000004' $$,
+  $$ values (null::text, 'ffffffff-0000-4000-8000-000000000001'::uuid) $$,
+  'the evento points to the lugar and has no written lugar'
+);
+
+-- Allowed: an old evento keeps its written lugar until a lugar of the list is
+-- chosen, which replaces it.
+select is(
+  public.guardar_evento(
+    evento_id => 'eeeeeeee-0000-4000-8000-000000000003',
+    titulo => 'Evento viejo',
+    alcance => 'iglesia',
+    duenio_iglesia_id => '11111111-0000-4000-8000-000000000001',
+    hora => '19:00',
+    repeticion => 'ninguna',
+    lugar_id => 'ffffffff-0000-4000-8000-000000000001',
+    fechas => array['2026-11-14']::date[]),
+  'eeeeeeee-0000-4000-8000-000000000003'::uuid,
+  'the encargado edits an old evento choosing a lugar of the list'
+);
+select results_eq(
+  $$ select lugar, lugar_id from public.eventos where id = 'eeeeeeee-0000-4000-8000-000000000003' $$,
+  $$ values (null::text, 'ffffffff-0000-4000-8000-000000000001'::uuid) $$,
+  'the lugar of the list replaces the written one'
+);
+
+-- Rejected: a lugar of another duenio, even one the evento could not have.
+select throws_ok(
+  $$ select public.guardar_evento(
+    titulo => 'En lugar ajeno',
+    alcance => 'iglesia',
+    duenio_iglesia_id => '11111111-0000-4000-8000-000000000001',
+    hora => '10:00',
+    repeticion => 'ninguna',
+    lugar_id => 'ffffffff-0000-4000-8000-000000000002',
+    fechas => array['2026-12-05']::date[]) $$,
+  '23514', null, 'an evento cannot have a lugar of another duenio'
+);
+
+-- Rejected: a written lugar and a lugar of the list at once.
+select throws_ok(
+  $$ select public.guardar_evento(
+    titulo => 'Dos lugares',
+    alcance => 'iglesia',
+    duenio_iglesia_id => '11111111-0000-4000-8000-000000000001',
+    hora => '10:00',
+    repeticion => 'ninguna',
+    lugar => 'Plaza',
+    lugar_id => 'ffffffff-0000-4000-8000-000000000001',
+    fechas => array['2026-12-05']::date[]) $$,
+  '23514', null, 'an evento cannot have a written lugar and a lugar of the list'
 );
 
 -- Rejected: editing an evento of an iglesia the cargos do not cover. The
