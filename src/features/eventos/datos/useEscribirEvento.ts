@@ -33,7 +33,8 @@ function useInvalidarEventos() {
 /**
  * Saves an evento, new (no `id`) or edited. A new one gets its id once, when
  * the form opens: tapping Guardar again after an answer that never came saves
- * that same evento instead of a second one.
+ * that same evento instead of a second one. When the evento was deleted
+ * meanwhile, the calendarios and the evento are read again so it disappears.
  */
 export function useGuardarEvento(id: string | undefined) {
   const invalidar = useInvalidarEventos();
@@ -46,6 +47,11 @@ export function useGuardarEvento(id: string | undefined) {
     networkMode: 'always',
     mutationFn: (evento: EventoAGuardar) => guardarEvento(evento, destino),
     onSuccess: (savedId) => invalidar(savedId),
+    onError: (error) => {
+      if (getTipoDeError(error) === 'no-existe') {
+        return invalidar(id ?? nuevoId);
+      }
+    },
   });
 }
 
