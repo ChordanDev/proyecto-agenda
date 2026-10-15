@@ -45,7 +45,9 @@ describe('guardarEvento', () => {
     mockRpc.mockResolvedValue({ data: null, error: NO_VISIBLE });
     mockReadEvento.mockResolvedValue(GONE);
 
-    await expect(guardarEvento(EVENTO, 'e1')).rejects.toMatchObject({ tipo: 'no-existe' });
+    await expect(guardarEvento(EVENTO, { editar: 'e1' })).rejects.toMatchObject({
+      tipo: 'no-existe',
+    });
     expect(mockReadEvento).toHaveBeenCalledWith({
       table: 'eventos',
       columns: 'id',
@@ -57,27 +59,48 @@ describe('guardarEvento', () => {
     mockRpc.mockResolvedValue({ data: null, error: NO_VISIBLE });
     mockReadEvento.mockResolvedValue(STILL_THERE);
 
-    await expect(guardarEvento(EVENTO, 'e1')).rejects.toMatchObject({ tipo: 'sin-permiso' });
+    await expect(guardarEvento(EVENTO, { editar: 'e1' })).rejects.toMatchObject({
+      tipo: 'sin-permiso',
+    });
   });
 
   it('keeps the cargos as the reason when the evento cannot be read again', async () => {
     mockRpc.mockResolvedValue({ data: null, error: NO_VISIBLE });
     mockReadEvento.mockResolvedValue({ data: null, error: { message: 'Failed to fetch' } });
 
-    await expect(guardarEvento(EVENTO, 'e1')).rejects.toMatchObject({ tipo: 'sin-permiso' });
+    await expect(guardarEvento(EVENTO, { editar: 'e1' })).rejects.toMatchObject({
+      tipo: 'sin-permiso',
+    });
   });
 
   it('does not read the evento again for a row the policy rejects', async () => {
     mockRpc.mockResolvedValue({ data: null, error: { code: '42501', message: 'rls' } });
 
-    await expect(guardarEvento(EVENTO, 'e1')).rejects.toMatchObject({ tipo: 'sin-permiso' });
+    await expect(guardarEvento(EVENTO, { editar: 'e1' })).rejects.toMatchObject({
+      tipo: 'sin-permiso',
+    });
     expect(mockReadEvento).not.toHaveBeenCalled();
+  });
+
+  it('reads its own id again when a create sent again is rejected', async () => {
+    // The first try created it; meanwhile its duenio moved out of the cargos.
+    mockRpc.mockResolvedValue({ data: null, error: NO_VISIBLE });
+    mockReadEvento.mockResolvedValue(STILL_THERE);
+
+    await expect(guardarEvento(EVENTO, { crear: 'n1' })).rejects.toMatchObject({
+      tipo: 'sin-permiso',
+    });
+    expect(mockReadEvento).toHaveBeenCalledWith({
+      table: 'eventos',
+      columns: 'id',
+      eq: ['id', 'n1'],
+    });
   });
 
   it('returns the id of the evento saved', async () => {
     mockRpc.mockResolvedValue({ data: 'e1', error: null });
 
-    await expect(guardarEvento(EVENTO, 'e1')).resolves.toBe('e1');
+    await expect(guardarEvento(EVENTO, { editar: 'e1' })).resolves.toBe('e1');
   });
 });
 

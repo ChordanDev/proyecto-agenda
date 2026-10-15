@@ -47,14 +47,24 @@ function orOmitted<T>(value: T | null): T | undefined {
 }
 
 /**
- * Saves an evento with all its dates in one call (public.guardar_evento):
- * either both are saved or neither is. Without `id` it creates the evento.
- * Returns the id of the evento saved.
+ * Which evento a save writes: a new one, with the id the app chose for it, or
+ * an existing one.
  */
-export async function guardarEvento(evento: EventoAGuardar, id?: string): Promise<string> {
+export type EventoDestino = { crear: string } | { editar: string };
+
+/**
+ * Saves an evento with all its dates in one call (public.guardar_evento):
+ * either both are saved or neither is. A create sent again with the same id
+ * saves the evento once. Returns the id of the evento saved.
+ */
+export async function guardarEvento(
+  evento: EventoAGuardar,
+  destino: EventoDestino,
+): Promise<string> {
   const { duenio } = evento;
   const { data, error } = await supabase.rpc('guardar_evento', {
-    evento_id: id,
+    evento_id: 'editar' in destino ? destino.editar : undefined,
+    nuevo_evento_id: 'crear' in destino ? destino.crear : undefined,
     titulo: evento.titulo,
     lugar: orOmitted(evento.lugar),
     descripcion: orOmitted(evento.descripcion),
@@ -71,7 +81,8 @@ export async function guardarEvento(evento: EventoAGuardar, id?: string): Promis
   });
 
   if (error) {
-    throw await toErrorDeEscritura(error, id);
+    // A create sent again ends as an edit of its own id: either id is the one to read.
+    throw await toErrorDeEscritura(error, 'editar' in destino ? destino.editar : destino.crear);
   }
 
   return data;
