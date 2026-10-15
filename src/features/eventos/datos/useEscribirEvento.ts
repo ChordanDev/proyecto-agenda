@@ -48,8 +48,10 @@ export function useGuardarEvento(id: string | undefined) {
     mutationFn: (evento: EventoAGuardar) => guardarEvento(evento, destino),
     onSuccess: (savedId) => invalidar(savedId),
     onError: (error) => {
+      // Not awaited: reading the evento again finds it gone and unmounts the
+      // form, which would drop the warning and the close of `mutate`.
       if (getTipoDeError(error) === 'no-existe') {
-        return invalidar(id ?? nuevoId);
+        void invalidar(id ?? nuevoId);
       }
     },
   });
