@@ -14,7 +14,7 @@ body{margin:0;font-family:'Noto Sans','Segoe UI',system-ui,sans-serif;color:#222
 a{color:#1B3550}a:hover{color:#10233A}
 </style>
 </helmet>
-<div style="width: 390px; height: 1885px; box-sizing: border-box; background: linear-gradient(180deg, #2F557F 0px, #E6EBF1 190px, #C9D4E0 100%); display: flex; flex-direction: column; font-family: 'Noto Sans', 'Segoe UI', system-ui, sans-serif; color: #222222">
+<div style="position: relative; width: 390px; height: 1885px; box-sizing: border-box; background: linear-gradient(180deg, #2F557F 0px, #E6EBF1 190px, #C9D4E0 100%); display: flex; flex-direction: column; font-family: 'Noto Sans', 'Segoe UI', system-ui, sans-serif; color: #222222">
 
   <header style="flex-shrink: 0; padding: 22px 16px 0; display: flex; align-items: center; gap: 12px">
     <a href="Calendario.dc.html" aria-label="Cancelar" style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: #FFFFFF; display: flex; align-items: center; justify-content: center; color: #1B3550">
@@ -62,9 +62,13 @@ a{color:#1B3550}a:hover{color:#10233A}
           <span style="font-size: 14px; line-height: 1.4; color: #4A4A4A">Un evento que se repite no puede durar varios días.</span>
         </sc-if>
       </div>
+      <!-- Lugar: opens the sheet in 6c with the lugares of the chosen dueño. Optional: with none chosen it shows the placeholder in grey. -->
       <div style="display: flex; flex-direction: column; gap: 8px">
-        <label for="lugar" style="font-size: 16px; font-weight: 700">Lugar</label>
-        <input id="lugar" type="text" value="Templo" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
+        <span id="tLugar" style="font-size: 16px; font-weight: 700">Lugar <span style="font-weight: 400; color: #717171">(opcional)</span></span>
+        <button type="button" aria-labelledby="tLugar" onClick="{{ abrirLugar }}" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 6px 12px 6px 16px; font-family: inherit; text-align: left; cursor: pointer; color: #222222">
+          <span style="font-size: 18px; color: {{ lugarColor }}">{{ lugarTexto }}</span>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B3550" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+        </button>
       </div>
       <div style="display: flex; flex-direction: column; gap: 8px">
         <label for="desc" style="font-size: 16px; font-weight: 700">Descripción <span style="font-weight: 400; color: #717171">(opcional)</span></label>
@@ -176,6 +180,53 @@ a{color:#1B3550}a:hover{color:#10233A}
 
     <a href="Calendario.dc.html" style="display: flex; align-items: center; justify-content: center; min-height: 58px; border-radius: 14px; background: #1B3550; color: #FFFFFF; font-size: 18px; font-weight: 700; text-decoration: none">Crear evento</a>
   </div>
+
+  <!-- 6c: the Lugar sheet. Lists the lugares of the chosen dueño, sorted by name, then "+ Agregar lugar".
+       "Sin lugar" clears the field. An evento saved before the list keeps its lugar as written text: it shows first, marked "Escrito a mano", until another one is chosen.
+       "+ Agregar lugar" turns into a text field: Guardar saves it for the dueño and leaves it chosen. A name already in the list (ignoring capitals and accents) picks that one instead of repeating it. -->
+  <sc-if value="{{ hojaLugar }}" hint-placeholder-val="{{ false }}">
+  <div style="position: absolute; inset: 0; background: rgba(34, 46, 61, 0.55); display: flex; flex-direction: column; justify-content: flex-end">
+    <div role="dialog" aria-labelledby="tHojaLugar" style="background: #FFFFFF; border-radius: 28px 28px 0 0; padding: 12px 16px 32px">
+      <div style="width: 44px; height: 5px; border-radius: 3px; background: #D5DBE3; margin: 0 auto 14px"></div>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+        <span id="tHojaLugar" style="font-size: 22px; font-weight: 700">¿Dónde es?</span>
+        <button type="button" aria-label="Cerrar" onClick="{{ cerrarLugar }}" style="width: 44px; height: 44px; border-radius: 50%; border: 0; background: #EEF1F5; display: flex; align-items: center; justify-content: center; color: #1B3550; cursor: pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        </button>
+      </div>
+      <span style="display: block; margin-top: 8px; font-size: 16px; line-height: 1.4; color: #4A4A4A">Lugares de {{ duenio.nombre }}.</span>
+      <div role="radiogroup" aria-labelledby="tHojaLugar" style="display: flex; flex-direction: column; margin-top: 6px">
+        <sc-for list="{{ lugares }}" as="lu" hint-placeholder-count="4">
+          <button type="button" role="radio" aria-checked="{{ lu.checked }}" onClick="{{ lu.pick }}" style="display: flex; align-items: center; gap: 14px; min-height: 60px; padding: 8px 0; border: 0; border-bottom: 1px solid #EEEEEE; background: transparent; font-family: inherit; text-align: left; cursor: pointer; color: #222222">
+            <span style="display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0">
+              <span style="font-size: 17px; font-weight: 700">{{ lu.nombre }}</span>
+              <sc-if value="{{ lu.aMano }}" hint-placeholder-val="{{ false }}"><span style="font-size: 14px; color: #4A4A4A">Escrito a mano</span></sc-if>
+            </span>
+            <sc-if value="{{ lu.sel }}" hint-placeholder-val="{{ false }}">
+              <span style="width: 26px; height: 26px; border-radius: 50%; background: #2F557F; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+            </sc-if>
+            <sc-if value="{{ lu.notSel }}" hint-placeholder-val="{{ true }}">
+              <span style="width: 26px; height: 26px; box-sizing: border-box; border-radius: 50%; border: 2px solid #9AA3AE; flex-shrink: 0"></span>
+            </sc-if>
+          </button>
+        </sc-for>
+        <sc-if value="{{ agregando }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 0 4px">
+            <label for="nuevoLugar" style="font-size: 16px; font-weight: 700">Nombre del lugar</label>
+            <input id="nuevoLugar" type="text" value="{{ nuevo }}" onChange="{{ escribirNuevo }}" placeholder="Por ejemplo: Salón de jóvenes" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
+            <button type="button" onClick="{{ guardarNuevo }}" style="min-height: 56px; border-radius: 14px; border: 0; background: #1B3550; color: #FFFFFF; font-family: inherit; font-size: 18px; font-weight: 700; cursor: pointer">Guardar lugar</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ noAgregando }}" hint-placeholder-val="{{ true }}">
+          <button type="button" onClick="{{ empezarAgregar }}" style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 0; border: 0; background: transparent; font-family: inherit; text-align: left; cursor: pointer; color: #1B3550">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+            <span style="font-size: 17px; font-weight: 700">Agregar lugar</span>
+          </button>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+  </sc-if>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1885}}'>
@@ -238,6 +289,26 @@ class Component extends DCLogic {
       ? 'Se repite todos los ' + plural + ', hasta el ' + hastaLargo + '.'
       : 'Se repite el ' + pos + ' ' + nombreDia + ' de cada mes, hasta el ' + hastaLargo + '.';
 
+    // Lugar: the lugares of the chosen dueño. null is "Sin lugar"; 'escrito' is the text of an evento saved before the list.
+    const LUGARES = ['Plaza San Martín', 'Salón de jóvenes', 'Templo'];
+    const lugar = st.lugar === undefined ? 'Templo' : st.lugar;
+    const aMano = st.aMano || null; // e.g. 'Salon jovenes' when editing an old evento
+    const norm0 = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    const opcionesLugar = [{ nombre: 'Sin lugar', valor: null }]
+      .concat(aMano ? [{ nombre: aMano, valor: aMano, aMano: true }] : [])
+      .concat(LUGARES.concat(st.nuevos || []).sort((a, b) => a.localeCompare(b, 'es')).map((n) => ({ nombre: n, valor: n })));
+    const lugares = opcionesLugar.map((o) => ({
+      ...o, aMano: !!o.aMano, sel: o.valor === lugar, notSel: o.valor !== lugar, checked: o.valor === lugar ? 'true' : 'false',
+      pick: () => this.setState({ lugar: o.valor, hoja: null })
+    }));
+    const nuevo = st.nuevo || '';
+    const guardarNuevo = () => {
+      const limpio = nuevo.trim().replace(/\s+/g, ' ');
+      if (!limpio) return;
+      const existe = LUGARES.concat(st.nuevos || []).find((n) => norm0(n) === norm0(limpio));
+      this.setState({ lugar: existe || limpio, nuevos: existe ? st.nuevos : (st.nuevos || []).concat(limpio), nuevo: '', agregando: false, hoja: null });
+    };
+
     // Dueño: the levels the cargos cover (a pastor of Distrito Norte here).
     const duenio = { nombre: 'Iglesia Central', detalle: 'Distrito Norte', seVe: 'Se ve en el calendario de esta iglesia.' };
     const variosDuenios = true;
@@ -265,7 +336,16 @@ class Component extends DCLogic {
       hayElegidas: elegidas.length > 0,
       sinResultados: resultados.length === 0,
       listaTitulo: q.trim() ? 'Resultados, de la más cercana a la más lejana' : 'Más cercanas',
-      buscar: (e) => this.setState({ q: e.target.value })
+      buscar: (e) => this.setState({ q: e.target.value }),
+      lugares, nuevo, guardarNuevo,
+      lugarTexto: lugar === null ? 'Elegir lugar' : lugar,
+      lugarColor: lugar === null ? '#717171' : '#222222',
+      hojaLugar: st.hoja === 'lugar',
+      agregando: !!st.agregando, noAgregando: !st.agregando,
+      abrirLugar: () => this.setState({ hoja: 'lugar' }),
+      cerrarLugar: () => this.setState({ hoja: null, agregando: false, nuevo: '' }),
+      empezarAgregar: () => this.setState({ agregando: true }),
+      escribirNuevo: (e) => this.setState({ nuevo: e.target.value })
     };
   }
 }

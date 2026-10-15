@@ -74,8 +74,12 @@ Nivel dueño de un evento: iglesia, distrito o asociación. Un evento se ve en t
 _Avoid_: Visibilidad, tipo de evento, ámbito
 
 **Dueño**:
-La iglesia, el distrito o la asociación concretos a los que pertenece un evento. Todo evento tiene exactamente un dueño. En el código se escribe `duenio`.
+La iglesia, el distrito o la asociación concretos a los que pertenece un evento o un lugar. Todo evento y todo lugar tienen exactamente un dueño. En el código se escribe `duenio`.
 _Avoid_: Creador, autor, iglesia de origen, iglesia anfitriona
+
+**Lugar**:
+Sitio guardado en la lista de un dueño donde se hacen sus eventos ("Templo", "Salón de jóvenes"). Un evento tiene a lo sumo un lugar, y es de su mismo dueño. Un dueño no repite el nombre de un lugar, sin distinguir mayúsculas ni tildes. Los eventos cargados antes de la lista conservan su lugar escrito a mano.
+_Avoid_: Ubicación, sede, sala, dirección
 
 **Iglesia sumada**:
 Iglesia que está por fuera del alcance de un evento y a la que el dueño se lo comparte, sin pasar a ser dueña.
