@@ -1,4 +1,4 @@
-import { skipToken, useQuery } from '@tanstack/react-query';
+import { skipToken, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { Cargo } from '@/features/sesion/dominio/cargo';
 
@@ -66,6 +66,7 @@ const SIN_IGLESIA = armarCalendarioDeIglesia(null, [], {});
  * client, so going back to a month already seen makes no request.
  */
 export function useCalendario(fuente: FuenteDeCalendario, month: Month) {
+  const queryClient = useQueryClient();
   const fuenteKey =
     fuente.tipo === 'iglesia'
       ? [fuente.iglesiaId]
@@ -101,12 +102,21 @@ export function useCalendario(fuente: FuenteDeCalendario, month: Month) {
     },
   });
 
+  // The month kept on screen was downloaded with the previous filter: its
+  // query, the one holding that same data, tells when.
+  const mesUpdatedAt = mes.isPlaceholderData
+    ? (queryClient
+        .getQueryCache()
+        .findAll({ queryKey: ['calendario', ...fuenteKey] })
+        .find((query) => query.state.data === mes.data)?.state.dataUpdatedAt ?? 0)
+    : mes.dataUpdatedAt;
+
   return {
     data: lecturaData === null ? SIN_IGLESIA : mes.data,
     isError: lectura.isError || mes.isError,
     isFetching: lectura.isFetching || mes.isFetching,
     // When the calendario on screen was downloaded, 0 while nothing was.
-    dataUpdatedAt: lecturaData === null ? lectura.dataUpdatedAt : mes.dataUpdatedAt,
+    dataUpdatedAt: lecturaData === null ? lectura.dataUpdatedAt : mesUpdatedAt,
     refetch: () => (lectura.isError ? lectura.refetch() : mes.refetch()),
   };
 }
