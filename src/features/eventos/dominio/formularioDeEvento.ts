@@ -1,10 +1,9 @@
 import { formatLongDate, formatTime } from '@/features/calendario/dominio/calendarioTexts';
 import { getWeekday, parseLocalDate } from '@/features/calendario/dominio/localDate';
-import type { LugarElegido } from '@/features/lugares/dominio/lugar';
+import { isSameDuenio, type LugarElegido } from '@/features/lugares/dominio/lugar';
 
 import { getCategoria, type Categoria } from './categoria';
 import type { Duenio, Enfasis, Evento, Repeticion } from './evento';
-import { getDuenioId } from './opcionesDeDuenio';
 import { getFechasDeSerie, getTopeDeHasta } from './repeticion';
 
 /**
@@ -235,10 +234,7 @@ function getLugarElegido(evento: Evento): LugarElegido | null {
  */
 export function cambiarDuenio(formulario: FormularioDeEvento, duenio: Duenio): FormularioDeEvento {
   const { lugar } = formulario;
-  const lugarDeOtro =
-    lugar?.tipo === 'guardado' &&
-    (lugar.lugar.duenio.alcance !== duenio.alcance ||
-      getDuenioId(lugar.lugar.duenio) !== getDuenioId(duenio));
+  const lugarDeOtro = lugar?.tipo === 'guardado' && !isSameDuenio(lugar.lugar.duenio, duenio);
 
   return { ...formulario, duenio, lugar: lugarDeOtro ? null : lugar };
 }

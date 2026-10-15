@@ -35,10 +35,14 @@ export function limpiarNombreDeLugar(nombre: string): string {
  * spaces. The database compares them the same way (public.lugar_nombre_key).
  */
 export function getNombreKey(nombre: string): string {
-  return limpiarNombreDeLugar(nombre).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  return limpiarNombreDeLugar(nombre)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 }
 
-function isSameDuenio(a: Duenio, b: Duenio): boolean {
+/** Whether two duenios are the same: an iglesia and a distrito never are, whatever their ids. */
+export function isSameDuenio(a: Duenio, b: Duenio): boolean {
   return a.alcance === b.alcance && getDuenioId(a) === getDuenioId(b);
 }
 
