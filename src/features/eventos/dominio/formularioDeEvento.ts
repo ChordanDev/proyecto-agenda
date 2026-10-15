@@ -234,9 +234,29 @@ function getLugarElegido(evento: Evento): LugarElegido | null {
  */
 export function cambiarDuenio(formulario: FormularioDeEvento, duenio: Duenio): FormularioDeEvento {
   const { lugar } = formulario;
-  const lugarDeOtro = lugar?.tipo === 'guardado' && !isSameDuenio(lugar.lugar.duenio, duenio);
 
-  return { ...formulario, duenio, lugar: lugarDeOtro ? null : lugar };
+  return { ...formulario, duenio, lugar: esLugarDe(lugar, duenio) ? lugar : null };
+}
+
+/**
+ * Chooses the lugar of the evento. A lugar of the list of another duenio is
+ * ignored: "Guardar lugar" can answer after the person chose another duenio,
+ * and saving the evento with it would be rejected.
+ */
+export function elegirLugar(
+  formulario: FormularioDeEvento,
+  lugar: LugarElegido | null,
+): FormularioDeEvento {
+  return esLugarDe(lugar, formulario.duenio) ? { ...formulario, lugar } : formulario;
+}
+
+/** A lugar of the list is of its duenio only; one written by hand, of any. */
+function esLugarDe(lugar: LugarElegido | null, duenio: Duenio | null): boolean {
+  if (lugar?.tipo !== 'guardado') {
+    return true;
+  }
+
+  return duenio !== null && isSameDuenio(lugar.lugar.duenio, duenio);
 }
 
 /** The form of an evento being edited, loaded with what it has. */

@@ -3,6 +3,7 @@ import type { Lugar } from '@/features/lugares/dominio/lugar';
 import type { Evento } from './evento';
 import {
   cambiarDuenio,
+  elegirLugar,
   formatFechaDelCampo,
   formularioDesdeEvento,
   formularioVacio,
@@ -456,6 +457,35 @@ describe('cambiarDuenio', () => {
     const { duenio: _before, lugar: _l, ...antes } = completo();
 
     expect(resto).toEqual(antes);
+  });
+});
+
+describe('elegirLugar', () => {
+  it('chooses a lugar of the list of the duenio of the form', () => {
+    const formulario = elegirLugar(completo({ lugar: null }), { tipo: 'guardado', lugar: TEMPLO });
+
+    expect(formulario.lugar).toEqual({ tipo: 'guardado', lugar: TEMPLO });
+  });
+
+  it('ignores a lugar of the list of another duenio, which saving would reject', () => {
+    // "Guardar lugar" answered after the person chose another duenio.
+    const antes = completo({ duenio: OTRA_IGLESIA, lugar: null });
+    const formulario = elegirLugar(antes, { tipo: 'guardado', lugar: TEMPLO });
+
+    expect(formulario).toBe(antes);
+  });
+
+  it('ignores a lugar of the list while the form has no duenio', () => {
+    const antes = completo({ duenio: null, lugar: null });
+
+    expect(elegirLugar(antes, { tipo: 'guardado', lugar: TEMPLO })).toBe(antes);
+  });
+
+  it('chooses a lugar written by hand or no lugar, whatever the duenio', () => {
+    const escrito = { tipo: 'escrito', nombre: 'Salon jovenes' } as const;
+
+    expect(elegirLugar(completo({ duenio: OTRA_IGLESIA }), escrito).lugar).toEqual(escrito);
+    expect(elegirLugar(completo(), null).lugar).toBeNull();
   });
 });
 
