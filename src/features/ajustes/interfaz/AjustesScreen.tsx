@@ -1,12 +1,13 @@
 import { useRouter } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { useDeleteOwnUsuario, useSignOut } from '@/features/sesion/datos/useLeaveSesion';
+import { useDeleteOwnUsuario } from '@/features/sesion/datos/useLeaveSesion';
 import { useSesion } from '@/features/sesion/datos/useSesion';
+import { ConfirmSignOut } from '@/features/sesion/interfaz/ConfirmSignOut';
 import { useLeaveToFirstScreen } from '@/features/sesion/interfaz/useLeaveToFirstScreen';
-import { colors, fontSize, radius, spacing } from '@/shared/theme';
-import { AppText, Button, Logo, ScreenBackground } from '@/shared/ui';
+import { colors, radius, spacing } from '@/shared/theme';
+import { AppText, Button, ConfirmDialog, DialogText, Logo, ScreenBackground } from '@/shared/ui';
 
 import { useMiIglesia, type EstadoDeMiIglesia } from '../datos/useMiIglesia';
 import { useUsuario } from '../datos/useUsuario';
@@ -34,20 +35,8 @@ const CHANGE_LABEL_SIZE = 16;
 const USUARIO_CARD_GAP = 14; // line 84
 const AVATAR_SIZE = 44; // line 86
 const AVATAR_LABEL_SIZE = 15;
-const DELETE_HEIGHT = 52; // line 96
+const DELETE_HEIGHT = 52; // line 97
 const DELETE_LABEL_SIZE = 16;
-// The confirmation of "Eliminar mi cuenta" (lines 111-121).
-const OVERLAY_COLOR = 'rgba(16,35,58,0.55)';
-const OVERLAY_PADDING_HORIZONTAL = 20;
-const DIALOG_RADIUS = 22;
-const DIALOG_PADDING_TOP = 24;
-const DIALOG_PADDING_HORIZONTAL = 20;
-const DIALOG_PADDING_BOTTOM = 20;
-const DIALOG_GAP = 12;
-const DIALOG_TITLE_SIZE = 21;
-const DIALOG_TEXT_COLOR = '#333333';
-const DIALOG_BUTTON_HEIGHT = 54;
-const DIALOG_BUTTONS_MARGIN_TOP = 8;
 // The text of the states the mockup does not draw, as in "Elegir iglesia"
 // (03-elegir-iglesia.html, line 28).
 const PARAGRAPH_SIZE = 16;
@@ -138,8 +127,7 @@ export function AjustesScreen() {
 }
 
 function UsuarioCard({ usuario }: { usuario: DescripcionDeUsuario }) {
-  const signOut = useSignOut();
-  const leaveToFirstScreen = useLeaveToFirstScreen();
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
 
   return (
     <View style={[styles.card, styles.usuarioCard]}>
@@ -158,18 +146,12 @@ function UsuarioCard({ usuario }: { usuario: DescripcionDeUsuario }) {
           )}
         </View>
       </View>
-      {/* A state the mockup does not draw. */}
-      {signOut.isError && (
-        <AppText color="peligro" accessibilityRole="alert">
-          No se pudo cerrar la sesión. Probá de nuevo.
-        </AppText>
-      )}
       <Button
         label="Cerrar sesión"
         variant="secondary"
-        disabled={signOut.isPending || signOut.isSuccess}
-        onPress={() => signOut.mutate(undefined, { onSuccess: leaveToFirstScreen })}
+        onPress={() => setConfirmingSignOut(true)}
       />
+      {confirmingSignOut && <ConfirmSignOut onClose={() => setConfirmingSignOut(false)} />}
     </View>
   );
 }
@@ -178,75 +160,37 @@ function UsuarioCard({ usuario }: { usuario: DescripcionDeUsuario }) {
 function ConfirmDelete({ onClose }: { onClose: () => void }) {
   const deleteOwnUsuario = useDeleteOwnUsuario();
   const leaveToFirstScreen = useLeaveToFirstScreen();
-  // Once it is being deleted, there is nothing left to cancel.
-  const busy = deleteOwnUsuario.isPending || deleteOwnUsuario.isSuccess;
-  const cancel = () => {
-    if (!busy) {
-      onClose();
-    }
-  };
 
   return (
-    <Modal transparent animationType="fade" statusBarTranslucent onRequestClose={cancel}>
-      <View style={styles.overlay}>
-        <View style={styles.dialog} accessibilityViewIsModal accessibilityRole="alert">
-          <AppText weight="bold" accessibilityRole="header" style={styles.dialogTitle}>
-            ¿Eliminar tu cuenta?
-          </AppText>
-          <AppText style={styles.dialogText}>
-            Se borran tu usuario y tus cargos. Los eventos que cargaste siguen en el calendario.
-          </AppText>
-          <AppText weight="semibold" style={styles.dialogText}>
-            No se puede deshacer.
-          </AppText>
-          {/* A state the mockup does not draw. */}
-          {deleteOwnUsuario.isError && (
-            <AppText color="peligro" accessibilityRole="alert" style={styles.dialogText}>
-              No se pudo eliminar tu cuenta. Revisá la conexión y probá de nuevo.
-            </AppText>
-          )}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ disabled: busy }}
-            disabled={busy}
-            onPress={() =>
-              deleteOwnUsuario.mutate(undefined, {
-                // Ajustes stays mounted under the calendario: the dialog closes
-                // before leaving, or it would stay on top.
-                onSuccess: () => {
-                  onClose();
-                  leaveToFirstScreen();
-                },
-              })
-            }
-            style={({ pressed }) => [
-              styles.dialogButton,
-              styles.deleteButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <AppText weight="bold" color="textoSobreOscuro" style={styles.dialogButtonLabel}>
-              {deleteOwnUsuario.isPending ? 'Eliminando…' : 'Eliminar mi cuenta'}
-            </AppText>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ disabled: busy }}
-            disabled={busy}
-            onPress={cancel}
-            style={({ pressed }) => [
-              styles.dialogButton,
-              styles.cancelButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <AppText weight="bold" color="azulOscuro" style={styles.dialogButtonLabel}>
-              Cancelar
-            </AppText>
-          </Pressable>
-        </View>
-      </View>
-    </Modal>
+    <ConfirmDialog
+      title="¿Eliminar tu cuenta?"
+      confirmLabel={deleteOwnUsuario.isPending ? 'Eliminando…' : 'Eliminar mi cuenta'}
+      tone="danger"
+      // Once it is being deleted, there is nothing left to cancel.
+      busy={deleteOwnUsuario.isPending || deleteOwnUsuario.isSuccess}
+      onConfirm={() =>
+        deleteOwnUsuario.mutate(undefined, {
+          // Ajustes stays mounted under the calendario: the dialog closes
+          // before leaving, or it would stay on top.
+          onSuccess: () => {
+            onClose();
+            leaveToFirstScreen();
+          },
+        })
+      }
+      onCancel={onClose}
+    >
+      <DialogText>
+        Se borran tu usuario y tus cargos. Los eventos que cargaste siguen en el calendario.
+      </DialogText>
+      <DialogText weight="semibold">No se puede deshacer.</DialogText>
+      {/* A state the mockup does not draw. */}
+      {deleteOwnUsuario.isError && (
+        <DialogText color="peligro" accessibilityRole="alert">
+          No se pudo eliminar tu cuenta. Revisá la conexión y probá de nuevo.
+        </DialogText>
+      )}
+    </ConfirmDialog>
   );
 }
 
@@ -422,44 +366,6 @@ const styles = StyleSheet.create({
   deleteLinkLabel: {
     fontSize: DELETE_LABEL_SIZE,
     textDecorationLine: 'underline',
-  },
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: OVERLAY_PADDING_HORIZONTAL,
-    backgroundColor: OVERLAY_COLOR,
-  },
-  dialog: {
-    gap: DIALOG_GAP,
-    paddingTop: DIALOG_PADDING_TOP,
-    paddingHorizontal: DIALOG_PADDING_HORIZONTAL,
-    paddingBottom: DIALOG_PADDING_BOTTOM,
-    borderRadius: DIALOG_RADIUS,
-    backgroundColor: colors.superficie,
-  },
-  dialogTitle: {
-    fontSize: DIALOG_TITLE_SIZE,
-  },
-  dialogText: {
-    fontSize: PARAGRAPH_SIZE,
-    lineHeight: PARAGRAPH_SIZE * PARAGRAPH_LINE_HEIGHT,
-    color: DIALOG_TEXT_COLOR,
-  },
-  dialogButton: {
-    minHeight: DIALOG_BUTTON_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.boton,
-  },
-  deleteButton: {
-    marginTop: DIALOG_BUTTONS_MARGIN_TOP,
-    backgroundColor: colors.peligro,
-  },
-  cancelButton: {
-    backgroundColor: colors.azulSuave,
-  },
-  dialogButtonLabel: {
-    fontSize: fontSize.cuerpo,
   },
   pressed: {
     opacity: PRESSED_OPACITY,

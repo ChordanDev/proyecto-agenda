@@ -89,7 +89,8 @@ a{color:#1B3550}a:hover{color:#10233A}
             <span style="font-size: 15px; color: #4A4A4A">Encargada de calendario · Iglesia Central</span>
           </span>
         </div>
-        <a href="Main.dc.html" style="display: flex; align-items: center; justify-content: center; min-height: 52px; border-radius: 14px; background: #E3EAF2; font-size: 17px; font-weight: 700; text-decoration: none; color: #1B3550">Cerrar sesión</a>
+        <!-- Asks first, as the yellow notice of a usuario without cargos does. -->
+        <button type="button" onClick="{{ pedirSalir }}" style="display: flex; align-items: center; justify-content: center; min-height: 52px; border: 0; border-radius: 14px; background: #E3EAF2; font-family: inherit; font-size: 17px; font-weight: 700; color: #1B3550; cursor: pointer">Cerrar sesión</button>
       </div>
     </section>
     <!-- Kept outside the card, as a link, so it is not tapped by mistake. Always asks first. -->
@@ -119,6 +120,21 @@ a{color:#1B3550}a:hover{color:#10233A}
       </div>
     </div>
   </sc-if>
+
+  <!-- Asks before signing out, from here and from the yellow notice of a usuario without cargos. -->
+  <sc-if value="{{ confirmandoSalir }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(16,35,58,0.55); display: flex; align-items: center; padding: 0 20px">
+      <div role="alertdialog" aria-modal="true" aria-labelledby="tSalir" style="width: 100%; border-radius: 22px; background: #FFFFFF; padding: 24px 20px 20px; display: flex; flex-direction: column; gap: 12px">
+        <span id="tSalir" style="font-size: 21px; font-weight: 700">¿Cerrar sesión?</span>
+        <!-- Only without a connection: signing in again needs one. -->
+        <sc-if value="{{ sinConexion }}" hint-placeholder-val="{{ true }}">
+          <span style="font-size: 16px; line-height: 1.45; color: #333333">Para volver a entrar vas a necesitar conexión.</span>
+        </sc-if>
+        <a href="Main.dc.html" style="display: flex; align-items: center; justify-content: center; min-height: 54px; margin-top: 8px; border-radius: 14px; background: #1B3550; color: #FFFFFF; font-size: 17px; font-weight: 700; text-decoration: none">Cerrar sesión</a>
+        <button type="button" onClick="{{ cancelar }}" style="min-height: 54px; border: 0; border-radius: 14px; background: #E3EAF2; color: #1B3550; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Cancelar</button>
+      </div>
+    </div>
+  </sc-if>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
@@ -129,11 +145,14 @@ class Component extends DCLogic {
     const conNotificaciones = false; // v2
     const conSesion = st.conSesion !== false;
     const confirmando = !!st.confirmando;
+    const confirmandoSalir = !!st.confirmandoSalir;
+    const sinConexion = st.sinConexion !== false;
     return {
       on: !off, off, toggle: () => this.setState({ off: !off }),
-      conNotificaciones, conSesion, sinSesion: !conSesion, confirmando,
+      conNotificaciones, conSesion, sinSesion: !conSesion, confirmando, confirmandoSalir, sinConexion,
       pedirEliminar: () => this.setState({ confirmando: true }),
-      cancelar: () => this.setState({ confirmando: false })
+      pedirSalir: () => this.setState({ confirmandoSalir: true }),
+      cancelar: () => this.setState({ confirmando: false, confirmandoSalir: false })
     };
   }
 }
