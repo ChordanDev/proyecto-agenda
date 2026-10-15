@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import {
+  crearIntentosDeLugar,
   getMensajeDeErrorDeLugar,
   getOpcionesDeLugar,
   resolverLugarNuevo,
@@ -62,10 +63,18 @@ export function HojaDeLugar({
   const [agregando, setAgregando] = useState(false);
   const [nuevo, setNuevo] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const intentos = useRef(crearIntentosDeLugar()).current;
 
   const opciones = getOpcionesDeLugar(lugares.data ?? [], duenio, selected);
 
+  // What the person does next wins over a save still on its way.
+  const forgetPendingSave = () => {
+    intentos.cancelar();
+    guardar.reset();
+  };
+
   const close = () => {
+    forgetPendingSave();
     setAgregando(false);
     setNuevo('');
     setError(null);
@@ -73,6 +82,7 @@ export function HojaDeLugar({
   };
 
   const choose = (lugar: LugarElegido | null) => {
+    forgetPendingSave();
     setAgregando(false);
     setNuevo('');
     setError(null);
@@ -99,11 +109,18 @@ export function HojaDeLugar({
       return;
     }
 
+    const intento = intentos.empezar();
     guardar.mutate(
       { nombre: result.nuevo, duenio },
       {
-        onSuccess: (lugar) => choose({ tipo: 'guardado', lugar }),
-        onError: (failure) => setError(getMensajeDeErrorDeLugar(getTipoDeErrorDeLugar(failure))),
+        onSuccess: (lugar) => {
+          if (intentos.esVigente(intento)) choose({ tipo: 'guardado', lugar });
+        },
+        onError: (failure) => {
+          if (intentos.esVigente(intento)) {
+            setError(getMensajeDeErrorDeLugar(getTipoDeErrorDeLugar(failure)));
+          }
+        },
       },
     );
   };

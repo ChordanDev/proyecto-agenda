@@ -1,4 +1,5 @@
 import {
+  crearIntentosDeLugar,
   getMensajeDeErrorDeLugar,
   getOpcionesDeLugar,
   getNombreKey,
@@ -141,5 +142,32 @@ describe('getMensajeDeErrorDeLugar', () => {
     expect(getMensajeDeErrorDeLugar('otro')).toBe(
       'No se pudo guardar el lugar. Probá de nuevo en un momento.',
     );
+  });
+});
+
+describe('crearIntentosDeLugar', () => {
+  it('lets the answer of the last save choose the lugar', () => {
+    const intentos = crearIntentosDeLugar();
+    const intento = intentos.empezar();
+
+    expect(intentos.esVigente(intento)).toBe(true);
+  });
+
+  it('ignores a save that finishes after something else was chosen or the sheet was closed', () => {
+    const intentos = crearIntentosDeLugar();
+    const intento = intentos.empezar();
+
+    intentos.cancelar();
+
+    expect(intentos.esVigente(intento)).toBe(false);
+  });
+
+  it('ignores an earlier save when the lugar was saved again', () => {
+    const intentos = crearIntentosDeLugar();
+    const primero = intentos.empezar();
+    const segundo = intentos.empezar();
+
+    expect(intentos.esVigente(primero)).toBe(false);
+    expect(intentos.esVigente(segundo)).toBe(true);
   });
 });

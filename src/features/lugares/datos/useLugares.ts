@@ -31,8 +31,11 @@ export function useGuardarLugar() {
     networkMode: 'always',
     mutationFn: ({ nombre, duenio }: { nombre: string; duenio: Duenio }) =>
       guardarLugar(nombre, duenio),
-    onSuccess: (lugar: Lugar) =>
-      queryClient.invalidateQueries({ queryKey: lugaresKey(lugar.duenio) }),
+    // Not awaited: the save is done when the lugar is saved, not when the list
+    // is read again, which waits for a connection.
+    onSuccess: (lugar: Lugar) => {
+      void queryClient.invalidateQueries({ queryKey: lugaresKey(lugar.duenio) });
+    },
   });
 }
 

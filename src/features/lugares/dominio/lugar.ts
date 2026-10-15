@@ -131,3 +131,31 @@ const MENSAJES: Record<TipoDeErrorDeLugar, string> = {
 export function getMensajeDeErrorDeLugar(tipo: TipoDeErrorDeLugar): string {
   return MENSAJES[tipo];
 }
+
+/** The saves of "+ Agregar lugar" of an open sheet: only the last one still counts. */
+export type IntentosDeLugar = {
+  /** A new save; its answer counts while it stays the last one. */
+  empezar: () => number;
+  /** Something else was chosen or the sheet was closed: no save counts any more. */
+  cancelar: () => void;
+  esVigente: (intento: number) => boolean;
+};
+
+/**
+ * A save that answers late must not replace what the person did meanwhile:
+ * choosing another lugar, "Sin lugar", closing the sheet or saving again.
+ */
+export function crearIntentosDeLugar(): IntentosDeLugar {
+  let actual = 0;
+
+  return {
+    empezar: () => {
+      actual += 1;
+      return actual;
+    },
+    cancelar: () => {
+      actual += 1;
+    },
+    esVigente: (intento) => intento === actual,
+  };
+}
