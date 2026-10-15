@@ -77,17 +77,28 @@ export function useCalendario(fuente: FuenteDeCalendario, month: Month) {
   });
   const lecturaData = lectura.data;
 
+  // The filter is part of the key: when the eventos sumados change, the
+  // months are read again instead of keeping those of the old filter.
+  const filtroIndex = 1 + fuenteKey.length;
+  const mesKey = [
+    'calendario',
+    ...fuenteKey,
+    lecturaData?.ownedOrSumada ?? null,
+    month.year,
+    month.month,
+  ];
   const mes = useQuery({
-    // The filter is part of the key: when the eventos sumados change, the
-    // months are read again instead of keeping those of the old filter.
-    queryKey: [
-      'calendario',
-      ...fuenteKey,
-      lecturaData?.ownedOrSumada ?? null,
-      month.year,
-      month.month,
-    ],
+    queryKey: mesKey,
     queryFn: lecturaData ? () => readMonth(fuente, lecturaData, month) : skipToken,
+    // While the month is read again for a new filter, it keeps what it showed.
+    // Only the filter may differ: another source or month starts empty.
+    placeholderData: (previous, previousQuery) => {
+      const previousKey = previousQuery?.queryKey;
+      const sameMonth =
+        previousKey?.length === mesKey.length &&
+        mesKey.every((part, i) => i === filtroIndex || part === previousKey[i]);
+      return sameMonth ? previous : undefined;
+    },
   });
 
   return {
