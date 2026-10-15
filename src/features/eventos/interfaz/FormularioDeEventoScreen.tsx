@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -106,7 +107,7 @@ export function FormularioDeEventoScreen({ modo }: { modo: ModoDelFormulario }) 
           opciones={opciones.data}
           initial={initial}
           id={modo.tipo === 'editar' ? modo.id : undefined}
-          onSaved={leave}
+          onClose={leave}
         />
       );
     }
@@ -180,10 +181,11 @@ type FormularioProps = {
   initial: FormularioDeEvento;
   /** The evento being edited; undefined for a new one. */
   id: string | undefined;
-  onSaved: () => void;
+  /** Leaves the form, after saving or when the evento no longer exists. */
+  onClose: () => void;
 };
 
-function Formulario({ opciones, initial, id, onSaved }: FormularioProps) {
+function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
   const [formulario, setFormulario] = useState(initial);
   // The fields only show what is missing after a first attempt to save.
   const [triedToSave, setTriedToSave] = useState(false);
@@ -220,8 +222,19 @@ function Formulario({ opciones, initial, id, onSaved }: FormularioProps) {
     }
 
     guardar.mutate(result.evento, {
-      onSuccess: onSaved,
-      onError: (error) => setSaveError(getMensajeDeError(getTipoDeError(error))),
+      onSuccess: onClose,
+      onError: (error) => {
+        const tipo = getTipoDeError(error);
+
+        // Saving again would fail the same way: there is nothing left to edit.
+        if (tipo === 'no-existe') {
+          Alert.alert('No se pudo guardar', getMensajeDeError(tipo));
+          onClose();
+          return;
+        }
+
+        setSaveError(getMensajeDeError(tipo));
+      },
     });
   };
 
