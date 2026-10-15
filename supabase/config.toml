@@ -235,7 +235,7 @@ otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
-# The codes of first access and password recovery go out through Resend, from
+# The codes to sign in go out through Resend, from
 # the domain of the asociacion. Off until that sender domain exists (issue #2):
 # meanwhile the local stack keeps every email in its own inbox (Inbucket, port
 # 54324). To try Resend locally, set RESEND_API_KEY and SMTP_ADMIN_EMAIL in
@@ -249,8 +249,15 @@ pass = "env(RESEND_API_KEY)"
 admin_email = "env(SMTP_ADMIN_EMAIL)"
 sender_name = "Agenda de iglesia"
 
-# The email of the 6-digit code ("Es mi primera vez u olvidé mi contraseña").
-# The app asks for it as a password recovery, also on the first access.
+# The email of the 6-digit code to sign in, the only way in (#126). The app
+# asks for it with signInWithOtp and never creates an account.
+[auth.email.template.magic_link]
+subject = "Tu código para ingresar"
+content_path = "./supabase/templates/magic_link.html"
+
+# The email of the code to choose a password ("Es mi primera vez u olvidé mi
+# contraseña"). That flow is out of the app since #126, kept in case the
+# password comes back.
 [auth.email.template.recovery]
 subject = "Tu código para elegir la contraseña"
 content_path = "./supabase/templates/recovery.html"

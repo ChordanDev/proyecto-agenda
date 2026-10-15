@@ -1,16 +1,8 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  BackHandler,
-  Keyboard,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { BackHandler, Keyboard, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { accesibilidad, colors, fonts, radius, spacing } from '@/shared/theme';
+import { accesibilidad, colors, radius, spacing } from '@/shared/theme';
 import { AppText, BackButton, Button, ScreenBackground, TextField } from '@/shared/ui';
 
 import {
@@ -26,6 +18,7 @@ import {
   validatePassword,
   type PasswordRecoveryStep,
 } from '../dominio/passwordRecovery';
+import { CodeField } from './CodeField';
 
 // Layout of the approved mockup, which the theme has no tokens for. The line
 // numbers are those of diseno/pantallas/02b-elegir-contrasena.html.
@@ -42,19 +35,12 @@ const FORM_GAP = 14; // line 30
 const FORM_PADDING_VERTICAL = 20;
 const HINT_SIZE = 15; // line 37
 const HINT_LINE_HEIGHT = 1.45;
-const CODE_LABEL_GAP = 8; // line 42
-const CODE_BOX_WIDTH = 46; // line 46
-const CODE_BOX_HEIGHT = 58;
-const CODE_DIGIT_SIZE = 24;
-const CODE_FOCUS_BORDER = 2; // line 113
 const LINK_SIZE = 16; // line 50
 const SHOW_BUTTON_PADDING = 12; // line 60
 const SHOW_BUTTON_SIZE = 15;
 const SUBMIT_MARGIN_TOP = 4; // line 70
 // The mockups draw no pressed state; the same value as `Button`.
 const PRESSED_OPACITY = 0.85;
-
-const CODE_LENGTH = 6;
 
 const STEPS = {
   email: {
@@ -80,6 +66,10 @@ const STEPS = {
 } as const satisfies Record<PasswordRecoveryStep, unknown>;
 
 /**
+ * Out of the app since #126: the sign-in is only with a code by email (see
+ * LoginScreen), with no password. This screen is kept, with no route to it (#126
+ * removed src/app/choose-password.tsx), in case the password comes back.
+ *
  * "Es mi primera vez u olvidé mi contraseña": the email, the 6-digit code sent
  * there and the new password, one step at a time. Nobody hands out a temporary
  * password: the code is the proof that the email is the usuario's.
@@ -390,66 +380,6 @@ export function PasswordRecoveryScreen() {
   );
 }
 
-type CodeFieldProps = {
-  value: string;
-  onChange: (text: string) => void;
-  onSubmit: () => void;
-};
-
-/**
- * The code as six boxes, one per digit (line 44). A single input behind them
- * takes what is typed, pasted or filled in by the keyboard from the email.
- */
-function CodeField({ value, onChange, onSubmit }: CodeFieldProps) {
-  const input = useRef<TextInput>(null);
-  const [focused, setFocused] = useState(false);
-  const digits = Array.from({ length: CODE_LENGTH }, (_, index) => value[index] ?? '');
-
-  return (
-    <View style={styles.codeField}>
-      <AppText variant="label" importantForAccessibility="no">
-        Código
-      </AppText>
-      <Pressable
-        importantForAccessibility="no-hide-descendants"
-        accessibilityElementsHidden
-        onPress={() => input.current?.focus()}
-        style={styles.codeBoxes}
-      >
-        {digits.map((digit, index) => (
-          <View
-            key={index}
-            style={[
-              styles.codeBox,
-              focused && index === Math.min(value.length, CODE_LENGTH - 1) && styles.codeBoxFocused,
-            ]}
-          >
-            <AppText weight="bold" style={styles.codeDigit}>
-              {digit}
-            </AppText>
-          </View>
-        ))}
-      </Pressable>
-      <TextInput
-        ref={input}
-        accessibilityLabel="Código de 6 dígitos"
-        value={value}
-        onChangeText={onChange}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        onSubmitEditing={onSubmit}
-        keyboardType="number-pad"
-        textContentType="oneTimeCode"
-        autoComplete="one-time-code"
-        maxLength={CODE_LENGTH}
-        autoFocus
-        caretHidden
-        style={styles.codeInput}
-      />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
@@ -484,36 +414,6 @@ const styles = StyleSheet.create({
   hint: {
     fontSize: HINT_SIZE,
     lineHeight: HINT_SIZE * HINT_LINE_HEIGHT,
-  },
-  codeField: {
-    gap: CODE_LABEL_GAP,
-  },
-  codeBoxes: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  codeBox: {
-    width: CODE_BOX_WIDTH,
-    height: CODE_BOX_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.campo,
-    backgroundColor: colors.campo,
-  },
-  codeBoxFocused: {
-    borderWidth: CODE_FOCUS_BORDER,
-    borderColor: colors.azulMarca,
-  },
-  codeDigit: {
-    fontSize: CODE_DIGIT_SIZE,
-    fontFamily: fonts.bold,
-  },
-  // Out of sight but focusable: the boxes show what it holds.
-  codeInput: {
-    position: 'absolute',
-    width: 1,
-    height: 1,
-    opacity: 0,
   },
   link: {
     alignSelf: 'center',

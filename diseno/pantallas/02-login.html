@@ -24,47 +24,79 @@ a{color:#1B3550}a:hover{color:#10233A}
 
   <div style="flex: 1; display: flex; flex-direction: column; gap: 16px; padding: 34px 16px 32px">
     <div style="display: flex; flex-direction: column; gap: 6px; padding: 0 4px">
-      <h1 style="margin: 0; font-size: 28px; line-height: 1.15; font-weight: 700">Ingresar</h1>
-      <p style="margin: 0; font-size: 17px; line-height: 1.45; color: #4A4A4A">Para encargados de calendario, pastores y administradores de la asociación.</p>
+      <h1 style="margin: 0; font-size: 28px; line-height: 1.15; font-weight: 700">{{ titulo }}</h1>
+      <p style="margin: 0; font-size: 17px; line-height: 1.45; color: #4A4A4A">{{ texto }}</p>
     </div>
 
-    <form style="display: flex; flex-direction: column; gap: 18px; padding: 20px 16px; border-radius: 20px; background: #FFFFFF">
-      <div style="display: flex; flex-direction: column; gap: 8px">
-        <label for="email" style="font-size: 16px; font-weight: 700">Email</label>
-        <input id="email" type="email" value="marta.gomez@correo.com" autocomplete="email" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 8px">
-        <label for="pass" style="font-size: 16px; font-weight: 700">Contraseña</label>
-        <div style="display: flex; align-items: center; height: 56px; box-sizing: border-box; border-radius: 12px; background: #EEF1F5; padding: 0 6px 0 16px; gap: 8px">
-          <input id="pass" type="{{ passType }}" value="clave1234" autocomplete="current-password" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-size: 18px; font-family: inherit; color: #222222">
-          <button type="button" onClick="{{ toggle }}" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 15px; font-weight: 700; color: #1B3550; cursor: pointer">{{ toggleLabel }}</button>
+    <!-- Sign-in only with a 6-digit code by email, no password (#126). The first access and
+         every later sign-in are the same path. -->
+    <form style="display: flex; flex-direction: column; gap: 14px; padding: 20px 16px; border-radius: 20px; background: #FFFFFF">
+      <!-- Step 1: the correo. The request never tells whether the correo is registered. -->
+      <sc-if value="{{ paso1 }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <label for="email" style="font-size: 16px; font-weight: 700">Email</label>
+          <input id="email" type="email" value="marta.gomez@correo.com" autocomplete="email" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
         </div>
-      </div>
-      <a href="CalendarioPastor.dc.html" style="display: flex; align-items: center; justify-content: center; min-height: 58px; margin-top: 4px; border-radius: 14px; background: #1B3550; color: #FFFFFF; font-size: 18px; font-weight: 700; text-decoration: none">Ingresar</a>
-      <!-- First access and password recovery share one flow (#13): 02b-elegir-contrasena.html. -->
-      <a href="ElegirContrasena.dc.html" style="display: flex; align-items: center; justify-content: center; min-height: 48px; margin-top: -6px; font-size: 16px; font-weight: 700; color: #1B3550; text-decoration: underline; text-underline-offset: 3px">Es mi primera vez u olvidé mi contraseña</a>
+        <span style="font-size: 15px; line-height: 1.45; color: #4A4A4A">Usá el correo que le diste a tu iglesia o a la asociación.</span>
+      </sc-if>
+
+      <!-- Step 2: the 6-digit code, one box per digit. A right code goes to the calendar. -->
+      <sc-if value="{{ paso2 }}" hint-placeholder-val="{{ false }}">
+        <div role="group" aria-labelledby="tCodigo" style="display: flex; flex-direction: column; gap: 8px">
+          <span id="tCodigo" style="font-size: 16px; font-weight: 700">Código</span>
+          <div style="display: flex; justify-content: space-between">
+            <sc-for list="{{ casillas }}" as="c" hint-placeholder-count="6">
+              <input type="text" inputmode="numeric" maxlength="1" value="{{ c.d }}" aria-label="Dígito {{ c.n }}" style="width: 46px; height: 58px; box-sizing: border-box; border: {{ c.borde }}; border-radius: 12px; background: #EEF1F5; text-align: center; font-size: 24px; font-weight: 700; font-family: inherit; color: #222222">
+            </sc-for>
+          </div>
+        </div>
+        <button type="button" style="align-self: center; min-height: 44px; border: 0; background: transparent; font-family: inherit; font-size: 16px; font-weight: 700; color: #1B3550; text-decoration: underline; text-underline-offset: 3px; cursor: pointer">No me llegó, mandarlo de nuevo</button>
+      </sc-if>
+
+      <sc-if value="{{ hayError }}" hint-placeholder-val="{{ false }}">
+        <span role="alert" style="font-size: 15px; line-height: 1.45; font-weight: 600; color: #B0103F">{{ error }}</span>
+      </sc-if>
+
+      <button type="button" onClick="{{ siguiente }}" style="display: flex; align-items: center; justify-content: center; min-height: 58px; margin-top: 4px; border: 0; border-radius: 14px; background: #1B3550; color: #FFFFFF; font-family: inherit; font-size: 18px; font-weight: 700; cursor: pointer">{{ boton }}</button>
     </form>
 
     <div style="flex: 1"></div>
 
-    <div style="display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 20px; background: #FFFFFF">
-      <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
-        <span style="font-size: 16px; font-weight: 700">¿Sos miembro de iglesia?</span>
-        <span style="font-size: 15px; line-height: 1.4; color: #4A4A4A">No necesitás cuenta para ver el calendario.</span>
-      </span>
-      <a href="ElegirIglesia.dc.html" style="display: inline-flex; align-items: center; min-height: 46px; padding: 0 14px; border-radius: 12px; background: #E3EAF2; font-size: 15px; font-weight: 700; text-decoration: none; color: #1B3550; flex-shrink: 0">Elegir iglesia</a>
-    </div>
+    <!-- Only on the first step: on the code, the person already said they have a cargo. -->
+    <sc-if value="{{ paso1 }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 20px; background: #FFFFFF">
+        <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+          <span style="font-size: 16px; font-weight: 700">¿Sos miembro de iglesia?</span>
+          <span style="font-size: 15px; line-height: 1.4; color: #4A4A4A">No necesitás cuenta para ver el calendario.</span>
+        </span>
+        <a href="ElegirIglesia.dc.html" style="display: inline-flex; align-items: center; min-height: 46px; padding: 0 14px; border-radius: 12px; background: #E3EAF2; font-size: 15px; font-weight: 700; text-decoration: none; color: #1B3550; flex-shrink: 0">Elegir iglesia</a>
+      </div>
+    </sc-if>
   </div>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
   renderVals() {
-    const show = !!(this.state && this.state.show);
+    const st = this.state || {};
+    const paso = st.paso || 1;
+    const PASOS = {
+      1: { titulo: 'Ingresar', texto: 'Para encargados de calendario, pastores y administradores de la asociación. Te mandamos un código por correo, sin contraseña.', boton: 'Enviar código' },
+      2: { titulo: 'Ingresá el código', texto: 'Si marta.gomez@correo.com está registrado, te llega un código de 6 dígitos. Puede tardar unos minutos: revisá también el correo no deseado.', boton: 'Ingresar' }
+    };
+    // One error per step, shown above the button.
+    const ERRORES = {
+      1: 'Revisá el correo: falta algo o tiene un error.',
+      2: 'El código no es correcto o ya venció. Pedí uno nuevo.'
+    };
+    const digitos = ['4', '8', '2', '0', '', ''];
+    const casillas = digitos.map((d, k) => ({ d, n: k + 1, borde: k === 4 ? '2px solid #2F557F' : '0' }));
     return {
-      passType: show ? 'text' : 'password',
-      toggleLabel: show ? 'Ocultar' : 'Mostrar',
-      toggle: () => this.setState({ show: !show })
+      paso, ...PASOS[paso],
+      paso1: paso === 1, paso2: paso === 2,
+      casillas,
+      hayError: !!st.error, error: ERRORES[paso],
+      siguiente: () => this.setState({ paso: Math.min(paso + 1, 2), error: false })
     };
   }
 }

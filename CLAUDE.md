@@ -103,7 +103,7 @@ Recordatorios simples de eventos próximos (ej. "Mañana: Congreso de Jóvenes")
 
 ## Pantallas
 1. **Bienvenida:** botón principal "Elegir mi iglesia"; secundario "Soy encargado o pastor" (lleva al login).
-2. **Login:** email y contraseña, con el enlace "Es mi primera vez u olvidé mi contraseña" (envía un código de 6 dígitos por correo para elegir la contraseña).
+2. **Login:** solo con un código por correo, sin contraseña (issue #126). Pide el email y "Enviar código"; después, el código de 6 dígitos que llega por correo, y entra directo al calendario. El primer acceso y el ingreso normal son el mismo camino. No revela si un correo está registrado.
 3. **Elegir iglesia:** buscador, opción "Usar mi ubicación", lista de cercanas mostrando distrito y distancia, botón Continuar.
 4. **Calendario (todos los roles):** vista mensual con marcadores por día (forma + color del énfasis, o el rombo de la actividad regular), día seleccionado destacado y lista de eventos de ese día debajo. Filtros por énfasis (y por iglesia para pastor/admin). Los eventos de asociación/distrito muestran su alcance.
 5. **Detalle de evento:** toda la información, énfasis, alcance y con qué iglesias se comparte. Editar/quitar según permisos.

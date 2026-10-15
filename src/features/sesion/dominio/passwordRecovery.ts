@@ -1,4 +1,11 @@
+import type { Check } from './codeSignIn';
 import type { SignInErrorInfo } from './signInErrors';
+
+// Out of the app since #126: the sign-in is only with a code by email, with no
+// password. Kept, with no screen using it, in case the password comes back.
+
+// The email and the code are checked as in the sign-in with a code.
+export { normalizeCode, validateCode, validateEmail, type Check } from './codeSignIn';
 
 /**
  * First access and password recovery are one flow of three steps: the email,
@@ -6,14 +13,10 @@ import type { SignInErrorInfo } from './signInErrors';
  */
 export type PasswordRecoveryStep = 'email' | 'code' | 'password';
 
-export type Check = { ok: true; value: string } | { ok: false; message: string };
-
-const CODE_LENGTH = 6;
 const MIN_PASSWORD_LENGTH = 8;
 
 const MESSAGES = {
   invalidEmail: 'Revisá el correo: falta algo o tiene un error.',
-  incompleteCode: `Escribí los ${CODE_LENGTH} dígitos del código.`,
   wrongCode: 'El código no es correcto o ya venció. Pedí uno nuevo.',
   shortPassword: `Tiene que tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`,
   samePassword: 'Es la misma contraseña que tenías. Elegí otra.',
@@ -27,30 +30,6 @@ const MESSAGES = {
     password: 'No pudimos guardar la contraseña. Probá de nuevo en un momento.',
   },
 } as const;
-
-// Something, an @, something, a dot and something, without spaces. The auth
-// service checks the rest.
-const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/** The email, trimmed: a phone keyboard often leaves a trailing space. */
-export function validateEmail(email: string): Check {
-  const trimmed = email.trim();
-
-  return EMAIL_SHAPE.test(trimmed)
-    ? { ok: true, value: trimmed }
-    : { ok: false, message: MESSAGES.invalidEmail };
-}
-
-/** What the code field keeps of what was typed or pasted: its digits, up to six. */
-export function normalizeCode(text: string): string {
-  return text.replace(/\D/g, '').slice(0, CODE_LENGTH);
-}
-
-export function validateCode(code: string): Check {
-  return new RegExp(`^\\d{${CODE_LENGTH}}$`).test(code)
-    ? { ok: true, value: code }
-    : { ok: false, message: MESSAGES.incompleteCode };
-}
 
 /**
  * The only rule of a password is its length: no uppercase, digits or symbols.

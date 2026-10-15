@@ -2,6 +2,9 @@ import { supabase } from '@/shared/supabase';
 
 import { getSignInErrorMessage, type Credentials } from '../dominio/signInErrors';
 
+// Out of the app since #126: the sign-in is only with a code by email, with no
+// password. Kept, with no screen using it, in case the password comes back.
+
 /** A failed sign-in; its message is the one to show the person. */
 export class SignInError extends Error {
   constructor(message: string) {

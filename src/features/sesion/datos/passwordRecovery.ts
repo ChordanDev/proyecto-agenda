@@ -6,6 +6,9 @@ import {
 } from '../dominio/passwordRecovery';
 import { markRecoveryFinished, markRecoveryStarted } from './unfinishedRecovery';
 
+// Out of the app since #126: the sign-in is only with a code by email, with no
+// password. Kept, with no screen using it, in case the password comes back.
+
 /** A failed step of the flow; its message is the one to show the person. */
 export class PasswordRecoveryError extends Error {
   constructor(message: string) {
