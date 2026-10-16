@@ -11,6 +11,7 @@ Diseño aprobado de "Agenda de iglesia". Es la referencia visual para implementa
 - `capturas/` — PNG de cada pantalla (exportar desde el lienzo de diseño: Share › Export).
   - `6b · Crear evento (dueño).png` es la hoja que se abre al tocar "Dueño" en Crear evento: los niveles que abarcan los cargos de quien carga, agrupados en Asociación, Distrito e Iglesias.
   - `6e · Crear evento (hora poco común).png` es el cartel que pregunta por una hora de la madrugada, de 00:00 a 05:59 (#128): "Sí" la deja y "Cambiar" vuelve al campo de la hora. En el HTML, `hora` vale `rara` para este cartel e `imposible` para el error de una hora que no existe (`25:00`).
+  - `6f · Crear evento (fecha pasada).png` es el aviso "Esta fecha ya pasó." bajo el campo Fecha, mientras la fecha elegida es anterior a hoy (#132). `6g · Crear evento (fecha pasada, Guardar).png` es el diálogo que aparece al tocar Guardar con esa fecha: "Cargarlo igual" guarda y "Cambiar fecha" vuelve al campo Fecha sin guardar. En el HTML, `fecha` vale `pasada` o `dialogo`.
   - Las capturas de Crear evento salen de un render a 2x (780 px de ancho), porque `support.js` del editor no está en el repositorio.
 - Lo que es de la v2 queda en el HTML, apagado y marcado con un comentario `v2`: por ejemplo, "Compartir con otras iglesias" en Crear evento. No se implementa en la v1.
 - `logo-iglesia.svg` — logo vectorizado, sin color fijo (`currentColor`). Es una aproximación calcada; reemplazar por el SVG oficial cuando esté disponible.

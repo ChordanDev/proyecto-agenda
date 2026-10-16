@@ -47,7 +47,14 @@ a{color:#1B3550}a:hover{color:#10233A}
       <div style="display: grid; grid-template-columns: 3fr 2fr; gap: 12px">
         <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0">
           <label for="fecha" style="font-size: 16px; font-weight: 700">Fecha</label>
-          <input id="fecha" type="text" value="Sáb 17 oct" style="height: 56px; width: 100%; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 14px; font-size: 18px; font-family: inherit; color: #222222">
+          <input id="fecha" type="text" value="{{ fechaTexto }}" style="height: 56px; width: 100%; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 14px; font-size: 18px; font-family: inherit; color: #222222">
+          <!-- While the fecha chosen is before today, by the date of the phone (#132). Told with words and an icon, not only color. -->
+          <sc-if value="{{ fechaPasada }}" hint-placeholder-val="{{ false }}">
+            <span role="status" style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: #FFF1CC; color: #6B4E00; font-size: 14px; line-height: 1.3; font-weight: 600">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A6400" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0"><path d="M12 3l10 18H2z"></path><path d="M12 10v5M12 18h.01"></path></svg>
+              Esta fecha ya pasó.
+            </span>
+          </sc-if>
         </div>
         <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0">
           <label for="hora" style="font-size: 16px; font-weight: 700">Hora</label>
@@ -233,6 +240,18 @@ a{color:#1B3550}a:hover{color:#10233A}
   </div>
   </sc-if>
 
+  <!-- On Guardar with a fecha before today: creating, or editing when the fecha was changed to another past one (#132). "Cambiar fecha" closes it and leaves the focus on the Fecha field; it does not save. -->
+  <sc-if value="{{ dialogoFecha }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(16,35,58,0.55); display: flex; align-items: center; padding: 0 20px">
+      <div role="alertdialog" aria-modal="true" aria-labelledby="tFechaPasada" style="width: 100%; border-radius: 22px; background: #FFFFFF; padding: 24px 20px 20px; display: flex; flex-direction: column; gap: 12px">
+        <span id="tFechaPasada" style="font-size: 21px; font-weight: 700">Esta fecha ya pasó</span>
+        <span style="font-size: 16px; line-height: 1.45; color: #333333">El evento es el martes 1 de septiembre, que ya pasó. ¿Querés cargarlo igual?</span>
+        <a href="Calendario.dc.html" style="display: flex; align-items: center; justify-content: center; min-height: 54px; margin-top: 8px; border-radius: 14px; background: #1B3550; color: #FFFFFF; font-size: 17px; font-weight: 700; text-decoration: none">Cargarlo igual</a>
+        <button type="button" onClick="{{ cerrarDialogoFecha }}" style="min-height: 54px; border: 0; border-radius: 14px; background: #E3EAF2; color: #1B3550; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Cambiar fecha</button>
+      </div>
+    </div>
+  </sc-if>
+
   <!-- A hora of the madrugada, from 00:00 to 05:59, is asked about on leaving the field or on saving (#128). "Cambiar" goes back to the hora. -->
   <sc-if value="{{ horaRara }}" hint-placeholder-val="{{ false }}">
     <div style="position: absolute; inset: 0; background: rgba(16,35,58,0.55); display: flex; align-items: center; padding: 0 20px">
@@ -259,6 +278,8 @@ class Component extends DCLogic {
     const q = st.q || '';
     // Hora: 'rara' shows the question about 03:00, 'imposible' the error of 25:00 (#128).
     const hora = st.hora || 'normal';
+    // Fecha: 'pasada' shows the notice under the field, 'dialogo' also the question of Guardar (#132).
+    const fecha = st.fecha || 'futura';
 
     const META = [
       { k: 'S', lema: 'Somos', cat: 'Identidad' },
@@ -349,6 +370,10 @@ class Component extends DCLogic {
 
     return {
       enfasis, repes, elegidas, resultados, q,
+      fechaTexto: fecha === 'futura' ? 'Sáb 17 oct' : 'Mar 1 sep',
+      fechaPasada: fecha !== 'futura',
+      dialogoFecha: fecha === 'dialogo',
+      cerrarDialogoFecha: () => this.setState({ fecha: 'pasada' }),
       horaTexto: hora === 'rara' ? '03:00' : hora === 'imposible' ? '25:00' : '19:00',
       horaImposible: hora === 'imposible',
       horaRara: hora === 'rara',
