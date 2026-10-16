@@ -51,7 +51,12 @@ a{color:#1B3550}a:hover{color:#10233A}
         </div>
         <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0">
           <label for="hora" style="font-size: 16px; font-weight: 700">Hora</label>
-          <input id="hora" type="text" value="19:00" style="height: 56px; width: 100%; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 14px; font-size: 18px; font-family: inherit; color: #222222">
+          <!-- The two points appear by themselves while typing: "19" becomes "19:", "1930" becomes "19:30" (#128). -->
+          <input id="hora" type="text" value="{{ horaTexto }}" style="height: 56px; width: 100%; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 14px; font-size: 18px; font-family: inherit; color: #222222">
+          <!-- An impossible hora is told as soon as the field is complete, not when saving. -->
+          <sc-if value="{{ horaImposible }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size: 14px; line-height: 1.4; color: #B0103F">Esa hora no existe. Escribila, por ejemplo, 19:00.</span>
+          </sc-if>
         </div>
       </div>
       <!-- Fecha de fin: date only, no end time. It excludes repetición: one is disabled while the other is set. -->
@@ -227,6 +232,18 @@ a{color:#1B3550}a:hover{color:#10233A}
     </div>
   </div>
   </sc-if>
+
+  <!-- A hora of the madrugada, from 00:00 to 05:59, is asked about on leaving the field or on saving (#128). "Cambiar" goes back to the hora. -->
+  <sc-if value="{{ horaRara }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(16,35,58,0.55); display: flex; align-items: center; padding: 0 20px">
+      <div role="alertdialog" aria-modal="true" aria-labelledby="tHoraRara" style="width: 100%; border-radius: 22px; background: #FFFFFF; padding: 24px 20px 20px; display: flex; flex-direction: column; gap: 12px">
+        <span id="tHoraRara" style="font-size: 21px; font-weight: 700">¿Es a las 3:00 de la madrugada?</span>
+        <span style="font-size: 16px; line-height: 1.45; color: #333333">Es una hora poco común. Si querías una hora de la tarde, tocá Cambiar.</span>
+        <button type="button" onClick="{{ cerrarHoraRara }}" style="min-height: 54px; margin-top: 8px; border: 0; border-radius: 14px; background: #1B3550; color: #FFFFFF; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Sí</button>
+        <button type="button" onClick="{{ cerrarHoraRara }}" style="min-height: 54px; border: 0; border-radius: 14px; background: #E3EAF2; color: #1B3550; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Cambiar</button>
+      </div>
+    </div>
+  </sc-if>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1885}}'>
@@ -240,6 +257,8 @@ class Component extends DCLogic {
     const conCompartir = false; // v2
     const elegidasIds = st.eleg || ['rosas'];
     const q = st.q || '';
+    // Hora: 'rara' shows the question about 03:00, 'imposible' the error of 25:00 (#128).
+    const hora = st.hora || 'normal';
 
     const META = [
       { k: 'S', lema: 'Somos', cat: 'Identidad' },
@@ -330,6 +349,10 @@ class Component extends DCLogic {
 
     return {
       enfasis, repes, elegidas, resultados, q,
+      horaTexto: hora === 'rara' ? '03:00' : hora === 'imposible' ? '25:00' : '19:00',
+      horaImposible: hora === 'imposible',
+      horaRara: hora === 'rara',
+      cerrarHoraRara: () => this.setState({ hora: 'normal' }),
       duenio, variosDuenios, fechaFin, tieneFin, seRepite, hasta, frase, conCompartir,
       finColor: seRepite ? '#717171' : '#222222',
       finFondo: seRepite ? '#F5F6F8' : '#EEF1F5',

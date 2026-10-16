@@ -28,6 +28,8 @@ type ConfirmDialogProps = {
   /** The texts between the title and the buttons, as `DialogText`. */
   children?: ReactNode;
   confirmLabel: string;
+  /** The button that leaves without doing it. */
+  cancelLabel?: string;
   /** `danger` for what cannot be undone, such as deleting the usuario. */
   tone: 'primary' | 'danger';
   /** While the action runs there is nothing left to cancel: both buttons are off. */
@@ -41,6 +43,7 @@ export function ConfirmDialog({
   title,
   children,
   confirmLabel,
+  cancelLabel = 'Cancelar',
   tone,
   busy,
   onConfirm,
@@ -84,7 +87,7 @@ export function ConfirmDialog({
             style={({ pressed }) => [styles.button, styles.cancelButton, pressed && styles.pressed]}
           >
             <AppText weight="bold" color="azulOscuro" style={styles.buttonLabel}>
-              Cancelar
+              {cancelLabel}
             </AppText>
           </Pressable>
         </View>

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -7,13 +7,23 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  TextInput,
   View,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { accesibilidad, colors, fontSize, radius, spacing } from '@/shared/theme';
 import { useToday } from '@/features/calendario/interfaz/useToday';
-import { AppText, BackButton, Button, Card, ScreenBackground, TextField } from '@/shared/ui';
+import {
+  AppText,
+  BackButton,
+  Button,
+  Card,
+  ConfirmDialog,
+  DialogText,
+  ScreenBackground,
+  TextField,
+} from '@/shared/ui';
 
 import { useEvento } from '../datos/useEvento';
 import { getTipoDeError, hasConexion, useGuardarEvento } from '../datos/useEscribirEvento';
@@ -24,9 +34,14 @@ import {
   cambiarDuenio,
   elegirLugar,
   formatFechaDelCampo,
+  formatHoraAlEscribir,
   formularioDesdeEvento,
   getNombreDelLugar,
+  getPreguntaDeHoraPocoComun,
   formularioVacio,
+  isHoraImposible,
+  isHoraPocoComun,
+  parseHora,
   validarFormulario,
   type FormularioDeEvento,
 } from '../dominio/formularioDeEvento';
@@ -197,6 +212,14 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
   const [openSheet, setOpenSheet] = useState<
     'duenio' | 'fecha' | 'fechaFin' | 'finDeSerie' | 'lugar' | null
   >(null);
+  // A hora of the madrugada is asked about once; the one of an evento loaded to
+  // be edited was already accepted when it was created.
+  const [horaConfirmada, setHoraConfirmada] = useState(() => parseHora(initial.hora));
+  // Who asked about the hora: leaving its field, or "Guardar", which goes on after "Sí".
+  const [preguntaDeHora, setPreguntaDeHora] = useState<'campo' | 'guardar' | null>(null);
+  // Counts the times "Cambiar" was tapped: each one moves the focus to the hora.
+  const [focusHoraRequests, setFocusHoraRequests] = useState(0);
+  const horaInput = useRef<TextInput>(null);
   const guardar = useGuardarEvento(id);
   const hoy = useToday();
   const editando = id !== undefined;
@@ -207,6 +230,21 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
   const opcionDeDuenio = getOpcionDeDuenio(opciones, formulario.duenio);
   const severalDuenios = countOpciones(opciones) > 1;
   const nombreDelLugar = getNombreDelLugar(formulario.lugar);
+  const hora = parseHora(formulario.hora);
+  const horaSinConfirmar = hora !== null && isHoraPocoComun(hora) && hora !== horaConfirmada;
+  // An impossible hora is told as soon as it is written, not when saving.
+  const errorDeHora =
+    errores.hora ??
+    (isHoraImposible(formulario.hora)
+      ? 'Esa hora no existe. Escribila, por ejemplo, 19:00.'
+      : undefined);
+
+  // "Cambiar" leaves the person back in the field of the hora, once the dialog is closed.
+  useEffect(() => {
+    if (focusHoraRequests > 0) {
+      horaInput.current?.focus();
+    }
+  }, [focusHoraRequests]);
 
   const update = (changes: Partial<FormularioDeEvento>) => {
     setFormulario((current) => ({ ...current, ...changes }));
@@ -216,6 +254,19 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
     setTriedToSave(true);
     setSaveError(null);
 
+    if (!result.ok) {
+      return;
+    }
+
+    if (horaSinConfirmar) {
+      setPreguntaDeHora('guardar');
+      return;
+    }
+
+    persist();
+  };
+
+  const persist = () => {
     if (!result.ok) {
       return;
     }
@@ -313,11 +364,19 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
             </Field>
           </View>
           <View style={styles.time}>
-            <Field error={errores.hora}>
+            <Field error={errorDeHora}>
               <TextField
+                ref={horaInput}
                 label="Hora"
                 value={formulario.hora}
-                onChangeText={(hora) => update({ hora })}
+                onChangeText={(texto) =>
+                  update({ hora: formatHoraAlEscribir(formulario.hora, texto) })
+                }
+                onEndEditing={() => {
+                  if (horaSinConfirmar) {
+                    setPreguntaDeHora('campo');
+                  }
+                }}
                 placeholder="19:00"
                 keyboardType="numbers-and-punctuation"
                 maxLength={5}
@@ -464,6 +523,31 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
         disabled={guardar.isPending}
         onPress={save}
       />
+
+      {preguntaDeHora !== null && hora !== null && (
+        <ConfirmDialog
+          title={getPreguntaDeHoraPocoComun(hora)}
+          confirmLabel="Sí"
+          cancelLabel="Cambiar"
+          tone="primary"
+          busy={false}
+          onConfirm={() => {
+            setHoraConfirmada(hora);
+            setPreguntaDeHora(null);
+            if (preguntaDeHora === 'guardar') {
+              persist();
+            }
+          }}
+          onCancel={() => {
+            setPreguntaDeHora(null);
+            setFocusHoraRequests((count) => count + 1);
+          }}
+        >
+          <DialogText>
+            Es una hora poco común. Si querías una hora de la tarde, tocá Cambiar.
+          </DialogText>
+        </ConfirmDialog>
+      )}
 
       <HojaDeDuenio
         visible={openSheet === 'duenio'}

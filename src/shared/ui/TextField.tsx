@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
 import { accesibilidad, colors, fonts, fontSize, radius } from '@/shared/theme';
@@ -19,6 +19,8 @@ type TextFieldProps = Omit<TextInputProps, 'style'> & {
   optional?: boolean;
   /** Something inside the field, at its right end: the "Mostrar" button of a password. */
   trailing?: ReactNode;
+  /** To move the focus to the input, as after asking about what was typed. */
+  ref?: Ref<TextInput>;
 };
 
 /** A text input with its label above, as the fields inside the cards of the design. */

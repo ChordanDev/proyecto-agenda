@@ -60,8 +60,13 @@ const ENFASIS_OF_CATEGORIA: Record<Categoria, Enfasis | null> = {
   R: null,
 };
 
-// "19", "1930", "19:30" or "19.30", with one or two digits for the hora.
-const HORA_PATTERN = /^(\d{1,2})(?:[:.]?(\d{2}))?$/;
+// "19", "1930", "19:30" or "19.30", with one or two digits for the hora; also
+// "19:", as the field leaves it while it is typed.
+const HORA_PATTERN = /^(\d{1,2})(?:[:.]?(\d{2})|[:.])?$/;
+// A hora written to the end: its minutes have their two digits.
+const HORA_COMPLETA_PATTERN = /^(?:\d{1,2}[:.]\d{2}|\d{3,4})$/;
+// From 00:00 to 05:59 a hora is probably one of the afternoon written wrong.
+const ULTIMA_HORA_POCO_COMUN = 5;
 
 /**
  * Reads a hora as people write it ("19", "9:30", "1930") and gives it as the
@@ -84,6 +89,40 @@ export function parseHora(text: string): string | null {
   const pad = (value: number) => String(value).padStart(2, '0');
 
   return `${pad(hours)}:${pad(minutes)}:00`;
+}
+
+/**
+ * What the field of the hora shows after a change: the two points appear by
+ * themselves once the hora is typed ("19" → "19:", "1930" → "19:30"). Erasing
+ * is left as it is, and so is a separator the person typed.
+ */
+export function formatHoraAlEscribir(anterior: string, texto: string): string {
+  if (texto.length < anterior.length || !/^\d{2,4}$/.test(texto)) {
+    return texto;
+  }
+
+  // Two digits that cannot be a hora are a hora of one digit and its minutes.
+  const twoDigitHora = Number(texto.slice(0, 2)) <= 23;
+  const split = texto.length === 4 || (twoDigitHora && texto.length < 4) ? 2 : 1;
+
+  return `${texto.slice(0, split)}:${texto.slice(split)}`;
+}
+
+/** A hora written to the end that is not one of the day, such as "25:00" or "19:75". */
+export function isHoraImposible(texto: string): boolean {
+  const trimmed = texto.trim();
+
+  return HORA_COMPLETA_PATTERN.test(trimmed) && parseHora(trimmed) === null;
+}
+
+/** A hora of the madrugada, from 00:00 to 05:59, as `parseHora` gives it. */
+export function isHoraPocoComun(hora: string): boolean {
+  return Number(hora.slice(0, 2)) <= ULTIMA_HORA_POCO_COMUN;
+}
+
+/** What is asked before keeping a hora of the madrugada: "¿Es a las 3:00 de la madrugada?". */
+export function getPreguntaDeHoraPocoComun(hora: string): string {
+  return `¿Es a las ${Number(hora.slice(0, 2))}:${hora.slice(3, 5)} de la madrugada?`;
 }
 
 /** What the field of the lugar shows; null for "Sin lugar". */
