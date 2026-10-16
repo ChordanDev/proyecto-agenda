@@ -425,8 +425,10 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
                   update({ hora: formatHoraAlEscribir(formulario.hora, texto) })
                 }
                 onEndEditing={() => {
+                  // Tapping "Guardar" can end the editing after its press: its question,
+                  // which saves after "Sí", is kept.
                   if (horaSinConfirmar) {
-                    setPreguntaDeHora('campo');
+                    setPreguntaDeHora((current) => current ?? 'campo');
                   }
                 }}
                 placeholder="19:00"
@@ -589,6 +591,8 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
           }}
           onCancel={() => {
             setPreguntandoFecha(false);
+            // The hora is asked about again on "Guardar", not while the fecha is changed.
+            setPreguntaDeHora(null);
             setFocusFechaRequests((count) => count + 1);
           }}
         >
@@ -596,7 +600,8 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
         </ConfirmDialog>
       )}
 
-      {preguntaDeHora !== null && hora !== null && (
+      {/* The question about the fecha goes first: the one about the hora waits for it. */}
+      {preguntaDeHora !== null && !preguntandoFecha && hora !== null && (
         <ConfirmDialog
           title={getPreguntaDeHoraPocoComun(hora)}
           confirmLabel="Sí"
