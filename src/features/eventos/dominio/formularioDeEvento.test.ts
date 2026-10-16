@@ -7,6 +7,10 @@ import {
   formatFechaDelCampo,
   formularioDesdeEvento,
   formularioVacio,
+  formatHoraAlEscribir,
+  getPreguntaDeHoraPocoComun,
+  isHoraImposible,
+  isHoraPocoComun,
   parseHora,
   validarFormulario,
   type FormularioDeEvento,
@@ -58,12 +62,95 @@ describe('parseHora', () => {
     expect(parseHora(' 19:00 ')).toBe('19:00:00');
   });
 
+  it('reads the hora left with its two points while it is typed', () => {
+    expect(parseHora('19:')).toBe('19:00:00');
+  });
+
   it('rejects what is not a hora of the day', () => {
     expect(parseHora('')).toBeNull();
     expect(parseHora('24:00')).toBeNull();
     expect(parseHora('19:60')).toBeNull();
     expect(parseHora('19:5')).toBeNull();
     expect(parseHora('a las 7')).toBeNull();
+  });
+});
+
+describe('formatHoraAlEscribir', () => {
+  it('adds the two points after the hora', () => {
+    expect(formatHoraAlEscribir('1', '19')).toBe('19:');
+    expect(formatHoraAlEscribir('19:3', '19:30')).toBe('19:30');
+  });
+
+  it('formats a hora typed or pasted all at once', () => {
+    expect(formatHoraAlEscribir('', '1930')).toBe('19:30');
+    expect(formatHoraAlEscribir('', '930')).toBe('9:30');
+  });
+
+  it('puts the two points after the first digit when two would not be a hora', () => {
+    expect(formatHoraAlEscribir('9', '93')).toBe('9:3');
+    expect(formatHoraAlEscribir('9:3', '9:30')).toBe('9:30');
+  });
+
+  it('keeps the separator that was typed', () => {
+    expect(formatHoraAlEscribir('9', '9:')).toBe('9:');
+    expect(formatHoraAlEscribir('09', '09.')).toBe('09.');
+    expect(formatHoraAlEscribir('09.3', '09.30')).toBe('09.30');
+  });
+
+  it('lets the field be erased normally', () => {
+    expect(formatHoraAlEscribir('19:', '19')).toBe('19');
+    expect(formatHoraAlEscribir('19', '1')).toBe('1');
+    expect(formatHoraAlEscribir('1', '')).toBe('');
+  });
+
+  it('formats the hora again when a digit is typed after erasing the two points', () => {
+    expect(formatHoraAlEscribir('19', '193')).toBe('19:3');
+  });
+
+  it('leaves alone what is not digits', () => {
+    expect(formatHoraAlEscribir('', 'a las 7')).toBe('a las 7');
+  });
+});
+
+describe('isHoraImposible', () => {
+  it('tells a complete hora that is not one of the day', () => {
+    expect(isHoraImposible('25:00')).toBe(true);
+    expect(isHoraImposible('19:75')).toBe(true);
+    expect(isHoraImposible('19.75')).toBe(true);
+  });
+
+  it('says nothing while the hora is still being typed', () => {
+    expect(isHoraImposible('')).toBe(false);
+    expect(isHoraImposible('2')).toBe(false);
+    expect(isHoraImposible('25:')).toBe(false);
+    expect(isHoraImposible('19:7')).toBe(false);
+  });
+
+  it('says nothing of a hora of the day', () => {
+    expect(isHoraImposible('19:30')).toBe(false);
+    expect(isHoraImposible('9:30')).toBe(false);
+    expect(isHoraImposible('23:59')).toBe(false);
+  });
+});
+
+describe('isHoraPocoComun', () => {
+  it('tells a hora of the madrugada, from 00:00 to 05:59', () => {
+    expect(isHoraPocoComun('00:00:00')).toBe(true);
+    expect(isHoraPocoComun('03:00:00')).toBe(true);
+    expect(isHoraPocoComun('05:59:00')).toBe(true);
+  });
+
+  it('says nothing from 06:00 on', () => {
+    expect(isHoraPocoComun('06:00:00')).toBe(false);
+    expect(isHoraPocoComun('19:00:00')).toBe(false);
+    expect(isHoraPocoComun('23:59:00')).toBe(false);
+  });
+});
+
+describe('getPreguntaDeHoraPocoComun', () => {
+  it('asks with the hora as it is said', () => {
+    expect(getPreguntaDeHoraPocoComun('03:00:00')).toBe('¿Es a las 3:00 de la madrugada?');
+    expect(getPreguntaDeHoraPocoComun('00:30:00')).toBe('¿Es a las 0:30 de la madrugada?');
   });
 });
 
