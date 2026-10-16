@@ -1,7 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
+  AccessibilityInfo,
   Alert,
+  findNodeHandle,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -30,6 +32,11 @@ import { getTipoDeError, hasConexion, useGuardarEvento } from '../datos/useEscri
 import { useOpcionesDeDuenio } from '../datos/useOpcionesDeDuenio';
 import { getDuenioDelDetalle } from '../dominio/detalleDeEvento';
 import { getMensajeDeError } from '../dominio/errorDeEscritura';
+import {
+  debePreguntarPorFechaPasada,
+  getTextoDeFechaPasada,
+  isFechaPasada,
+} from '../dominio/fechaPasada';
 import {
   cambiarDuenio,
   elegirLugar,
@@ -79,6 +86,14 @@ const DATE_FLEX = 3;
 const TIME_FLEX = 2;
 const DATE_PADDING_HORIZONTAL = 14; // line 50
 const HINT_LINE_HEIGHT = 1.4; // line 45
+// The notice of a fecha that already passed (line 53).
+const NOTICE_GAP = 8;
+const NOTICE_PADDING_VERTICAL = 8;
+const NOTICE_PADDING_HORIZONTAL = 10;
+const NOTICE_RADIUS = 10;
+const NOTICE_LINE_HEIGHT = 1.3;
+const NOTICE_ICON_SIZE = 18;
+const NOTICE_ICON_STROKE_WIDTH = 2.4;
 const BANNER_PADDING = 14;
 // The field of the fecha de fin while it cannot be used (line 264).
 const DISABLED_FIELD_COLOR = '#F5F6F8';
@@ -220,9 +235,15 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
   // Counts the times "Cambiar" was tapped: each one moves the focus to the hora.
   const [focusHoraRequests, setFocusHoraRequests] = useState(0);
   const horaInput = useRef<TextInput>(null);
+  const [preguntandoFecha, setPreguntandoFecha] = useState(false);
+  // Counts the times "Cambiar fecha" was tapped: each one moves the focus to the fecha.
+  const [focusFechaRequests, setFocusFechaRequests] = useState(0);
+  const fechaButton = useRef<View>(null);
   const guardar = useGuardarEvento(id);
   const hoy = useToday();
   const editando = id !== undefined;
+  // Editing an evento that already passed does not ask, unless its fecha is changed.
+  const [fechaOriginal] = useState(editando ? initial.fecha : null);
   const seRepite = formulario.repeticion !== 'ninguna';
 
   const result = validarFormulario(formulario, { hoy, editando });
@@ -246,6 +267,14 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
     }
   }, [focusHoraRequests]);
 
+  // "Cambiar fecha" leaves the person on the field of the fecha, once the dialog is closed.
+  useEffect(() => {
+    const node = findNodeHandle(fechaButton.current);
+    if (focusFechaRequests > 0 && node !== null) {
+      AccessibilityInfo.setAccessibilityFocus(node);
+    }
+  }, [focusFechaRequests]);
+
   const update = (changes: Partial<FormularioDeEvento>) => {
     setFormulario((current) => ({ ...current, ...changes }));
   };
@@ -258,6 +287,15 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
       return;
     }
 
+    if (debePreguntarPorFechaPasada({ fecha: result.evento.fechas[0], fechaOriginal, hoy })) {
+      setPreguntandoFecha(true);
+      return;
+    }
+
+    askAboutHora();
+  };
+
+  const askAboutHora = () => {
     if (horaSinConfirmar) {
       setPreguntaDeHora('guardar');
       return;
@@ -346,6 +384,7 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
             <Field error={errores.fecha}>
               <AppText variant="label">Fecha</AppText>
               <Pressable
+                ref={fechaButton}
                 accessibilityRole="button"
                 accessibilityLabel={`Fecha: ${
                   formulario.fecha ? formatFechaDelCampo(formulario.fecha) : 'sin elegir'
@@ -361,6 +400,19 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
                   {formulario.fecha ? formatFechaDelCampo(formulario.fecha) : 'Elegir'}
                 </AppText>
               </Pressable>
+              {formulario.fecha !== null && isFechaPasada(formulario.fecha, hoy) && (
+                <View accessibilityRole="text" style={styles.notice}>
+                  <AlertIcon />
+                  <AppText
+                    variant="chico"
+                    weight="semibold"
+                    color="avisoTexto"
+                    style={styles.noticeText}
+                  >
+                    Esta fecha ya pasó.
+                  </AppText>
+                </View>
+              )}
             </Field>
           </View>
           <View style={styles.time}>
@@ -373,8 +425,10 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
                   update({ hora: formatHoraAlEscribir(formulario.hora, texto) })
                 }
                 onEndEditing={() => {
+                  // Tapping "Guardar" can end the editing after its press: its question,
+                  // which saves after "Sí", is kept.
                   if (horaSinConfirmar) {
-                    setPreguntaDeHora('campo');
+                    setPreguntaDeHora((current) => current ?? 'campo');
                   }
                 }}
                 placeholder="19:00"
@@ -524,7 +578,30 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
         onPress={save}
       />
 
-      {preguntaDeHora !== null && hora !== null && (
+      {preguntandoFecha && formulario.fecha !== null && (
+        <ConfirmDialog
+          title="Esta fecha ya pasó"
+          confirmLabel="Cargarlo igual"
+          cancelLabel="Cambiar fecha"
+          tone="primary"
+          busy={false}
+          onConfirm={() => {
+            setPreguntandoFecha(false);
+            askAboutHora();
+          }}
+          onCancel={() => {
+            setPreguntandoFecha(false);
+            // The hora is asked about again on "Guardar", not while the fecha is changed.
+            setPreguntaDeHora(null);
+            setFocusFechaRequests((count) => count + 1);
+          }}
+        >
+          <DialogText>{getTextoDeFechaPasada(formulario.fecha, hoy)}</DialogText>
+        </ConfirmDialog>
+      )}
+
+      {/* The question about the fecha goes first: the one about the hora waits for it. */}
+      {preguntaDeHora !== null && !preguntandoFecha && hora !== null && (
         <ConfirmDialog
           title={getPreguntaDeHoraPocoComun(hora)}
           confirmLabel="Sí"
@@ -623,6 +700,20 @@ function Field({ error, children }: { error: string | undefined; children: React
   );
 }
 
+function AlertIcon() {
+  return (
+    <Svg width={NOTICE_ICON_SIZE} height={NOTICE_ICON_SIZE} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 3l10 18H2zM12 10v5M12 18h.01"
+        stroke={colors.aviso}
+        strokeWidth={NOTICE_ICON_STROKE_WIDTH}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
 function Chevron() {
   return (
     <Svg width={CHEVRON_SIZE} height={CHEVRON_SIZE} viewBox="0 0 24 24" fill="none">
@@ -694,6 +785,19 @@ const styles = StyleSheet.create({
   },
   hint: {
     lineHeight: fontSize.chico * HINT_LINE_HEIGHT,
+  },
+  notice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: NOTICE_GAP,
+    paddingVertical: NOTICE_PADDING_VERTICAL,
+    paddingHorizontal: NOTICE_PADDING_HORIZONTAL,
+    borderRadius: NOTICE_RADIUS,
+    backgroundColor: colors.avisoSuave,
+  },
+  noticeText: {
+    flexShrink: 1,
+    lineHeight: fontSize.chico * NOTICE_LINE_HEIGHT,
   },
   dateTime: {
     flexDirection: 'row',

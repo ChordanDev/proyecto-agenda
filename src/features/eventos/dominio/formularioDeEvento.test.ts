@@ -331,6 +331,21 @@ describe('a weekly series', () => {
     });
   });
 
+  it('rejects a "Hasta" that already passed', () => {
+    expect(
+      validar(completo({ fecha: '2026-09-05', repeticion: 'semanal', finDeSerie: '2026-10-13' })),
+    ).toEqual({
+      ok: false,
+      errores: { finDeSerie: '"Hasta" no puede ser una fecha pasada.' },
+    });
+  });
+
+  it('accepts today as "Hasta"', () => {
+    expect(
+      validar(completo({ fecha: '2026-09-05', repeticion: 'semanal', finDeSerie: HOY })).ok,
+    ).toBe(true);
+  });
+
   it('caps "Hasta" a year after the first date', () => {
     expect(
       validar(completo({ fecha: '2026-10-17', repeticion: 'semanal', finDeSerie: '2027-10-17' }))

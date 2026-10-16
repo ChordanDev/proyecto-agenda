@@ -3,6 +3,7 @@ import { getWeekday, parseLocalDate } from '@/features/calendario/dominio/localD
 import { isSameDuenio, type LugarElegido } from '@/features/lugares/dominio/lugar';
 
 import { getCategoria, type Categoria } from './categoria';
+import { isFechaPasada } from './fechaPasada';
 import type { Duenio, Enfasis, Evento, Repeticion } from './evento';
 import { getFechasDeSerie, getTopeDeHasta } from './repeticion';
 
@@ -186,7 +187,9 @@ export function validarFormulario(
   }
   if (seRepite && formulario.fecha !== null && formulario.finDeSerie !== null) {
     const tope = getTopeDeHasta({ fecha: formulario.fecha, ...contexto });
-    if (formulario.finDeSerie < formulario.fecha) {
+    if (isFechaPasada(formulario.finDeSerie, contexto.hoy)) {
+      errores.finDeSerie = '"Hasta" no puede ser una fecha pasada.';
+    } else if (formulario.finDeSerie < formulario.fecha) {
       errores.finDeSerie = '"Hasta" no puede ser anterior a la primera fecha.';
     } else if (formulario.finDeSerie > tope) {
       errores.finDeSerie = `"Hasta" puede ser, como máximo, el ${formatLongDate(tope)}.`;
