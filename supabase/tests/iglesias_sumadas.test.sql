@@ -22,7 +22,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(42);
+select plan(44);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -465,6 +465,43 @@ reset role;
 select is_empty(
   $$ select 1 from public.iglesias_sumadas where evento_id = 'eeeeeeee-0000-4000-8000-000000000002' $$,
   'the evento of the distrito is no longer shared'
+);
+
+-- An iglesia sumada that moves into the distrito duenio ----------------------------
+-- The developers move the Tercera iglesia into the Distrito dueño while it is
+-- sumada. The list the app read still has it: saving that list drops it
+-- instead of failing on every try.
+
+insert into public.iglesias_sumadas (evento_id, iglesia_id) values
+  ('eeeeeeee-0000-4000-8000-000000000002', '11111111-0000-4000-8000-000000000004');
+update public.iglesias set distrito_id = 'dddddddd-0000-4000-8000-000000000001'
+  where id = '11111111-0000-4000-8000-000000000004';
+
+set local role authenticated;
+set local request.jwt.claims to '{"sub": "bbbbbbbb-0000-4000-8000-000000000005", "role": "authenticated"}';
+
+select lives_ok(
+  $$ select public.guardar_evento(
+    evento_id => 'eeeeeeee-0000-4000-8000-000000000002',
+    titulo => 'Del distrito',
+    alcance => 'distrito',
+    duenio_distrito_id => 'dddddddd-0000-4000-8000-000000000001',
+    hora => '19:00',
+    repeticion => 'ninguna',
+    fechas => array['2026-11-14']::date[],
+    iglesias_sumadas => array[
+      '11111111-0000-4000-8000-000000000003',
+      '11111111-0000-4000-8000-000000000004'
+    ]::uuid[]) $$,
+  'the pastor saves a list that still has an iglesia now of their distrito'
+);
+
+reset role;
+
+select results_eq(
+  $$ select iglesia_id from public.iglesias_sumadas where evento_id = 'eeeeeeee-0000-4000-8000-000000000002' $$,
+  $$ values ('11111111-0000-4000-8000-000000000003'::uuid) $$,
+  'the iglesia that moved into the distrito stops being sumada; the rest of the list is saved'
 );
 
 select * from finish();

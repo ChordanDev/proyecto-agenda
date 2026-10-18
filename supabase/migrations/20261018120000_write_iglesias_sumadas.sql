@@ -175,8 +175,9 @@ drop function public.guardar_evento(
 -- `iglesias_sumadas` replaces the iglesias the evento is shared with. Unlike
 -- the other columns, leaving it out (null) keeps the ones it has: an app that
 -- does not know the list, or a form that did not touch it, must not undo what
--- the duenio shared or what an iglesia quito. Either way, an iglesia that now
--- sees the evento by its alcance stops being sumada.
+-- the duenio shared or what an iglesia quito. Either way, an iglesia sumada that
+-- now sees the evento by its alcance stops being sumada, even when the list
+-- still has it.
 --
 -- The columns that can be empty go last and default to null, so the API can
 -- leave them out. Leaving one out when editing empties it: every column but
@@ -207,6 +208,8 @@ set search_path = ''
 as $$
 declare
   saved_id uuid;
+  -- The iglesias sumadas the alcance of the evento now reaches.
+  redundantes uuid[];
 begin
   -- An evento without dates is the very thing this function prevents.
   if coalesce(cardinality(guardar_evento.fechas), 0) = 0 then
@@ -267,23 +270,33 @@ begin
   select saved_id, fecha
   from unnest(guardar_evento.fechas) as fecha;
 
-  if guardar_evento.iglesias_sumadas is null then
-    -- The list is kept, but a new duenio may already reach some of them.
+  -- The iglesias sumadas the evento now reaches by its alcance stop being
+  -- sumadas: a new duenio, or an iglesia that moved into the distrito duenio.
+  -- A list read before that still has them, so they also leave the list
+  -- instead of failing the save on every try.
+  with dejan_de_estar_sumadas as (
     delete from public.iglesias_sumadas
     where iglesias_sumadas.evento_id = saved_id
       and (
         guardar_evento.alcance = 'asociacion'
         or public.iglesia_ve_evento_por_alcance(saved_id, iglesias_sumadas.iglesia_id)
-      );
-  else
+      )
+    returning iglesias_sumadas.iglesia_id
+  )
+  select coalesce(array_agg(iglesia_id), '{}') into redundantes
+  from dejan_de_estar_sumadas;
+
+  if guardar_evento.iglesias_sumadas is not null then
     -- Replaced as a whole, so the trigger checks every iglesia of the list
-    -- against the evento as it is now.
+    -- against the evento as it is now: one that was never sumada and already
+    -- sees the evento is rejected.
     delete from public.iglesias_sumadas
     where iglesias_sumadas.evento_id = saved_id;
 
     insert into public.iglesias_sumadas (evento_id, iglesia_id)
     select distinct saved_id, iglesia_id
-    from unnest(guardar_evento.iglesias_sumadas) as iglesia_id;
+    from unnest(guardar_evento.iglesias_sumadas) as iglesia_id
+    where iglesia_id <> all (redundantes);
   end if;
 
   return saved_id;
