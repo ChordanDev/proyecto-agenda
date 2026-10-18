@@ -1,5 +1,5 @@
 import type { EventoAGuardar } from '../dominio/formularioDeEvento';
-import { borrarEvento, guardarEvento } from './escribirEvento';
+import { borrarEvento, guardarEvento, quitarEventoDeIglesia } from './escribirEvento';
 
 const mockRpc = jest.fn();
 const mockReadEvento = jest.fn();
@@ -118,5 +118,27 @@ describe('borrarEvento', () => {
     mockReadEvento.mockResolvedValue(STILL_THERE);
 
     await expect(borrarEvento('e1')).rejects.toMatchObject({ tipo: 'sin-permiso' });
+  });
+});
+
+describe('quitarEventoDeIglesia', () => {
+  it('quita the evento from the calendario of the iglesia', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: null });
+
+    await expect(quitarEventoDeIglesia('e1', 'i3')).resolves.toBeUndefined();
+    expect(mockRpc).toHaveBeenCalledWith('quitar_evento_de_iglesia', {
+      evento_id: 'e1',
+      iglesia_id: 'i3',
+    });
+  });
+
+  it('tells an iglesia the cargos do not cover', async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { code: '42501', message: 'The cargos of the usuario do not cover the iglesia i3' },
+    });
+
+    await expect(quitarEventoDeIglesia('e1', 'i3')).rejects.toMatchObject({ tipo: 'sin-permiso' });
+    expect(mockReadEvento).not.toHaveBeenCalled();
   });
 });

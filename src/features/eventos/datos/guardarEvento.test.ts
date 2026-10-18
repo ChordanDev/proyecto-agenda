@@ -54,6 +54,24 @@ describe('guardarEvento', () => {
     );
   });
 
+  it('replaces the iglesias sumadas with the list given', async () => {
+    await guardarEvento({ ...EVENTO, iglesiasSumadas: ['i2', 'i3'] }, { editar: 'e1' });
+
+    expect(mockRpc).toHaveBeenCalledWith(
+      'guardar_evento',
+      expect.objectContaining({ iglesias_sumadas: ['i2', 'i3'] }),
+    );
+  });
+
+  it('leaves the iglesias sumadas out when the evento brings no list, so they are kept', async () => {
+    await guardarEvento(EVENTO, { editar: 'e1' });
+
+    expect(mockRpc).toHaveBeenCalledWith(
+      'guardar_evento',
+      expect.objectContaining({ iglesias_sumadas: undefined }),
+    );
+  });
+
   it('edits an evento by its id', async () => {
     await expect(guardarEvento(EVENTO, { editar: 'e1' })).resolves.toBe('e1');
 

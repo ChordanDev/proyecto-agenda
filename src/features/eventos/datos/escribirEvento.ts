@@ -80,6 +80,9 @@ export async function guardarEvento(
     repeticion: evento.repeticion,
     fin_de_serie: orOmitted(evento.finDeSerie),
     fechas: evento.fechas,
+    // Left out, the evento keeps the iglesias sumadas it has.
+    iglesias_sumadas:
+      evento.iglesiasSumadas === undefined ? undefined : [...evento.iglesiasSumadas],
   });
 
   if (error) {
@@ -103,5 +106,22 @@ export async function borrarEvento(id: string): Promise<void> {
     if (failure.tipo !== 'no-existe') {
       throw failure;
     }
+  }
+}
+
+/**
+ * Quita an evento from the calendario of an iglesia sumada
+ * (public.quitar_evento_de_iglesia): the evento stays for its duenio and the
+ * other iglesias. An evento the iglesia no longer has is already what was asked
+ * for.
+ */
+export async function quitarEventoDeIglesia(eventoId: string, iglesiaId: string): Promise<void> {
+  const { error } = await supabase.rpc('quitar_evento_de_iglesia', {
+    evento_id: eventoId,
+    iglesia_id: iglesiaId,
+  });
+
+  if (error) {
+    throw await toErrorDeEscritura(error, eventoId);
   }
 }

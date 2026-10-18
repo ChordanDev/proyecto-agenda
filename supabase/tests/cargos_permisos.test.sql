@@ -19,8 +19,8 @@
 --          on INSERT and on an UPDATE whose new row is not covered; zero rows
 --          on an UPDATE or DELETE whose current row is not covered, but only
 --          where the role has the privilege (eventos, eventos_fechas).
---        - a missing privilege (the structure, iglesias_sumadas, cargos,
---          auth.users): `permission denied for …`, whatever the command.
+--        - a missing privilege (the structure, cargos, auth.users, updating
+--          iglesias_sumadas): `permission denied for …`, whatever the command.
 --
 -- The structure of the fixtures:
 --
@@ -886,11 +886,13 @@ select throws_ok(
   'the admin cannot move an evento to another asociacion'
 );
 
--- Rejected: the iglesias sumadas stay read-only, for the admin too.
+-- Rejected: sumar an iglesia to an evento of another asociacion. Who sums and
+-- quita iglesias is tested in iglesias_sumadas.test.sql.
 select throws_ok(
   $$ insert into public.iglesias_sumadas (evento_id, iglesia_id)
-     values ('eeeeeeee-0000-4000-8000-000000000001', '11111111-0000-4000-8000-000000000002') $$,
-  '42501', null, 'the admin cannot insert iglesias_sumadas'
+     values ('eeeeeeee-0000-4000-8000-000000000007', '11111111-0000-4000-8000-000000000001') $$,
+  '42501', 'new row violates row-level security policy for table "iglesias_sumadas"',
+  'the admin cannot sumar an iglesia to an evento of another asociacion'
 );
 
 -- The rule itself: a duenio is exactly one level.

@@ -12,7 +12,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(66);
+select plan(68);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -52,7 +52,11 @@ select policies_are('public', 'eventos_fechas', array[
   'Usuarios can update eventos_fechas their cargos cover',
   'Usuarios can delete eventos_fechas their cargos cover'
 ]);
-select policies_are('public', 'iglesias_sumadas', array['Anyone can read iglesias_sumadas']);
+select policies_are('public', 'iglesias_sumadas', array[
+  'Anyone can read iglesias_sumadas',
+  'Usuarios can sumar iglesias to eventos their cargos cover',
+  'Usuarios can delete iglesias_sumadas their cargos cover'
+]);
 
 select policy_cmd_is('public', 'eventos', 'Anyone can read eventos', 'select', 'eventos has a read policy');
 select policy_cmd_is('public', 'eventos', 'Usuarios can insert eventos their cargos cover', 'insert', 'eventos has an insert policy');
@@ -62,7 +66,9 @@ select policy_cmd_is('public', 'eventos_fechas', 'Anyone can read eventos_fechas
 select policy_cmd_is('public', 'eventos_fechas', 'Usuarios can insert eventos_fechas their cargos cover', 'insert', 'eventos_fechas has an insert policy');
 select policy_cmd_is('public', 'eventos_fechas', 'Usuarios can update eventos_fechas their cargos cover', 'update', 'eventos_fechas has an update policy');
 select policy_cmd_is('public', 'eventos_fechas', 'Usuarios can delete eventos_fechas their cargos cover', 'delete', 'eventos_fechas has a delete policy');
-select policy_cmd_is('public', 'iglesias_sumadas', 'Anyone can read iglesias_sumadas', 'select', 'iglesias_sumadas has a read-only policy');
+select policy_cmd_is('public', 'iglesias_sumadas', 'Anyone can read iglesias_sumadas', 'select', 'iglesias_sumadas has a read policy');
+select policy_cmd_is('public', 'iglesias_sumadas', 'Usuarios can sumar iglesias to eventos their cargos cover', 'insert', 'iglesias_sumadas has an insert policy');
+select policy_cmd_is('public', 'iglesias_sumadas', 'Usuarios can delete iglesias_sumadas their cargos cover', 'delete', 'iglesias_sumadas has a delete policy');
 
 -- Without a session (anon): the hermano ---------------------------------------------
 
@@ -166,9 +172,8 @@ select throws_ok(
   '42501', null, 'authenticated cannot insert iglesias_sumadas'
 );
 
--- Rejected: with the privilege on eventos and eventos_fechas but no cargo,
--- updating and deleting affect zero rows. iglesias_sumadas has no write
--- privilege, so there they raise 42501.
+-- Rejected: with the privilege but no cargo, updating and deleting affect zero
+-- rows. iglesias_sumadas has no update privilege, so updating it raises 42501.
 select is_empty(
   $$ update public.eventos set titulo = 'Cambiado' returning id $$,
   'authenticated cannot update eventos'
@@ -181,9 +186,9 @@ select throws_ok(
   $$ update public.iglesias_sumadas set iglesia_id = '11111111-0000-4000-8000-000000000003' returning evento_id $$,
   '42501', 'permission denied for table iglesias_sumadas', 'authenticated cannot update iglesias_sumadas'
 );
-select throws_ok(
+select is_empty(
   $$ delete from public.iglesias_sumadas returning evento_id $$,
-  '42501', 'permission denied for table iglesias_sumadas', 'authenticated cannot delete iglesias_sumadas'
+  'authenticated cannot delete iglesias_sumadas'
 );
 select is_empty(
   $$ delete from public.eventos_fechas returning evento_id $$,

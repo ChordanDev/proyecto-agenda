@@ -47,6 +47,12 @@ export type ContextoDelFormulario = {
 export type EventoAGuardar = Omit<Evento, 'id' | 'iglesiasSumadas'> & {
   /** One for a single date; one per occurrence for a series. */
   fechas: string[];
+  /**
+   * Ids of the iglesias to share the evento with, replacing the ones it has.
+   * Left out, the evento keeps its iglesias sumadas: a form that does not show
+   * them must not undo what was shared, or what an iglesia quito.
+   */
+  iglesiasSumadas?: readonly string[];
 };
 
 export type ResultadoDelFormulario =
