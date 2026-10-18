@@ -85,11 +85,11 @@ select policies_are('public', 'perfiles', array[
   'Usuarios can read their own perfil',
   'Gestores can read the perfiles of the cargos they oversee'
 ]);
-select policy_cmd_is('public', 'perfiles', 'Usuarios can read their own perfil', 'select');
-select policy_cmd_is('public', 'perfiles', 'Gestores can read the perfiles of the cargos they oversee', 'select');
+select policy_cmd_is('public', 'perfiles', 'Usuarios can read their own perfil', 'select', 'the own perfil is only read');
+select policy_cmd_is('public', 'perfiles', 'Gestores can read the perfiles of the cargos they oversee', 'select', 'the perfiles of others are only read');
 select policy_roles_are('public', 'perfiles', 'Usuarios can read their own perfil', array['authenticated']);
 select policy_roles_are('public', 'perfiles', 'Gestores can read the perfiles of the cargos they oversee', array['authenticated']);
-select policy_cmd_is('public', 'cargos', 'Gestores can read the cargos they oversee', 'select');
+select policy_cmd_is('public', 'cargos', 'Gestores can read the cargos they oversee', 'select', 'the cargos of others are only read');
 select policy_roles_are('public', 'cargos', 'Gestores can read the cargos they oversee', array['authenticated']);
 
 select table_privs_are('public', 'perfiles', 'anon', array[]::text[], 'anon has no privilege on perfiles');
