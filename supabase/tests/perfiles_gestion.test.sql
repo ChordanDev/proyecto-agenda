@@ -8,13 +8,13 @@
 --
 -- The structure of the fixtures, with who holds each cargo:
 --
---   Asociación de la prueba: the admin
---     Distrito del pastor: the pastor
+--   Asociación de la prueba: the admin and another admin
+--     Distrito del pastor: the pastor and a co-pastor
 --       Iglesia de las secretarias: two secretarias and two encargados
 --       Iglesia vecina: one encargado
 --     Otro distrito: another pastor
 --       Iglesia de otro distrito: one encargado
---   Otra asociación
+--   Otra asociación: an admin
 --     Distrito de otra asociación
 --       Iglesia de otra asociación: one encargado
 --
@@ -24,7 +24,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(48);
+select plan(59);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -53,7 +53,10 @@ insert into auth.users (id, aud, role, email) values
   ('bbbbbbbb-0000-4000-8000-000000000007', 'authenticated', 'authenticated', 'pastor@prueba.example.com'),
   ('bbbbbbbb-0000-4000-8000-000000000008', 'authenticated', 'authenticated', 'otro-pastor@prueba.example.com'),
   ('bbbbbbbb-0000-4000-8000-000000000009', 'authenticated', 'authenticated', 'admin@prueba.example.com'),
-  ('bbbbbbbb-0000-4000-8000-000000000010', 'authenticated', 'authenticated', 'de-otra-asociacion@prueba.example.com');
+  ('bbbbbbbb-0000-4000-8000-000000000010', 'authenticated', 'authenticated', 'de-otra-asociacion@prueba.example.com'),
+  ('bbbbbbbb-0000-4000-8000-000000000011', 'authenticated', 'authenticated', 'otra-admin@prueba.example.com'),
+  ('bbbbbbbb-0000-4000-8000-000000000012', 'authenticated', 'authenticated', 'admin-de-otra-asociacion@prueba.example.com'),
+  ('bbbbbbbb-0000-4000-8000-000000000013', 'authenticated', 'authenticated', 'copastor@prueba.example.com');
 
 insert into public.perfiles (usuario_id, nombre) values
   ('bbbbbbbb-0000-4000-8000-000000000001', 'Secretaria'),
@@ -65,7 +68,10 @@ insert into public.perfiles (usuario_id, nombre) values
   ('bbbbbbbb-0000-4000-8000-000000000007', 'Pastor'),
   ('bbbbbbbb-0000-4000-8000-000000000008', 'Otro pastor'),
   ('bbbbbbbb-0000-4000-8000-000000000009', 'Admin'),
-  ('bbbbbbbb-0000-4000-8000-000000000010', 'De otra asociación');
+  ('bbbbbbbb-0000-4000-8000-000000000010', 'De otra asociación'),
+  ('bbbbbbbb-0000-4000-8000-000000000011', 'Otra admin'),
+  ('bbbbbbbb-0000-4000-8000-000000000012', 'Admin de otra asociación'),
+  ('bbbbbbbb-0000-4000-8000-000000000013', 'Copastor');
 
 insert into public.cargos (id, usuario_id, iglesia_id, distrito_id, asociacion_id, es_secretaria, funcion) values
   ('cccccccc-0000-4000-8000-000000000001', 'bbbbbbbb-0000-4000-8000-000000000001', '11111111-0000-4000-8000-000000000001', null, null, true, 'Secretaria'),
@@ -77,7 +83,12 @@ insert into public.cargos (id, usuario_id, iglesia_id, distrito_id, asociacion_i
   ('cccccccc-0000-4000-8000-000000000007', 'bbbbbbbb-0000-4000-8000-000000000007', null, 'dddddddd-0000-4000-8000-000000000001', null, false, null),
   ('cccccccc-0000-4000-8000-000000000008', 'bbbbbbbb-0000-4000-8000-000000000008', null, 'dddddddd-0000-4000-8000-000000000002', null, false, null),
   ('cccccccc-0000-4000-8000-000000000009', 'bbbbbbbb-0000-4000-8000-000000000009', null, null, 'aaaaaaaa-0000-4000-8000-000000000001', false, null),
-  ('cccccccc-0000-4000-8000-000000000010', 'bbbbbbbb-0000-4000-8000-000000000010', '11111111-0000-4000-8000-000000000004', null, null, false, null);
+  ('cccccccc-0000-4000-8000-000000000010', 'bbbbbbbb-0000-4000-8000-000000000010', '11111111-0000-4000-8000-000000000004', null, null, false, null),
+  -- A second admin of the same asociacion, an admin of the other one, and a
+  -- second pastor of the Distrito del pastor.
+  ('cccccccc-0000-4000-8000-000000000011', 'bbbbbbbb-0000-4000-8000-000000000011', null, null, 'aaaaaaaa-0000-4000-8000-000000000001', false, null),
+  ('cccccccc-0000-4000-8000-000000000012', 'bbbbbbbb-0000-4000-8000-000000000012', null, null, 'aaaaaaaa-0000-4000-8000-000000000002', false, null),
+  ('cccccccc-0000-4000-8000-000000000013', 'bbbbbbbb-0000-4000-8000-000000000013', null, 'dddddddd-0000-4000-8000-000000000001', null, false, null);
 
 -- The schema --------------------------------------------------------------------------
 
@@ -184,24 +195,27 @@ select results_eq(
   'the pastor reads the cargos of the encargados of their distrito'
 );
 
--- Rejected: those of another distrito, of another asociacion, and the pastor
--- and admin above or beside them.
+-- Rejected: those of another distrito, of another asociacion, the other pastor
+-- of their own distrito, and the admins above them.
 select is_empty(
   $$ select 1 from public.perfiles
      where usuario_id in ('bbbbbbbb-0000-4000-8000-000000000006', 'bbbbbbbb-0000-4000-8000-000000000008',
-                          'bbbbbbbb-0000-4000-8000-000000000009', 'bbbbbbbb-0000-4000-8000-000000000010') $$,
+                          'bbbbbbbb-0000-4000-8000-000000000009', 'bbbbbbbb-0000-4000-8000-000000000010',
+                          'bbbbbbbb-0000-4000-8000-000000000011', 'bbbbbbbb-0000-4000-8000-000000000013') $$,
   'the pastor does not read the nombres of another distrito'
 );
 select is_empty(
   $$ select 1 from public.get_usuario_emails()
      where usuario_id in ('bbbbbbbb-0000-4000-8000-000000000006', 'bbbbbbbb-0000-4000-8000-000000000008',
-                          'bbbbbbbb-0000-4000-8000-000000000009', 'bbbbbbbb-0000-4000-8000-000000000010') $$,
+                          'bbbbbbbb-0000-4000-8000-000000000009', 'bbbbbbbb-0000-4000-8000-000000000010',
+                          'bbbbbbbb-0000-4000-8000-000000000011', 'bbbbbbbb-0000-4000-8000-000000000013') $$,
   'the pastor does not read the emails of another distrito'
 );
 select is_empty(
   $$ select 1 from public.cargos
      where id in ('cccccccc-0000-4000-8000-000000000006', 'cccccccc-0000-4000-8000-000000000008',
-                  'cccccccc-0000-4000-8000-000000000009', 'cccccccc-0000-4000-8000-000000000010') $$,
+                  'cccccccc-0000-4000-8000-000000000009', 'cccccccc-0000-4000-8000-000000000010',
+                  'cccccccc-0000-4000-8000-000000000011', 'cccccccc-0000-4000-8000-000000000013') $$,
   'the pastor does not read the cargos of another distrito'
 );
 
@@ -286,37 +300,110 @@ select is_empty(
 
 set local request.jwt.claims to '{"sub": "bbbbbbbb-0000-4000-8000-000000000009", "role": "authenticated"}';
 
--- Allowed: every usuario of their asociacion, pastores included.
+-- Allowed: every usuario of their asociacion, pastores and the other admin
+-- included.
 select results_eq(
   $$ select nombre from public.perfiles order by nombre $$,
   $$ values
-       ('Admin'), ('De otro distrito'), ('Encargado'), ('Otra secretaria'), ('Otro encargado'),
-       ('Otro pastor'), ('Pastor'), ('Secretaria'), ('Vecino') $$,
+       ('Admin'), ('Copastor'), ('De otro distrito'), ('Encargado'), ('Otra admin'), ('Otra secretaria'),
+       ('Otro encargado'), ('Otro pastor'), ('Pastor'), ('Secretaria'), ('Vecino') $$,
   'the admin reads the nombres of all their asociacion'
 );
 select is(
   (select count(*)::int from public.get_usuario_emails()),
-  9,
+  11,
   'the admin reads the emails of all their asociacion'
 );
 select is(
   (select count(*)::int from public.cargos),
-  9,
+  11,
   'the admin reads the cargos of all their asociacion'
 );
 
--- Rejected: another asociacion.
+-- Allowed: the other admin of their asociacion, whom they read but never manage.
+select isnt_empty(
+  $$ select 1 from public.perfiles where usuario_id = 'bbbbbbbb-0000-4000-8000-000000000011' $$,
+  'the admin reads the nombre of another admin of their asociacion'
+);
+select isnt_empty(
+  $$ select 1 from public.get_usuario_emails() where usuario_id = 'bbbbbbbb-0000-4000-8000-000000000011' $$,
+  'the admin reads the email of another admin of their asociacion'
+);
+select isnt_empty(
+  $$ select 1 from public.cargos where id = 'cccccccc-0000-4000-8000-000000000011' $$,
+  'the admin reads the cargo of another admin of their asociacion'
+);
+
+-- Rejected: another asociacion, its admin included.
 select is_empty(
-  $$ select 1 from public.perfiles where usuario_id = 'bbbbbbbb-0000-4000-8000-000000000010' $$,
+  $$ select 1 from public.perfiles
+     where usuario_id in ('bbbbbbbb-0000-4000-8000-000000000010', 'bbbbbbbb-0000-4000-8000-000000000012') $$,
   'the admin does not read the nombres of another asociacion'
 );
 select is_empty(
-  $$ select 1 from public.get_usuario_emails() where usuario_id = 'bbbbbbbb-0000-4000-8000-000000000010' $$,
+  $$ select 1 from public.get_usuario_emails()
+     where usuario_id in ('bbbbbbbb-0000-4000-8000-000000000010', 'bbbbbbbb-0000-4000-8000-000000000012') $$,
   'the admin does not read the emails of another asociacion'
 );
 select is_empty(
-  $$ select 1 from public.cargos where id = 'cccccccc-0000-4000-8000-000000000010' $$,
+  $$ select 1 from public.cargos
+     where id in ('cccccccc-0000-4000-8000-000000000010', 'cccccccc-0000-4000-8000-000000000012') $$,
   'the admin does not read the cargos of another asociacion'
+);
+
+-- can_read_cargo called directly -------------------------------------------------------
+-- Any session can call it with any arguments. It answers only for a cargo on
+-- exactly one level, and only about the cargos of the usuario who asks.
+
+-- The admin: an iglesia of their asociacion alone is read, but not mixed with
+-- another level, and nothing with no level at all.
+select is(
+  public.can_read_cargo('11111111-0000-4000-8000-000000000001', null, null),
+  true,
+  'called directly, the admin reads a cargo on an iglesia of their asociacion'
+);
+select is(
+  public.can_read_cargo(null, null, null),
+  false,
+  'called directly, a cargo with no level is never read'
+);
+select is(
+  public.can_read_cargo('11111111-0000-4000-8000-000000000001', null, 'aaaaaaaa-0000-4000-8000-000000000001'),
+  false,
+  'called directly, an iglesia mixed with an asociacion is never read'
+);
+select is(
+  public.can_read_cargo('11111111-0000-4000-8000-000000000001', 'dddddddd-0000-4000-8000-000000000001', null),
+  false,
+  'called directly, an iglesia mixed with a distrito is never read'
+);
+
+-- The pastor: nothing outside the iglesias of their distrito.
+set local request.jwt.claims to '{"sub": "bbbbbbbb-0000-4000-8000-000000000007", "role": "authenticated"}';
+
+select is(
+  public.can_read_cargo('11111111-0000-4000-8000-000000000003', null, null),
+  false,
+  'called directly, the pastor does not read a cargo on an iglesia of another distrito'
+);
+select is(
+  public.can_read_cargo(null, 'dddddddd-0000-4000-8000-000000000001', null),
+  false,
+  'called directly, the pastor does not read a cargo on their own distrito'
+);
+select is(
+  public.can_read_cargo(null, null, 'aaaaaaaa-0000-4000-8000-000000000001'),
+  false,
+  'called directly, the pastor does not read a cargo on their asociacion'
+);
+
+-- A common encargado: not even the cargos of their own iglesia.
+set local request.jwt.claims to '{"sub": "bbbbbbbb-0000-4000-8000-000000000003", "role": "authenticated"}';
+
+select is(
+  public.can_read_cargo('11111111-0000-4000-8000-000000000001', null, null),
+  false,
+  'called directly, a common encargado does not read the cargos of their iglesia'
 );
 
 -- A session without a usuario (no `sub`) reads nothing ------------------------------------
