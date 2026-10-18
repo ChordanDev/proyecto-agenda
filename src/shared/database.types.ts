@@ -25,14 +25,14 @@ export type Database = {
           Tables: {
             "asociaciones": {
                   Row: {
-                    "id": string,"nombre": string
+                    "id": string,"nombre": string,"zona_horaria": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "id"?: string,"nombre": string
+                    "id"?: string,"nombre": string,"zona_horaria"?: string
                   }
                   Update: {
-                    "id"?: string,"nombre"?: string
+                    "id"?: string,"nombre"?: string,"zona_horaria"?: string
                   }
                   Relationships: [
                     
@@ -68,6 +68,48 @@ isOneToOne: false
       referencedRelation: "iglesias"
       referencedColumns: ["id"]
     }
+                  ]
+                },"chat_consentimientos": {
+                  Row: {
+                    "aceptado_en": string,"usuario_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "aceptado_en"?: string,"usuario_id": string
+                  }
+                  Update: {
+                    "aceptado_en"?: string,"usuario_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"chat_consultas": {
+                  Row: {
+                    "cantidad": number,"dia": string,"usuario_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cantidad"?: number,"dia": string,"usuario_id": string
+                  }
+                  Update: {
+                    "cantidad"?: number,"dia"?: string,"usuario_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"chat_gastos": {
+                  Row: {
+                    "mes": string,"usd": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "mes": string,"usd"?: number
+                  }
+                  Update: {
+                    "mes"?: string,"usd"?: number
+                  }
+                  Relationships: [
+                    
                   ]
                 },"distritos": {
                   Row: {
@@ -259,6 +301,12 @@ isOneToOne: false
       } },
 "lugar_nombre_key":
 { Args: { "nombre": string }; Returns: string
+                           },
+"registrar_consulta":
+{ Args: { "costo_usd": number,"dia": string,"mes": string,"usuario_id": string }; Returns: {
+              "consultas_del_dia": number,
+"gasto_del_mes": number
+            }[]
                            }
           }
           Enums: {

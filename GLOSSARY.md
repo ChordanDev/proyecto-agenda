@@ -101,6 +101,28 @@ _Avoid_: Ocultar, rechazar, bloquear
 Eliminar un evento para todas las iglesias donde se ve. Solo puede hacerlo quien tenga un cargo que abarque a su dueño.
 _Avoid_: Quitar, cancelar
 
+### Chat
+
+**Consulta**:
+Cada mensaje que un usuario le envía al chat, para preguntar o para cargar un evento. Cuenta para el límite diario.
+_Avoid_: Pregunta, mensaje, pedido
+
+**Consentimiento**:
+Aceptación de un usuario de que sus mensajes al chat se envían a OpenAI. Es de la persona, no del teléfono: se acepta una sola vez. Sin él, el chat no responde.
+_Avoid_: Permiso, aceptación de términos
+
+**Límite diario**:
+Cantidad de consultas que un usuario puede hacer en un día: 50. El día empieza a la medianoche, hora de la asociación.
+_Avoid_: Cupo, cuota
+
+**Presupuesto**:
+Lo que el chat puede gastar por mes, entre todos los usuarios: 20 USD. El mes se cuenta en hora de la asociación. Cuando se agota, el chat se apaga hasta el mes siguiente.
+_Avoid_: Límite de gasto, crédito
+
+**Zona horaria**:
+La hora oficial de una asociación, con la que se cuentan el día del límite diario y el mes del presupuesto.
+_Avoid_: Huso horario, hora local
+
 ### Entregas
 
 **v1**:
