@@ -24,7 +24,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(59);
+select plan(61);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -166,6 +166,10 @@ select throws_ok(
   $$ select * from public.cargos $$,
   '42501', 'permission denied for table cargos', 'anon cannot read cargos'
 );
+select throws_ok(
+  $$ select public.can_read_cargo('11111111-0000-4000-8000-000000000001', null, null) $$,
+  '42501', 'permission denied for function can_read_cargo', 'anon cannot ask whether they read a cargo'
+);
 
 reset role;
 
@@ -193,6 +197,14 @@ select results_eq(
   $$ select funcion from public.cargos where funcion is not null order by funcion $$,
   $$ values ('Anciano'), ('Secretaria'), ('Secretaria'), ('Tesorero') $$,
   'the pastor reads the cargos of the encargados of their distrito'
+);
+
+-- The cargos the pastor holds are only their own: whoever wants those, and not
+-- the ones they oversee, filters by the usuario (getCargosDelUsuario).
+select results_eq(
+  $$ select id from public.cargos where usuario_id = (select auth.uid()) $$,
+  $$ values ('cccccccc-0000-4000-8000-000000000007'::uuid) $$,
+  'filtered by the usuario, the pastor reads only the cargo they hold'
 );
 
 -- Rejected: those of another distrito, of another asociacion, the other pastor

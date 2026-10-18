@@ -36,7 +36,9 @@ alter table public.cargos
 -- Perfiles ------------------------------------------------------------------------
 
 create table public.perfiles (
-  -- One per usuario. Deleting a usuario ("Eliminar mi cuenta") takes it too.
+  -- One per usuario. Deleting a usuario takes it too, also through
+  -- public.delete_own_usuario() ("Eliminar mi cuenta"), whose comment predates
+  -- the perfiles and lists only the cargos.
   usuario_id uuid primary key references auth.users (id) on delete cascade,
   nombre text not null,
 
@@ -119,7 +121,8 @@ grant execute on function public.can_read_cargo(uuid, uuid, uuid) to authenticat
 
 -- Reading the cargos -------------------------------------------------------------------
 -- Next to "Usuarios can read their own cargos": a row is read when either one
--- allows it.
+-- allows it. So a gestor reads more cargos than the ones they hold, and the app
+-- reads their own by filtering by the usuario (getCargosDelUsuario).
 
 create policy "Gestores can read the cargos they oversee"
   on public.cargos for select
