@@ -39,14 +39,14 @@ export type Database = {
                   ]
                 },"cargos": {
                   Row: {
-                    "asociacion_id": string | null,"distrito_id": string | null,"id": string,"iglesia_id": string | null,"usuario_id": string
+                    "asociacion_id": string | null,"distrito_id": string | null,"es_secretaria": boolean,"funcion": string | null,"id": string,"iglesia_id": string | null,"usuario_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "asociacion_id"?: string | null,"distrito_id"?: string | null,"id"?: string,"iglesia_id"?: string | null,"usuario_id": string
+                    "asociacion_id"?: string | null,"distrito_id"?: string | null,"es_secretaria"?: boolean,"funcion"?: string | null,"id"?: string,"iglesia_id"?: string | null,"usuario_id": string
                   }
                   Update: {
-                    "asociacion_id"?: string | null,"distrito_id"?: string | null,"id"?: string,"iglesia_id"?: string | null,"usuario_id"?: string
+                    "asociacion_id"?: string | null,"distrito_id"?: string | null,"es_secretaria"?: boolean,"funcion"?: string | null,"id"?: string,"iglesia_id"?: string | null,"usuario_id"?: string
                   }
                   Relationships: [
                     {
@@ -225,6 +225,20 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"perfiles": {
+                  Row: {
+                    "nombre": string,"usuario_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "nombre": string,"usuario_id": string
+                  }
+                  Update: {
+                    "nombre"?: string,"usuario_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 }
           }
           Views: {
@@ -234,11 +248,19 @@ isOneToOne: false
             "borrar_evento":
 { Args: { "evento_id": string }; Returns: undefined
                            },
+"can_read_cargo":
+{ Args: { "cargo_asociacion_id": string,"cargo_distrito_id": string,"cargo_iglesia_id": string }; Returns: boolean
+                           },
 "cargos_abarcan_duenio":
 { Args: { "duenio_asociacion_id": string,"duenio_distrito_id": string,"duenio_iglesia_id": string }; Returns: boolean
                            },
 "delete_own_usuario":
 { Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"get_usuario_emails":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "email": string,"usuario_id": string
+            }[]
                            },
 "guardar_evento":
 { Args: { "alcance": Database["public"]['Enums']["alcance"],"descripcion"?: string,"duenio_asociacion_id"?: string,"duenio_distrito_id"?: string,"duenio_iglesia_id"?: string,"enfasis"?: Database["public"]['Enums']["enfasis"],"evento_id"?: string,"fecha_fin"?: string,"fechas": (string)[],"fin_de_serie"?: string,"hora": string,"lugar"?: string,"lugar_id"?: string,"nuevo_evento_id"?: string,"repeticion": Database["public"]['Enums']["repeticion"],"titulo": string }; Returns: string
