@@ -18,7 +18,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(40);
+select plan(44);
 
 -- Exact privileges ---------------------------------------------------------------
 
@@ -106,6 +106,16 @@ select is(
   coalesce((
     select array_agg(p order by p)
     from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    where has_table_privilege('anon', 'public.perfiles', p)
+  ), array[]::text[]),
+  array[]::text[],
+  'anon has exactly the expected privileges on perfiles'
+);
+
+select is(
+  coalesce((
+    select array_agg(p order by p)
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
     where has_table_privilege('authenticated', 'public.asociaciones', p)
   ), array[]::text[]),
   array['SELECT']::text[],
@@ -182,6 +192,16 @@ select is(
   'authenticated has exactly the expected privileges on lugares'
 );
 
+select is(
+  coalesce((
+    select array_agg(p order by p)
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    where has_table_privilege('authenticated', 'public.perfiles', p)
+  ), array[]::text[]),
+  array['SELECT']::text[],
+  'authenticated has exactly the expected privileges on perfiles'
+);
+
 -- Truncate --------------------------------------------------------------------
 -- The privilege check comes first, so the tables are not touched.
 
@@ -220,6 +240,11 @@ select throws_ok(
   '42501', 'permission denied for table lugares', 'anon cannot truncate lugares'
 );
 
+select throws_ok(
+  $$ truncate public.perfiles $$,
+  '42501', 'permission denied for table perfiles', 'anon cannot truncate perfiles'
+);
+
 reset role;
 
 set local role authenticated;
@@ -255,6 +280,11 @@ select throws_ok(
 select throws_ok(
   $$ truncate public.lugares $$,
   '42501', 'permission denied for table lugares', 'authenticated cannot truncate lugares'
+);
+
+select throws_ok(
+  $$ truncate public.perfiles $$,
+  '42501', 'permission denied for table perfiles', 'authenticated cannot truncate perfiles'
 );
 
 reset role;

@@ -72,9 +72,10 @@ Un evento sin énfasis es una **actividad regular** (cultos de oración, Escuela
 
 ## Roles
 1. **Hermano (sin login):** al abrir la app por primera vez elige su iglesia (queda guardada; se cambia en Ajustes). Ve el calendario de su iglesia + eventos de su distrito + eventos de la asociación. No tiene chat. No edita nada.
-2. **Encargado de calendario (con login):** secretaria, tesorero, etc. Una iglesia puede tener varios, todos con los mismos permisos. Crea/edita/borra eventos de su iglesia y puede compartirlos con otras iglesias. Usa el chat para consultar y cargar.
-3. **Pastor (con login):** tiene un distrito con varias iglesias. Ve todos sus calendarios (juntos o filtrados), crea eventos en cualquiera de sus iglesias y eventos de distrito (aparecen en todas sus iglesias). Da de alta encargados de sus iglesias.
-4. **Admin de asociación (con login):** ve todas las iglesias. Crea eventos de asociación (aparecen en todas las iglesias) y también de cualquier distrito o iglesia. Gestiona distritos, iglesias (con dirección/ubicación), pastores y encargados.
+2. **Encargado de calendario (con login):** cada encargado tiene una función de texto libre (secretaria, tesorero, anciano…) que no cambia sus permisos. Una iglesia puede tener varios, todos con los mismos permisos sobre los eventos. Crea/edita/borra eventos de su iglesia y puede compartirlos con otras iglesias. Usa el chat para consultar y cargar. Solo ve su propio nombre, correo y cargo.
+   - **Secretaria de iglesia:** un encargado que además agrega, edita y quita a los demás encargados de su iglesia, y ve sus nombres, correos y cargos. Puede haber varias por iglesia. La nombran o la quitan solo el pastor (en su distrito) o el admin; una secretaria no nombra a otra.
+3. **Pastor (con login):** tiene un distrito con varias iglesias. Ve todos sus calendarios (juntos o filtrados), crea eventos en cualquiera de sus iglesias y eventos de distrito (aparecen en todas sus iglesias). Da y quita los cargos de encargado y de secretaria de iglesia en las iglesias de su distrito, y ve sus nombres, correos y cargos.
+4. **Admin de asociación (con login):** ve todas las iglesias. Crea eventos de asociación (aparecen en todas las iglesias) y también de cualquier distrito o iglesia. Gestiona distritos, iglesias (con dirección/ubicación), pastores, secretarias de iglesia y encargados de su asociación, y ve todos sus nombres, correos y cargos. Es el único que cambia el correo de un usuario. El cargo de admin lo asignan solo los desarrolladores.
 
 ## Eventos
 - Campos: título, fecha y hora, fecha de fin (opcional, para eventos de varios días), lugar, descripción (opcional), énfasis (uno de los cuatro, o ninguno si es una actividad regular), alcance (iglesia / distrito / asociación).

@@ -32,16 +32,28 @@ Iglesia que se eligió en un teléfono y cuyo calendario ve el hermano. Pertenec
 _Avoid_: Mi iglesia, iglesia favorita, iglesia por defecto
 
 **Usuario**:
-Persona que inicia sesión. Puede tener uno o varios cargos a la vez, y ve los calendarios de todas las iglesias que esos cargos abarcan.
-_Avoid_: Cuenta, perfil
+Persona que inicia sesión. Puede tener uno o varios cargos a la vez, y ve los calendarios de todas las iglesias que esos cargos abarcan. Cada usuario es una persona, con su correo personal: cuando cambia quien ocupa un cargo, se le quita el cargo a la anterior y se le da a la nueva.
+_Avoid_: Cuenta, usuario por función
+
+**Perfil**:
+Nombre con el que un usuario aparece en la gestión de cargos. Hay uno por usuario y se va con él.
+_Avoid_: Cuenta, ficha
 
 **Cargo**:
 Asignación de un usuario a un nivel concreto: encargado de una iglesia, pastor de un distrito o admin de una asociación. Abarca ese nivel y todo lo que depende de él, nunca lo que está por encima o al costado.
 _Avoid_: Rol, permiso, tipo de usuario
 
 **Encargado**:
-Cargo sobre una iglesia. Una iglesia puede tener varios encargados, todos equivalentes.
-_Avoid_: Secretario, editor, encargado de calendario
+Cargo sobre una iglesia. Una iglesia puede tener varios encargados, todos equivalentes para crear, editar y borrar sus eventos. Algunos pueden ser además secretarias de iglesia.
+_Avoid_: Editor, encargado de calendario
+
+**Secretaria de iglesia**:
+Encargado que además agrega, edita y quita a los demás encargados de su iglesia. Una iglesia puede tener varias, todas equivalentes. Solo el pastor de su distrito o el admin la nombran o la quitan; una secretaria de iglesia no nombra a otra. No es lo mismo que la función "Secretaria".
+_Avoid_: Secretario, encargado principal, administradora de iglesia
+
+**Función**:
+Lo que hace en su iglesia la persona que ocupa un cargo: "Secretaria", "Tesorero", "Anciano". Se escribe libremente, se muestra en la gestión y no da ni quita ningún permiso.
+_Avoid_: Puesto, rol, título
 
 **Pastor**:
 Cargo sobre un distrito. Un distrito puede tener varios pastores, todos equivalentes, o ninguno.

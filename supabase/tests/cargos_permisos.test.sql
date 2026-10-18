@@ -107,7 +107,11 @@ insert into public.iglesias_sumadas (evento_id, iglesia_id) values
 -- usuario load cargos) without updating this test. The lists of eventos and
 -- eventos_fechas are pinned in eventos_permisos.test.sql.
 
-select policies_are('public', 'cargos', array['Usuarios can read their own cargos']);
+select policies_are('public', 'cargos', array[
+  'Usuarios can read their own cargos',
+  -- Pinned in perfiles_gestion.test.sql, with who reads which cargos.
+  'Gestores can read the cargos they oversee'
+]);
 select policy_cmd_is('public', 'cargos', 'Usuarios can read their own cargos', 'select', 'cargos has a read-only policy');
 select policy_roles_are('public', 'cargos', 'Usuarios can read their own cargos', array['authenticated'], 'the read policy of cargos needs a session');
 
