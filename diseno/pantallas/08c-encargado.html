@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Encargado</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&amp;family=Oswald:wght@500;600&amp;display=swap">
+<style>
+body{margin:0;font-family:'Noto Sans','Segoe UI',system-ui,sans-serif;color:#222222}
+a{color:#1B3550}a:hover{color:#10233A}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; background: linear-gradient(180deg, #2F557F 0px, #E6EBF1 190px, #C9D4E0 100%); display: flex; flex-direction: column; font-family: 'Noto Sans', 'Segoe UI', system-ui, sans-serif; color: #222222">
+  <!-- Agregar and Editar encargado (#155), used by the secretaria de iglesia, the pastor and the admin.
+       State: modo 'agregar' | 'editar'; quien 'secretaria' | 'pastor' (the admin sees what the pastor sees, over the whole asociación);
+       quitando opens the confirmation of "Quitar cargo"; sinConexion and error are the states of saving. -->
+  <header style="flex-shrink: 0; padding: 22px 16px 0; display: flex; align-items: center; gap: 12px">
+    <a href="Gestion.dc.html" aria-label="Cancelar" style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: #FFFFFF; display: flex; align-items: center; justify-content: center; color: #1B3550">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+    </a>
+    <span style="font-size: 20px; font-weight: 700; color: #000000">{{ titulo }}</span>
+  </header>
+
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 30px 16px 36px; display: flex; flex-direction: column; gap: 14px">
+    <!-- Agregar, editar and quitar need a connection (#156): the notice shows at the top and the buttons are off. -->
+    <sc-if value="{{ sinConexion }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="display: flex; align-items: center; gap: 10px; min-height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 14px; background: #FFFFFF; color: #1B3550">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0"><path d="M2 2l20 20"></path><path d="M5.8 5.8A5.5 5.5 0 0 0 6.5 17H17"></path><path d="M9.6 4.6A6 6 0 0 1 17.6 9 4 4 0 0 1 20.7 15.6"></path></svg>
+        <span style="font-size: 15px; line-height: 1.35; color: #222222"><span style="font-weight: 700; color: #1B3550">Sin conexión.</span> {{ textoSinConexion }}</span>
+      </div>
+    </sc-if>
+
+    <div style="display: flex; flex-direction: column; gap: 16px; padding: 18px 16px; border-radius: 20px; background: #FFFFFF">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="nombre" style="font-size: 16px; font-weight: 700">Nombre</label>
+        <input id="nombre" type="text" value="{{ nombre }}" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
+      </div>
+      <sc-if value="{{ agregando }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="correo" style="font-size: 16px; font-weight: 700">Correo</label>
+        <input id="correo" type="text" value="{{ correo }}" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
+        <span style="font-size: 15px; line-height: 1.4; color: #4A4A4A">Le llega un correo de bienvenida. Entra con este correo, sin contraseña.</span>
+      </div>
+      </sc-if>
+      <!-- Editing: only the admin changes a correo, from Usuario (09d). -->
+      <sc-if value="{{ editando }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 16px; font-weight: 700">Correo</span>
+        <span style="font-size: 18px; color: #222222">{{ correo }}</span>
+        <span style="font-size: 15px; line-height: 1.4; color: #4A4A4A">Solo el admin de la asociación puede cambiar el correo.</span>
+      </div>
+      </sc-if>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="funcion" style="font-size: 16px; font-weight: 700">Función</label>
+        <input id="funcion" type="text" value="{{ funcion }}" placeholder="Por ejemplo: Tesorero" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
+      </div>
+      <!-- The pastor chooses among the iglesias of their distrito when adding. The secretaria adds only to her iglesia, and the iglesia of a cargo never changes: to move someone, quitar el cargo y agregarlo de nuevo. -->
+      <sc-if value="{{ eligeIglesia }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span id="tIglesia" style="font-size: 16px; font-weight: 700">Iglesia</span>
+        <button type="button" aria-labelledby="tIglesia" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 6px 12px 6px 16px; font-family: inherit; font-size: 18px; text-align: left; cursor: pointer; color: #222222"><span>{{ iglesia }}</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B3550" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0"><path d="M6 9l6 6 6-6"></path></svg></button>
+      </div>
+      </sc-if>
+      <sc-if value="{{ iglesiaFija }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 16px; font-weight: 700">Iglesia</span>
+        <span style="font-size: 18px; color: #222222">{{ iglesia }}</span>
+      </div>
+      </sc-if>
+      <!-- Only the pastor and the admin name a secretaria de iglesia (#153). Also when editing an existing encargado. -->
+      <sc-if value="{{ nombraSecretaria }}" hint-placeholder-val="{{ true }}">
+        <button type="button" role="checkbox" aria-checked="true" style="display: flex; gap: 14px; align-items: flex-start; padding: 4px 0 0; border: 0; background: transparent; font-family: inherit; text-align: left; color: #222222; cursor: pointer">
+          <span style="width: 28px; height: 28px; margin-top: 2px; border-radius: 8px; background: #1B3550; color: #FFFFFF; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+          <span style="display: flex; flex-direction: column; gap: 2px">
+            <span style="font-size: 17px; font-weight: 700">Es secretaria de la iglesia</span>
+            <span style="font-size: 15px; line-height: 1.4; color: #4A4A4A">Además puede agregar, editar y quitar encargados de esta iglesia.</span>
+          </span>
+        </button>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ error }}" hint-placeholder-val="{{ false }}">
+      <div role="alert" style="border-radius: 14px; background: #FDE7EC; color: #7A0B2B; padding: 12px 14px; font-size: 15px; line-height: 1.4"><span style="font-weight: 700">{{ textoError }}</span> Lo que escribiste sigue acá. Probá de nuevo en un rato.</div>
+    </sc-if>
+
+    <sc-if value="{{ conConexion }}" hint-placeholder-val="{{ true }}">
+      <button type="button" style="display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 58px; border-radius: 14px; border: 0; background: #1B3550; color: #FFFFFF; font-family: inherit; font-size: 18px; font-weight: 700; cursor: pointer">{{ boton }}</button>
+    </sc-if>
+    <sc-if value="{{ sinConexion }}" hint-placeholder-val="{{ false }}">
+      <button type="button" disabled style="display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 58px; border-radius: 14px; border: 0; background: #9AA7B6; color: #FFFFFF; font-family: inherit; font-size: 18px; font-weight: 700">{{ boton }}</button>
+    </sc-if>
+    <sc-if value="{{ quitable }}" hint-placeholder-val="{{ false }}">
+      <button type="button" onClick="{{ pedirQuitar }}" style="min-height: 54px; border-radius: 14px; border: 2px solid #B0103F; background: #FFFFFF; color: #B0103F; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Quitar cargo</button>
+    </sc-if>
+    <sc-if value="{{ quitableOff }}" hint-placeholder-val="{{ false }}">
+      <button type="button" disabled style="min-height: 54px; border-radius: 14px; border: 2px solid #B0103F; background: #FFFFFF; color: #B0103F; font-family: inherit; font-size: 17px; font-weight: 700; opacity: 0.45">Quitar cargo</button>
+    </sc-if>
+  </div>
+
+  <!-- Quitar cargo (#154): takes effect at once and keeps the account; without cargos the person stays as a hermano. -->
+  <sc-if value="{{ quitando }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(16,35,58,0.55); display: flex; align-items: center; padding: 0 20px">
+      <div role="alertdialog" aria-modal="true" aria-labelledby="tQuitar" style="width: 100%; border-radius: 22px; background: #FFFFFF; padding: 24px 20px 20px; display: flex; flex-direction: column; gap: 12px">
+        <span id="tQuitar" style="font-size: 21px; font-weight: 700">¿Quitarle el cargo a {{ nombre }}?</span>
+        <span style="font-size: 16px; line-height: 1.45; color: #333333">Deja de poder cargar eventos de {{ iglesia }} desde ahora. Su cuenta no se borra.</span>
+        <button type="button" style="display: flex; align-items: center; justify-content: center; min-height: 54px; margin-top: 8px; border-radius: 14px; border: 0; background: #B0103F; color: #FFFFFF; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Quitar cargo</button>
+        <button type="button" onClick="{{ cancelar }}" style="min-height: 54px; border: 0; border-radius: 14px; background: #E3EAF2; color: #1B3550; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Cancelar</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const modo = st.modo || 'agregar';
+    const quien = st.quien || 'pastor';
+    const agregando = modo === 'agregar';
+    const sinConexion = !!st.sinConexion;
+    const error = !!st.error && !sinConexion;
+    const pastor = quien !== 'secretaria';
+    const datos = agregando
+      ? (pastor
+        ? { nombre: 'Lucía Martínez', correo: 'lucia.martinez@gmail.com', funcion: '', iglesia: 'Iglesia Las Rosas' }
+        : { nombre: 'Lucía Martínez', correo: 'lucia.martinez@gmail.com', funcion: 'Tesorera', iglesia: 'Iglesia Central' })
+      : { nombre: 'Raúl Fernández', correo: 'raul.fernandez@gmail.com', funcion: 'Tesorero', iglesia: 'Iglesia Central' };
+    return {
+      ...datos,
+      titulo: agregando ? 'Agregar encargado' : 'Editar encargado',
+      agregando, editando: !agregando,
+      eligeIglesia: agregando && pastor, iglesiaFija: !(agregando && pastor),
+      nombraSecretaria: pastor,
+      sinConexion, conConexion: !sinConexion, error,
+      textoSinConexion: agregando ? 'Para agregar un encargado hace falta conexión.' : 'Para guardar cambios hace falta conexión.',
+      textoError: agregando ? 'No se pudo agregar.' : 'No se pudieron guardar los cambios.',
+      boton: error ? 'Probar de nuevo' : (agregando ? 'Agregar encargado' : 'Guardar cambios'),
+      quitable: !agregando && !sinConexion, quitableOff: !agregando && sinConexion,
+      quitando: !!st.quitando,
+      pedirQuitar: () => this.setState({ quitando: true }),
+      cancelar: () => this.setState({ quitando: false })
+    };
+  }
+}
+</script>
+</body>
+</html>

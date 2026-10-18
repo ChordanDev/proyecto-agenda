@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Iglesia</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&amp;family=Oswald:wght@500;600&amp;display=swap">
+<style>
+body{margin:0;font-family:'Noto Sans','Segoe UI',system-ui,sans-serif;color:#222222}
+a{color:#1B3550}a:hover{color:#10233A}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; background: linear-gradient(180deg, #2F557F 0px, #E6EBF1 190px, #C9D4E0 100%); display: flex; flex-direction: column; font-family: 'Noto Sans', 'Segoe UI', system-ui, sans-serif; color: #222222">
+  <!-- Nueva and Editar iglesia, admin only (#155, #158, #159).
+       State: modo 'nueva' | 'editar'; movida shows the notice of a cambio de distrito; confirmando opens "Dar de baja". -->
+  <header style="flex-shrink: 0; padding: 22px 16px 0; display: flex; align-items: center; gap: 12px">
+    <a href="GestionAdmin.dc.html" aria-label="Cancelar" style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: #FFFFFF; display: flex; align-items: center; justify-content: center; color: #1B3550">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+    </a>
+    <span style="font-size: 20px; font-weight: 700; color: #000000">{{ titulo }}</span>
+  </header>
+
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 30px 16px 36px; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; flex-direction: column; gap: 16px; padding: 18px 16px; border-radius: 20px; background: #FFFFFF">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="nombre" style="font-size: 16px; font-weight: 700">Nombre</label>
+        <input id="nombre" type="text" value="{{ nombre }}" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="direccion" style="font-size: 16px; font-weight: 700">Dirección</label>
+        <input id="direccion" type="text" value="{{ direccion }}" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="localidad" style="font-size: 16px; font-weight: 700">Localidad</label>
+        <input id="localidad" type="text" value="{{ localidad }}" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
+        <span style="font-size: 15px; line-height: 1.4; color: #4A4A4A">Se muestra en el buscador de "Elegir iglesia".</span>
+      </div>
+      <!-- Opens a sheet with the active distritos. -->
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span id="tDistrito" style="font-size: 16px; font-weight: 700">Distrito</span>
+        <button type="button" aria-labelledby="tDistrito" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 6px 12px 6px 16px; font-family: inherit; font-size: 18px; text-align: left; cursor: pointer; color: #222222"><span>{{ distrito }}</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B3550" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0"><path d="M6 9l6 6 6-6"></path></svg></button>
+      </div>
+      <!-- Cambio de distrito (#158): the calendario follows the new distrito; eventos, lugares and encargados stay with the iglesia. -->
+      <sc-if value="{{ movida }}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="border-radius: 14px; background: #FFF1CC; color: #6B4E00; padding: 12px 14px; font-size: 15px; line-height: 1.4">Pasa del Distrito Norte al Distrito Centro. Su calendario va a mostrar los eventos del Distrito Centro. Sus eventos, lugares y encargados se quedan con ella.</div>
+      </sc-if>
+    </div>
+
+    <button type="button" style="display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 58px; border-radius: 14px; border: 0; background: #1B3550; color: #FFFFFF; font-family: inherit; font-size: 18px; font-weight: 700; cursor: pointer">{{ boton }}</button>
+    <sc-if value="{{ editando }}" hint-placeholder-val="{{ true }}">
+      <button type="button" onClick="{{ pedirBaja }}" style="min-height: 54px; border-radius: 14px; border: 2px solid #B0103F; background: #FFFFFF; color: #B0103F; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Dar de baja</button>
+    </sc-if>
+  </div>
+
+  <!-- Dar de baja (#159): nothing is deleted. -->
+  <sc-if value="{{ confirmando }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(16,35,58,0.55); display: flex; align-items: center; padding: 0 20px">
+      <div role="alertdialog" aria-modal="true" aria-labelledby="tBaja" style="width: 100%; border-radius: 22px; background: #FFFFFF; padding: 24px 20px 20px; display: flex; flex-direction: column; gap: 12px">
+        <span id="tBaja" style="font-size: 21px; font-weight: 700">¿Dar de baja {{ nombre }}?</span>
+        <span style="font-size: 16px; line-height: 1.45; color: #333333">Deja de aparecer en el buscador, en el calendario y en la gestión. Sus 2 encargados pierden el cargo.</span>
+        <span style="font-size: 16px; line-height: 1.45; color: #333333">Sus eventos quedan guardados y vuelven si la reactivás. Los encargados no vuelven solos.</span>
+        <button type="button" style="display: flex; align-items: center; justify-content: center; min-height: 54px; margin-top: 8px; border-radius: 14px; border: 0; background: #B0103F; color: #FFFFFF; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Dar de baja</button>
+        <button type="button" onClick="{{ cancelar }}" style="min-height: 54px; border: 0; border-radius: 14px; background: #E3EAF2; color: #1B3550; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Cancelar</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const nueva = (st.modo || 'nueva') === 'nueva';
+    const datos = nueva
+      ? { nombre: 'Iglesia Juana Koslay', direccion: 'Av. Los Fresnos 1450', localidad: 'Juana Koslay', distrito: 'Distrito Centro' }
+      : { nombre: 'Iglesia Las Rosas', direccion: 'Pringles 820', localidad: 'San Luis', distrito: st.movida ? 'Distrito Centro' : 'Distrito Norte' };
+    return {
+      ...datos,
+      titulo: nueva ? 'Nueva iglesia' : 'Editar iglesia',
+      boton: nueva ? 'Crear iglesia' : 'Guardar cambios',
+      editando: !nueva, movida: !nueva && !!st.movida,
+      confirmando: !nueva && !!st.confirmando,
+      pedirBaja: () => this.setState({ confirmando: true }),
+      cancelar: () => this.setState({ confirmando: false })
+    };
+  }
+}
+</script>
+</body>
+</html>
