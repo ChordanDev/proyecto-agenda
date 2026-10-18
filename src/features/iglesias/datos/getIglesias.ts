@@ -2,11 +2,16 @@ import { supabase } from '@/shared/supabase';
 
 import type { Iglesia } from '../dominio/buscarIglesias';
 
-/** Reads every church with the name of its distrito, ordered by name. */
+/**
+ * Reads every church with the name of its distrito and its coordinates when it
+ * has them, ordered by name.
+ */
 export async function getIglesias(): Promise<Iglesia[]> {
   const { data, error } = await supabase
     .from('iglesias')
-    .select('id, nombre, direccion, localidad, excluida_del_buscador, distritos (nombre)')
+    .select(
+      'id, nombre, direccion, localidad, excluida_del_buscador, latitud, longitud, distritos (nombre)',
+    )
     .order('nombre');
 
   if (error) {
@@ -20,5 +25,7 @@ export async function getIglesias(): Promise<Iglesia[]> {
     localidad: row.localidad,
     distrito: row.distritos.nombre,
     excluidaDelBuscador: row.excluida_del_buscador,
+    ...(row.latitud !== null &&
+      row.longitud !== null && { coordenadas: { latitud: row.latitud, longitud: row.longitud } }),
   }));
 }
