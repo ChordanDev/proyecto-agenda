@@ -304,8 +304,7 @@ isOneToOne: false
                            },
 "registrar_consulta":
 { Args: { "costo_usd": number,"dia": string,"mes": string,"usuario_id": string }; Returns: {
-              "consultas_del_dia": number,
-"gasto_del_mes": number
+              "consultas_del_dia": number,"gasto_del_mes": number
             }[]
                            }
           }
