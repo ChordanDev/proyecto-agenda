@@ -162,12 +162,19 @@ insert into public.eventos_fechas (evento_id, fecha) values
 insert into public.iglesias_sumadas (evento_id, iglesia_id) values
   -- Outside the alcance: Argüello (distrito Córdoba Norte) is added to the
   -- concert of Córdoba Central (distrito Córdoba Centro).
-  ('e0000000-0000-4000-8000-000000000009', '10000000-0000-4000-8000-000000000004'),
-  -- Inside the alcance: Villa Allende is added to an evento of its own
-  -- distrito, so it reaches the evento twice. The app does not create this, but
-  -- it is what remains when an iglesia sumada moves into the distrito that owns
-  -- the evento, and the calendario must show the evento only once.
+  ('e0000000-0000-4000-8000-000000000009', '10000000-0000-4000-8000-000000000004');
+
+-- Inside the alcance: Villa Allende reaches an evento of its own distrito twice,
+-- and the calendario must show it only once. Nobody can sumar an iglesia that
+-- already sees the evento, so this is built the way it happens: Villa Allende
+-- is sumada while it is in another distrito, and then moves into the distrito
+-- that owns the evento.
+update public.iglesias set distrito_id = 'd0000000-0000-4000-8000-000000000001'
+  where id = '10000000-0000-4000-8000-000000000005';
+insert into public.iglesias_sumadas (evento_id, iglesia_id) values
   ('e0000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000005');
+update public.iglesias set distrito_id = 'd0000000-0000-4000-8000-000000000002'
+  where id = '10000000-0000-4000-8000-000000000005';
 
 -- Gestion of cargos ----------------------------------------------------------------
 -- A secretaria de iglesia of Córdoba Central, who logs in like the other four,
