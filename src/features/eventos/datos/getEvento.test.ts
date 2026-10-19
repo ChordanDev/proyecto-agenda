@@ -65,6 +65,25 @@ describe('getEvento', () => {
     });
   });
 
+  it('reads the iglesias sumadas with their nombre and their place in the structure', async () => {
+    mockRow = {
+      ...DISTRITO_ROW,
+      iglesias_sumadas: [
+        {
+          iglesia_id: 'i9',
+          iglesias: { nombre: 'Norte', distrito_id: 'd2', distritos: { asociacion_id: 'a1' } },
+        },
+      ],
+    };
+
+    const detallado = await getEvento('e1');
+
+    expect(detallado?.sumadas).toEqual([
+      { id: 'i9', nombre: 'Norte', distritoId: 'd2', asociacionId: 'a1' },
+    ]);
+    expect(detallado?.evento.iglesiasSumadas).toEqual(['i9']);
+  });
+
   it('fails when the duenio of its alcance was not read', async () => {
     mockRow = { ...DISTRITO_ROW, distritos: null, asociaciones: { nombre: 'Asociación' } };
 

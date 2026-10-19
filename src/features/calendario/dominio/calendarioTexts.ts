@@ -1,5 +1,6 @@
-import type { Duenio, Evento } from '@/features/eventos/dominio/evento';
+import type { Alcance, Duenio, Evento } from '@/features/eventos/dominio/evento';
 
+import { seVePorAlcance, type FechaDeEvento, type IglesiaEnEstructura } from './armarCalendario';
 import type { DiaDelRango } from './diasDeEvento';
 import type { Month } from './getMonthRange';
 import { getWeekday, parseLocalDate } from './localDate';
@@ -106,6 +107,105 @@ export function getAlcanceLabel(
     case 'asociacion':
       return 'Asociación';
   }
+}
+
+/** The word that names each level before a bare nombre; an asociacion needs none. */
+const LEVELS: Record<Alcance, string | null> = {
+  iglesia: 'Iglesia',
+  distrito: 'Distrito',
+  asociacion: null,
+};
+
+/**
+ * The nombre of an iglesia, distrito or asociacion with the word of its level:
+ * "Iglesia Central" from "Central". Some nombres already say what they are
+ * ("Iglesia de prueba", the one of an asociacion) and stay as they are.
+ */
+export function nombrarConNivel(alcance: Alcance, nombre: string): string {
+  const level = LEVELS[alcance];
+
+  return level === null || nombre.toLowerCase().startsWith(`${level.toLowerCase()} `)
+    ? nombre
+    : `${level} ${nombre}`;
+}
+
+/** The nombres a calendario knows of the iglesias and distritos that own its eventos, by id. */
+export type NombresDeDuenios = {
+  iglesias: Readonly<Record<string, string>>;
+  distritos: Readonly<Record<string, string>>;
+};
+
+function nombrarDuenio(duenio: Duenio, nombres: NombresDeDuenios): string {
+  switch (duenio.alcance) {
+    case 'iglesia':
+      return nombrarConNivel('iglesia', nombres.iglesias[duenio.iglesiaId] ?? '').trim();
+    case 'distrito':
+      return nombrarConNivel('distrito', nombres.distritos[duenio.distritoId] ?? '').trim();
+    case 'asociacion':
+      return 'Asociación';
+  }
+}
+
+function formatCompartidoCon(count: number): string {
+  return count === 1 ? 'Compartido con 1 iglesia' : `Compartido con ${count} iglesias`;
+}
+
+/**
+ * The label of an evento in the list of a day of the calendario of these
+ * iglesias: where it comes from and whether it is shared.
+ *
+ * - Seen only as iglesia sumada: "Compartido por Iglesia Central".
+ * - Seen by its alcance: its alcance (`getAlcanceLabel`) and, when shared,
+ *   "Compartido con 3 iglesias". An iglesia sumada of the calendario that also
+ *   sees it by its alcance (it moved to the distrito of the duenio) is not
+ *   counted: for her the evento is not shared.
+ *
+ * Null when there is nothing to say: an evento of the iglesia, not shared.
+ */
+export function getEtiquetaDelEvento(
+  evento: Evento,
+  iglesias: readonly IglesiaEnEstructura[],
+  nombres: NombresDeDuenios,
+): string | null {
+  if (!iglesias.some((iglesia) => seVePorAlcance(iglesia, evento.duenio))) {
+    return `Compartido por ${nombrarDuenio(evento.duenio, nombres)}`;
+  }
+
+  const sumadas = evento.iglesiasSumadas.filter((id) => {
+    const delCalendario = iglesias.find((iglesia) => iglesia.id === id);
+
+    return delCalendario === undefined || !seVePorAlcance(delCalendario, evento.duenio);
+  });
+  const etiqueta = [
+    getAlcanceLabel(evento.duenio, nombres.distritos),
+    sumadas.length > 0 ? formatCompartidoCon(sumadas.length) : null,
+  ]
+    .filter((text) => text !== null)
+    .join(' · ');
+
+  return etiqueta === '' ? null : etiqueta;
+}
+
+/**
+ * The label of each evento of a calendario, by its id: see
+ * `getEtiquetaDelEvento`. An evento with no label is left out.
+ */
+export function armarEtiquetas(
+  iglesias: readonly IglesiaEnEstructura[],
+  fechas: readonly FechaDeEvento[],
+  nombres: NombresDeDuenios,
+): Record<string, string> {
+  const etiquetas: Record<string, string> = {};
+
+  for (const { evento } of fechas) {
+    const etiqueta = getEtiquetaDelEvento(evento, iglesias, nombres);
+
+    if (etiqueta !== null) {
+      etiquetas[evento.id] = etiqueta;
+    }
+  }
+
+  return etiquetas;
 }
 
 function isSameDay(a: Date, b: Date): boolean {

@@ -1,4 +1,4 @@
-import type { Evento } from '@/features/eventos/dominio/evento';
+import type { Duenio, Evento } from '@/features/eventos/dominio/evento';
 
 /** The place an iglesia has in the structure right now. */
 export type IglesiaEnEstructura = {
@@ -15,17 +15,10 @@ export type FechaDeEvento = {
 };
 
 /**
- * An evento is seen in an iglesia when its duenio is that iglesia, the distrito
- * the iglesia belongs to now or its asociacion, or when the iglesia is one of
- * its iglesias sumadas.
+ * Whether an iglesia sees the eventos of a duenio by their alcance: the duenio
+ * is that iglesia, the distrito it belongs to now or its asociacion.
  */
-function belongsToCalendario(iglesia: IglesiaEnEstructura, evento: Evento): boolean {
-  if (evento.iglesiasSumadas.includes(iglesia.id)) {
-    return true;
-  }
-
-  const { duenio } = evento;
-
+export function seVePorAlcance(iglesia: IglesiaEnEstructura, duenio: Duenio): boolean {
   switch (duenio.alcance) {
     case 'iglesia':
       return duenio.iglesiaId === iglesia.id;
@@ -34,6 +27,14 @@ function belongsToCalendario(iglesia: IglesiaEnEstructura, evento: Evento): bool
     case 'asociacion':
       return duenio.asociacionId === iglesia.asociacionId;
   }
+}
+
+/**
+ * An evento is seen in an iglesia by its alcance (`seVePorAlcance`), or when
+ * the iglesia is one of its iglesias sumadas.
+ */
+function belongsToCalendario(iglesia: IglesiaEnEstructura, evento: Evento): boolean {
+  return evento.iglesiasSumadas.includes(iglesia.id) || seVePorAlcance(iglesia, evento.duenio);
 }
 
 /** Dates and horas are fixed-width strings, so they order as plain text. */

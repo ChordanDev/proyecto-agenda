@@ -15,12 +15,27 @@ export type Calendario = {
    * comes from.
    */
   nombresDeDistritos: Record<string, string>;
+  /** The label of each evento in the list of a day, by its id (`armarEtiquetas`). */
+  etiquetas: Record<string, string>;
+};
+
+/**
+ * The dates read for a month, before the rule of `armarCalendario` keeps the
+ * ones of the calendario, with the nombres of the iglesias and distritos that
+ * own them, by id.
+ */
+export type FechasDelMes = {
+  fechas: FechaDeEvento[];
+  nombresDeDistritos: Record<string, string>;
+  /** Nombre of each iglesia that owns one of the eventos read: an iglesia sumada says who shares it. */
+  nombresDeIglesias: Record<string, string>;
 };
 
 /**
  * A date with its evento, the iglesias sumadas of that evento and the nombre
- * of the distrito that owns it, if one does. It is a single literal because
- * the client infers the type of the rows from it.
+ * of the iglesia or distrito that owns it, if one does. The iglesia is named by
+ * its foreign key: iglesias also reach eventos through iglesias_sumadas. It is a
+ * single literal because the client infers the type of the rows from it.
  */
 const FECHA_COLUMNS = `
   fecha,
@@ -30,6 +45,7 @@ const FECHA_COLUMNS = `
     hora, fecha_fin, repeticion, fin_de_serie,
     iglesias_sumadas (iglesia_id),
     lugares (nombre),
+    iglesias!eventos_duenio_iglesia_id_fkey (nombre),
     distritos (nombre)
   )
 ` as const;
@@ -100,7 +116,7 @@ async function readAllFechas(
 export async function getFechasDelMes(
   ownedOrSumada: string | null,
   month: Month,
-): Promise<Calendario> {
+): Promise<FechasDelMes> {
   const { firstDay, lastDay } = getMonthRange(month);
 
   // PostgREST cannot combine in one `or` a column of eventos_fechas (fecha)
@@ -124,5 +140,13 @@ export async function getFechasDelMes(
     })),
   );
 
-  return { fechas, nombresDeDistritos };
+  const nombresDeIglesias: Record<string, string> = {};
+
+  for (const { eventos } of rows) {
+    if (eventos.duenio_iglesia_id && eventos.iglesias) {
+      nombresDeIglesias[eventos.duenio_iglesia_id] = eventos.iglesias.nombre;
+    }
+  }
+
+  return { fechas, nombresDeDistritos, nombresDeIglesias };
 }
