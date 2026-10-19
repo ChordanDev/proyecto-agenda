@@ -63,8 +63,27 @@ const newClient = () =>
     },
   });
 
-/** Lets the cache tell the hook about an answer inside act. */
-const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+const MAX_TICKS = 50;
+const nextTick = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+/**
+ * Lets the cache tell the hook about an answer inside act, one tick at a time,
+ * until `isDone` holds. The read chains several async hops (the session, then
+ * the select), so a single tick is not enough on a loaded runner. The bound
+ * keeps a hook that never answers failing instead of hanging.
+ */
+async function settleUntil(isDone: () => boolean, maxTicks = MAX_TICKS) {
+  for (let tick = 0; tick < maxTicks && !isDone(); tick++) {
+    await act(() => nextTick());
+  }
+}
+
+/** Like settleUntil, for code already running inside act. */
+async function tickUntil(isDone: () => boolean, maxTicks = MAX_TICKS) {
+  for (let tick = 0; tick < maxTicks && !isDone(); tick++) {
+    await nextTick();
+  }
+}
 
 beforeEach(() => {
   mockUsuarioId.current = 'usuario-a';
@@ -99,7 +118,8 @@ describe('useAceptarConsentimiento', () => {
 
     await act(async () => {
       const saving = aceptar().mutateAsync();
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      // The session ends once the insert has been sent.
+      await tickUntil(() => mockInsert.mock.calls.length > 0);
       // Signing out removes the session and forgets the chat.
       mockUsuarioId.current = null;
       queryClient.removeQueries({ queryKey: ['chat'] });
@@ -115,7 +135,7 @@ describe('useConsentimiento', () => {
   it('reads that the usuario has not accepted', async () => {
     const consentimiento = renderHook(newClient(), useConsentimiento);
 
-    await settle();
+    await settleUntil(() => consentimiento().consentimiento !== 'leyendo');
 
     expect(consentimiento().consentimiento).toBe('no');
   });
@@ -125,7 +145,7 @@ describe('useConsentimiento', () => {
     mockSelect.mockRejectedValue(new Error('Network request failed'));
     const consentimiento = renderHook(newClient(), useConsentimiento);
 
-    await settle();
+    await settleUntil(() => consentimiento().consentimiento !== 'leyendo');
 
     expect(consentimiento().consentimiento).toBe('error');
   });
