@@ -83,7 +83,8 @@ export function ChatScreen() {
   const { consentimiento, retry } = useConsentimiento();
   const aceptar = useAceptarConsentimiento();
   const [avisoRechazado, setAvisoRechazado] = useState(false);
-  const { conversacion, vuelta, enviar, reintentar, nueva, confirmar, editar } = useConversacion();
+  const { conversacion, vuelta, enviar, reintentar, nueva, confirmar, editar, reportar } =
+    useConversacion();
   const [confirmandoNueva, setConfirmandoNueva] = useState(false);
 
   // Opening the tab again asks again.
@@ -136,6 +137,7 @@ export function ChatScreen() {
             enviar={enviar}
             reintentar={reintentar}
             confirmar={confirmar}
+            reportar={reportar}
             onIrAlFormulario={irAlFormulario}
             onEditar={editarPropuesta}
             onVerEvento={verEvento}

@@ -111,6 +111,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"chat_reportes": {
+                  Row: {
+                    "id": string,"motivo": string,"reportado_en": string,"usuario_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: string,"motivo": string,"reportado_en"?: string,"usuario_id": string
+                  }
+                  Update: {
+                    "id"?: string,"motivo"?: string,"reportado_en"?: string,"usuario_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"dispositivos": {
                   Row: {
                     "actualizado_at": string,"encendido": boolean,"id": string,"token": string,"usuario_id": string | null
