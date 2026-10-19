@@ -5,6 +5,7 @@
 
 import {
   HERRAMIENTA_BUSCAR_EVENTOS,
+  getHerramientas,
   type LlamadaABusqueda,
   type MensajeParaProveedor,
   type Proveedor,
@@ -53,7 +54,7 @@ function toMensajeDeOpenAI(mensaje: MensajeParaProveedor): MensajeDeOpenAI {
           id: llamada.id,
           type: 'function',
           function: {
-            name: HERRAMIENTA_BUSCAR_EVENTOS.nombre,
+            name: llamada.herramienta ?? HERRAMIENTA_BUSCAR_EVENTOS.nombre,
             arguments: JSON.stringify(llamada.argumentos),
           },
         })),
@@ -65,16 +66,20 @@ function toMensajeDeOpenAI(mensaje: MensajeParaProveedor): MensajeDeOpenAI {
 
 /** The arguments the model wrote; null when they are not JSON, so the domain tells it. */
 function toLlamada({ id, function: funcion }: LlamadaDeOpenAI): LlamadaABusqueda {
+  const herramienta =
+    funcion.name === 'proponer_evento' ? 'proponer_evento' : HERRAMIENTA_BUSCAR_EVENTOS.nombre;
   try {
-    return { id, argumentos: JSON.parse(funcion.arguments) };
+    return { id, herramienta, argumentos: JSON.parse(funcion.arguments) };
   } catch {
-    return { id, argumentos: null };
+    return { id, herramienta, argumentos: null };
   }
 }
 
 export function crearProveedor(apiKey: string): Proveedor {
   return {
-    async responder(mensajes, { conBusqueda }) {
+    async responder(mensajes, opciones) {
+      // Only herramientas that read or propose: the model never saves.
+      const herramientas = getHerramientas(opciones);
       const response = await fetch(URL_DE_OPENAI, {
         method: 'POST',
         headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -82,19 +87,17 @@ export function crearProveedor(apiKey: string): Proveedor {
         body: JSON.stringify({
           model: MODELO,
           messages: mensajes.map(toMensajeDeOpenAI),
-          ...(conBusqueda
+          ...(herramientas.length > 0
             ? {
-                tools: [
-                  {
-                    type: 'function',
-                    function: {
-                      name: HERRAMIENTA_BUSCAR_EVENTOS.nombre,
-                      description: HERRAMIENTA_BUSCAR_EVENTOS.descripcion,
-                      parameters: HERRAMIENTA_BUSCAR_EVENTOS.parametros,
-                      strict: true,
-                    },
+                tools: herramientas.map((herramienta) => ({
+                  type: 'function',
+                  function: {
+                    name: herramienta.nombre,
+                    description: herramienta.descripcion,
+                    parameters: herramienta.parametros,
+                    strict: true,
                   },
-                ],
+                })),
               }
             : {}),
         }),

@@ -1,6 +1,6 @@
-import { categorias } from '@/shared/theme';
+import { categorias } from '../../../shared/theme.ts';
 
-import type { Enfasis } from './evento';
+import type { Enfasis } from './evento.ts';
 
 /**
  * Key the design draws an evento with: one of the four enfasis, or `R` for the

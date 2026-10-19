@@ -35,8 +35,49 @@ describe('enviarConsulta', () => {
     };
     mockInvoke.mockResolvedValue({ data: { respuesta }, error: null });
 
-    await expect(enviarConsulta(pedido)).resolves.toEqual({ ok: true, respuesta });
+    await expect(enviarConsulta(pedido)).resolves.toEqual({
+      ok: true,
+      respuesta: { ...respuesta, borrador: null },
+    });
     expect(mockInvoke).toHaveBeenCalledWith('chat-consulta', pedido);
+  });
+
+  it('returns the borrador of the evento the asistente proposes', async () => {
+    const respuesta = {
+      tipo: 'respuesta',
+      texto: 'Revisalo y confirmalo.',
+      eventos: [],
+      aviso: null,
+      borrador: {
+        titulo: 'Culto joven',
+        fecha: '2026-10-24',
+        hora: '19:00:00',
+        fechaFin: null,
+        lugar: null,
+        descripcion: null,
+        enfasis: 'nuevas_generaciones',
+        duenio: { alcance: 'iglesia', iglesiaId: 'i1' },
+        duenioNombre: 'Iglesia Central',
+        repeticion: 'ninguna',
+        finDeSerie: null,
+      },
+    };
+    mockInvoke.mockResolvedValue({ data: { respuesta }, error: null });
+
+    await expect(enviarConsulta(pedido)).resolves.toEqual({ ok: true, respuesta });
+  });
+
+  it('is an error of the server when the borrador is not one', async () => {
+    const respuesta = {
+      tipo: 'respuesta',
+      texto: 'Listo.',
+      eventos: [],
+      aviso: null,
+      borrador: { titulo: 'Culto joven' },
+    };
+    mockInvoke.mockResolvedValue({ data: { respuesta }, error: null });
+
+    await expect(enviarConsulta(pedido)).resolves.toEqual({ ok: false, falla: 'error_servidor' });
   });
 
   it.each(['limite_diario', 'presupuesto_agotado', 'proveedor_caido'])(

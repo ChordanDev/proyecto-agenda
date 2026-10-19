@@ -3,8 +3,9 @@
 //
 // Two clients, on purpose:
 // - `usuario` carries the JWT of the usuario, so row level security and
-//   auth.uid() decide what it reads: their consentimiento, their zona horaria
-//   and, above all, the busqueda of eventos.
+//   auth.uid() decide what it reads: their consentimiento, their zona horaria,
+//   their cargos (whose eventos they can propose) and, above all, the busqueda
+//   of eventos.
 // - `servidor` is service_role, only for the counters (chat_consultas and
 //   chat_gastos), which no usuario can read or write: it reserves a consulta
 //   before the model is called, then confirms or frees it.
@@ -12,6 +13,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '../../../src/shared/database.types.ts';
+import type { Cargo } from '../../../src/features/sesion/dominio/cargo.ts';
 import { MAX_COINCIDENCIAS } from '../../../src/features/chat/dominio/ambiguedad.ts';
 import type {
   PuertosDeConsulta,
@@ -79,6 +81,55 @@ export function crearPuertos({
         zonaHoraria: zonaHoraria.data ?? ZONA_HORARIA_POR_DEFECTO,
         consultas: consultas.data,
         gasto: gasto.data ? { mes: gasto.data.mes, usd: Number(gasto.data.usd) } : null,
+      };
+    },
+
+    async leerCargos() {
+      const [cargos, asociaciones, distritos, iglesias] = await Promise.all([
+        // A gestor also reads the cargos they oversee: only their own count here.
+        usuario
+          .from('cargos')
+          .select('id, iglesia_id, distrito_id, asociacion_id')
+          .eq('usuario_id', usuarioId),
+        usuario.from('asociaciones').select('id, nombre'),
+        usuario.from('distritos').select('id, nombre, asociacion_id'),
+        usuario.from('iglesias').select('id, nombre, distrito_id'),
+      ]);
+
+      for (const { error } of [cargos, asociaciones, distritos, iglesias]) {
+        if (error) {
+          throw new Error(`Could not read the cargos: ${error.message}`);
+        }
+      }
+
+      return {
+        cargos: (cargos.data ?? []).map((fila): Cargo => {
+          // The database guarantees exactly one level per cargo (constraint
+          // cargos_exactly_one_nivel), but the generated types cannot know it.
+          if (fila.iglesia_id) {
+            return { nivel: 'iglesia', iglesiaId: fila.iglesia_id };
+          }
+          if (fila.distrito_id) {
+            return { nivel: 'distrito', distritoId: fila.distrito_id };
+          }
+          if (fila.asociacion_id) {
+            return { nivel: 'asociacion', asociacionId: fila.asociacion_id };
+          }
+          throw new Error(`Cargo ${fila.id} has no nivel`);
+        }),
+        estructura: {
+          asociaciones: asociaciones.data ?? [],
+          distritos: (distritos.data ?? []).map((distrito) => ({
+            id: distrito.id,
+            nombre: distrito.nombre,
+            asociacionId: distrito.asociacion_id,
+          })),
+          iglesias: (iglesias.data ?? []).map((iglesia) => ({
+            id: iglesia.id,
+            nombre: iglesia.nombre,
+            distritoId: iglesia.distrito_id,
+          })),
+        },
       };
     },
 

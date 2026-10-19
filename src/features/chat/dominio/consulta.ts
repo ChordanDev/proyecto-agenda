@@ -10,6 +10,14 @@
 import type { Alcance, Enfasis } from '../../eventos/dominio/evento.ts';
 import { decidirBusqueda } from './ambiguedad.ts';
 import {
+  HERRAMIENTA_PROPONER_EVENTO,
+  describirDuenios,
+  getDueniosDelUsuario,
+  leerPropuesta,
+  type BorradorDeEvento,
+  type CargosDelUsuario,
+} from './borrador.ts';
+import {
   decidirConsulta,
   getAvisoDeConsultasRestantes,
   type ContadorDeConsultas,
@@ -26,10 +34,10 @@ export const MAX_MENSAJES_DEL_TRAMO = 6;
 /** Characters of each mensaje of the tramo that go to the model. */
 const MAX_LARGO_DEL_TRAMO = 2000;
 
-/** Rounds of busquedas the model can ask for in one consulta. */
+/** Rounds of herramientas (busquedas and propuestas) the model can ask for in one consulta. */
 export const MAX_BUSQUEDAS = 3;
 
-/** Busquedas the model can ask for at once, in one round. */
+/** Herramientas the model can call at once, in one round. */
 export const MAX_LLAMADAS_POR_RONDA = 3;
 
 /** Days a busqueda can span, so one cannot read the whole calendario. */
@@ -84,15 +92,19 @@ export type EventoDeChat = {
 /**
  * The respuesta of a consulta.
  * - `tipo`: `repregunta` when the pregunta has to be narrowed (too many
- *   coincidencias); `respuesta` otherwise.
+ *   coincidencias) or an evento cannot be proposed until the person says
+ *   whose it is or its enfasis; `respuesta` otherwise.
  * - `eventos`: the coincidencias to draw, at most three; empty on a repregunta.
  * - `aviso`: "Te quedan 3 consultas por hoy", when few are left.
+ * - `borrador`: the evento the asistente proposes, for the app to draw its
+ *   card; nothing is saved until the person taps Confirmar. Null when none.
  */
 export type RespuestaDeConsulta = {
   tipo: 'respuesta' | 'repregunta';
   texto: string;
   eventos: EventoDeChat[];
   aviso: string | null;
+  borrador: BorradorDeEvento | null;
 };
 
 export type ResultadoDeConsulta =
@@ -113,14 +125,27 @@ export type Busqueda = { desde: string; hasta: string; texto: string | null };
 /** The first coincidencias of a busqueda, in order of fecha, and how many there are. */
 export type ResultadoDeBusqueda = { eventos: EventoDeChat[]; total: number };
 
-/** A busqueda the model asks for. Its arguments are whatever the model wrote. */
-export type LlamadaABusqueda = { id: string; argumentos: unknown };
+/** The herramientas the model can call. None of them writes. */
+export type NombreDeHerramienta = 'buscar_eventos' | 'proponer_evento';
+
+/**
+ * A herramienta the model calls: a busqueda, unless `herramienta` says
+ * otherwise. Its arguments are whatever the model wrote.
+ */
+export type LlamadaABusqueda = {
+  id: string;
+  herramienta?: NombreDeHerramienta;
+  argumentos: unknown;
+};
 
 /** The conversation as the provider receives it, in its neutral form. */
 export type MensajeParaProveedor =
   | { rol: 'sistema' | 'usuario' | 'asistente'; texto: string }
   | { rol: 'pedido_de_busqueda'; llamadas: LlamadaABusqueda[] }
   | { rol: 'busqueda'; llamadaId: string; contenido: string };
+
+/** What the model can do in a round: search, and propose an evento when the cargos allow it. */
+export type OpcionesDeRonda = { conBusqueda: boolean; conPropuesta: boolean };
 
 /** What a call to the model returns, with what it cost. */
 export type RespuestaDelProveedor =
@@ -132,7 +157,7 @@ export type Proveedor = {
   /** Throws when the provider fails. */
   responder(
     mensajes: readonly MensajeParaProveedor[],
-    opciones: { conBusqueda: boolean },
+    opciones: OpcionesDeRonda,
   ): Promise<RespuestaDelProveedor>;
 };
 
@@ -147,6 +172,8 @@ export type ResultadoDeReserva = 'reservada' | 'limite_diario' | 'presupuesto_ag
 export type PuertosDeConsulta = {
   ahora(): Date;
   leerEstado(): Promise<EstadoDelChat>;
+  /** Reads the cargos of the usuario and the structure, to know whose eventos they can propose. */
+  leerCargos(): Promise<CargosDelUsuario>;
   /** Runs with the identity of the usuario: it only finds what their calendario shows. */
   buscarEventos(busqueda: Busqueda): Promise<ResultadoDeBusqueda>;
   /** Counts the consulta before the model is called, unless the limits are reached. */
@@ -198,6 +225,19 @@ export const HERRAMIENTA_BUSCAR_EVENTOS = {
   },
 } as const;
 
+/** The herramientas of a round, described for any provider. None of them writes. */
+export function getHerramientas({
+  conBusqueda,
+  conPropuesta,
+}: OpcionesDeRonda): readonly (
+  typeof HERRAMIENTA_BUSCAR_EVENTOS | typeof HERRAMIENTA_PROPONER_EVENTO
+)[] {
+  return [
+    ...(conBusqueda ? [HERRAMIENTA_BUSCAR_EVENTOS] : []),
+    ...(conPropuesta ? [HERRAMIENTA_PROPONER_EVENTO] : []),
+  ];
+}
+
 const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 const MESES = [
   'enero',
@@ -240,7 +280,25 @@ function describirDia(dia: string): string {
   return `${DIAS[date.getUTCDay()]} ${date.getUTCDate()} de ${MESES[date.getUTCMonth()]} de ${date.getUTCFullYear()}`;
 }
 
-function getInstrucciones(hoy: string, zonaHoraria: string): string {
+/** What the model is told about proposing eventos, with the duenios it can use. */
+function getInstruccionesDeCarga(duenios: ReturnType<typeof getDueniosDelUsuario>): string[] {
+  if (duenios.length === 0) {
+    return ['Esta persona no puede crear eventos: si lo pide, decile que su cargo no lo permite.'];
+  }
+  return [
+    'Para cargar un evento nuevo usá proponer_evento. Nunca digas que el evento quedó guardado: la persona lo revisa en una tarjeta y lo guarda con Confirmar.',
+    'Antes de proponer, preguntá lo que falte y no lo inventes: el énfasis (Identidad, Liderazgo, Nuevas Generaciones, Discipulado o actividad regular) y, si hay más de un dueño posible y la persona no lo dijo, de quién es el evento.',
+    'Proponé un evento por mensaje. Si la persona pide varios, proponé el primero y decile que los demás los pida en otro mensaje.',
+    'Por el chat solo se crean eventos. Para editar o borrar uno, indicá que lo haga desde el detalle del evento.',
+    `Dueños que puede usar (id: nombre):\n${describirDuenios(duenios)}`,
+  ];
+}
+
+function getInstrucciones(
+  hoy: string,
+  zonaHoraria: string,
+  duenios: ReturnType<typeof getDueniosDelUsuario>,
+): string {
   return [
     'Sos el asistente del calendario de la iglesia. Respondés en español, breve y claro: te leen personas de todas las edades.',
     'Solo hablás del calendario. Ante cualquier otra cosa respondé que solo podés ayudar con el calendario.',
@@ -249,6 +307,7 @@ function getInstrucciones(hoy: string, zonaHoraria: string): string {
     'Si a un evento le falta la información que te piden (por ejemplo, no tiene descripción o lugar), decilo y no la rellenes.',
     'Cuando nombres un evento, decí su fecha y su iglesia.',
     'Si buscar_eventos te indica que hay demasiadas coincidencias, no las enumeres: pedí que precise la fecha o la iglesia.',
+    ...getInstruccionesDeCarga(duenios),
   ].join('\n');
 }
 
@@ -385,21 +444,73 @@ function getCausa(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** What the model answered, with what all its calls cost and what its busquedas found. */
-type Conversacion = { texto: string; costoUsd: number; coincidencias: Coincidencias };
+/**
+ * The evento the model proposed: the last valid propuesta, and whether the
+ * last one it tried lacks a dato the person has to give.
+ */
+type Propuesta = { borrador: BorradorDeEvento | null; faltaDato: boolean };
 
-/** Talks with the model, running the busquedas it asks for, until it answers. */
+/** What a consulta needs to check a propuesta. */
+type ContextoDePropuesta = { cargos: CargosDelUsuario; hoy: string; puedeProponer: boolean };
+
+/**
+ * Checks a propuesta of the model and returns what it reads back from it. A
+ * valid one becomes the borrador of the respuesta; nothing is saved.
+ */
+function sumarPropuesta(
+  propuesta: Propuesta,
+  argumentos: unknown,
+  contexto: ContextoDePropuesta,
+): string {
+  if (!contexto.puedeProponer) {
+    return JSON.stringify({ error: 'Esta persona no puede crear eventos.' });
+  }
+  // The respuesta carries one borrador: a second one would be lost unseen.
+  if (propuesta.borrador !== null) {
+    return JSON.stringify({
+      error:
+        'Ya propusiste un evento: se propone un evento por mensaje. Decile a la persona que los demás los pida en otro mensaje.',
+    });
+  }
+
+  const resultado = leerPropuesta(argumentos, contexto.cargos, contexto.hoy);
+  if ('error' in resultado) {
+    propuesta.faltaDato = resultado.falta !== undefined;
+    return JSON.stringify({ error: resultado.error });
+  }
+
+  propuesta.borrador = resultado.borrador;
+  propuesta.faltaDato = false;
+  return JSON.stringify({
+    estado: 'propuesto',
+    indicacion:
+      'La app muestra el evento en una tarjeta. No está guardado: la persona lo revisa y lo guarda con Confirmar. Decíselo en una frase.',
+  });
+}
+
+/** What the model answered, with what all its calls cost and what its herramientas found. */
+type Conversacion = {
+  texto: string;
+  costoUsd: number;
+  coincidencias: Coincidencias;
+  propuesta: Propuesta;
+};
+
+/** Talks with the model, running the herramientas it asks for, until it answers. */
 async function conversar(
   mensajes: MensajeParaProveedor[],
   puertos: PuertosDeConsulta,
+  contexto: ContextoDePropuesta,
 ): Promise<Conversacion> {
   let costoUsd = 0;
   const coincidencias: Coincidencias = { repreguntar: false, eventos: new Map() };
+  const propuesta: Propuesta = { borrador: null, faltaDato: false };
 
   for (let ronda = 0; ; ronda++) {
     const conBusqueda = ronda < MAX_BUSQUEDAS;
+    const conPropuesta = conBusqueda && contexto.puedeProponer;
     const respuesta = await puertos.proveedor
-      .responder(mensajes, { conBusqueda })
+      .responder(mensajes, { conBusqueda, conPropuesta })
       .catch((error: unknown) => {
         throw new ProveedorCaido(`The provider failed: ${getCausa(error)}`);
       });
@@ -409,7 +520,7 @@ async function conversar(
       if (respuesta.texto.trim() === '') {
         throw new ProveedorCaido('The provider answered with no text');
       }
-      return { texto: respuesta.texto.trim(), costoUsd, coincidencias };
+      return { texto: respuesta.texto.trim(), costoUsd, coincidencias, propuesta };
     }
 
     if (!conBusqueda || respuesta.llamadas.length === 0) {
@@ -418,6 +529,15 @@ async function conversar(
 
     mensajes.push({ rol: 'pedido_de_busqueda', llamadas: respuesta.llamadas });
     for (const [indice, llamada] of respuesta.llamadas.entries()) {
+      if (indice < MAX_LLAMADAS_POR_RONDA && llamada.herramienta === 'proponer_evento') {
+        mensajes.push({
+          rol: 'busqueda',
+          llamadaId: llamada.id,
+          contenido: sumarPropuesta(propuesta, llamada.argumentos, contexto),
+        });
+        continue;
+      }
+
       // Every llamada needs its result, so the extra ones get an error.
       const busqueda =
         indice < MAX_LLAMADAS_POR_RONDA
@@ -486,13 +606,16 @@ export async function responderConsulta(
     }
 
     try {
-      const { texto, costoUsd, coincidencias } = await conversar(
+      const cargos = await puertos.leerCargos();
+      const duenios = getDueniosDelUsuario(cargos);
+      const { texto, costoUsd, coincidencias, propuesta } = await conversar(
         [
-          { rol: 'sistema', texto: getInstrucciones(dia, estado.zonaHoraria) },
+          { rol: 'sistema', texto: getInstrucciones(dia, estado.zonaHoraria, duenios) },
           ...pedido.tramo.map(({ autor, texto: contenido }) => ({ rol: autor, texto: contenido })),
           { rol: 'usuario', texto: pedido.mensaje },
         ],
         puertos,
+        { cargos, hoy: dia, puedeProponer: duenios.length > 0 },
       );
       const { consultasDelDia } = await puertos.confirmarConsulta({
         usuarioId,
@@ -501,13 +624,18 @@ export async function responderConsulta(
         costoUsd,
       });
 
+      const repreguntar =
+        coincidencias.repreguntar || (propuesta.faltaDato && propuesta.borrador === null);
+
       return {
         ok: true,
         respuesta: {
-          tipo: coincidencias.repreguntar ? 'repregunta' : 'respuesta',
+          tipo: repreguntar ? 'repregunta' : 'respuesta',
           texto,
-          eventos: getEventosDeRespuesta(coincidencias),
+          // A repregunta lists no eventos, whatever made it one.
+          eventos: repreguntar ? [] : getEventosDeRespuesta(coincidencias),
           aviso: getAvisoDeConsultasRestantes(consultasDelDia),
+          borrador: propuesta.borrador,
         },
       };
     } catch (error) {

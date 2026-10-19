@@ -1,4 +1,4 @@
-import type { Duenio, Evento } from '@/features/eventos/dominio/evento';
+import type { Duenio, Evento } from '../../eventos/dominio/evento.ts';
 
 /** The place an iglesia has in the structure right now. */
 export type IglesiaEnEstructura = {

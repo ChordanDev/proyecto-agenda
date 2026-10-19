@@ -1,4 +1,4 @@
-import { toLocalDate } from './localDate';
+import { toLocalDate } from './localDate.ts';
 
 /** A month of the calendar. `month` goes from 1 (January) to 12 (December). */
 export type Month = {

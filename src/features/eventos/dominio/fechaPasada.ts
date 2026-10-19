@@ -1,5 +1,5 @@
-import { formatDayHeading } from '@/features/calendario/dominio/calendarioTexts';
-import { parseLocalDate } from '@/features/calendario/dominio/localDate';
+import { formatDayHeading } from '../../calendario/dominio/calendarioTexts.ts';
+import { parseLocalDate } from '../../calendario/dominio/localDate.ts';
 
 /**
  * A fecha before today. Today is the date of the phone, in its local hora;

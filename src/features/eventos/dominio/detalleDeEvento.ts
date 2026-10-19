@@ -2,12 +2,12 @@ import {
   formatDayHeading,
   formatTime,
   nombrarConNivel,
-} from '@/features/calendario/dominio/calendarioTexts';
-import { daysBetween } from '@/features/calendario/dominio/localDate';
-import { categorias } from '@/shared/theme';
+} from '../../calendario/dominio/calendarioTexts.ts';
+import { daysBetween } from '../../calendario/dominio/localDate.ts';
+import { categorias } from '../../../shared/theme.ts';
 
-import { getCategoria } from './categoria';
-import type { Duenio, Enfasis, Repeticion } from './evento';
+import { getCategoria } from './categoria.ts';
+import type { Duenio, Enfasis, Repeticion } from './evento.ts';
 
 /** The row "Fecha y hora" of the detail: "Sábado 10 de octubre · 19:00". */
 export function formatFechaYHora(fecha: string, hora: string): string {
