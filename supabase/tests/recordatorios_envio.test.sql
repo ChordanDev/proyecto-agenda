@@ -11,7 +11,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(12);
+select plan(14);
 
 -- The schedule -------------------------------------------------------------------
 
@@ -129,6 +129,30 @@ select results_eq(
 select lives_ok(
   $$ update public.dispositivos set encendido = false where token = 'ExponentPushToken[norte]' $$,
   'The server turns off a phone whose token is no longer valid'
+);
+reset role;
+
+-- An iglesia dada de baja (#217) ------------------------------------------------------
+
+-- An evento of iglesia central on 7 November, when its phone is warned.
+insert into public.eventos (id, titulo, alcance, duenio_iglesia_id, hora, enfasis) values
+  ('eeeeeeee-0000-4000-8000-000000000163', 'Congreso', 'iglesia', '11111111-0000-4000-8000-000000000163', '19:00', 'identidad');
+insert into public.eventos_fechas (evento_id, fecha) values
+  ('eeeeeeee-0000-4000-8000-000000000163', '2026-11-07');
+
+update public.iglesias set de_baja = true where id = '11111111-0000-4000-8000-000000000163';
+
+set local role service_role;
+select is_empty(
+  $$ select 1 from public.fechas_de_recordatorio('2026-11-07')
+     where evento_id = 'eeeeeeee-0000-4000-8000-000000000163' $$,
+  'The sending does not warn of the eventos of an iglesia dada de baja'
+);
+
+select is_empty(
+  $$ select 1 from public.dispositivos_iglesias
+     where iglesia_id = '11111111-0000-4000-8000-000000000163' $$,
+  'and no phone follows that iglesia any more'
 );
 reset role;
 

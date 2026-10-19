@@ -376,6 +376,9 @@ isOneToOne: false
 "cargos_administran_asociacion":
 { Args: { "asociacion_id": string }; Returns: boolean
                            },
+"cargos_de_usuario_abarcan_iglesia":
+{ Args: { "iglesia_id": string,"usuario_id": string }; Returns: boolean
+                           },
 "check_nombre_y_funcion":
 { Args: { "funcion": string,"nombre": string }; Returns: undefined
                            },

@@ -82,6 +82,14 @@ describe('iglesiasQuePuedeSeguir', () => {
     expect(iglesiasQuePuedeSeguir(pastor, iglesias)).toEqual(['i1', 'i2']);
   });
 
+  it('no longer offers a pastor an iglesia that moved to another distrito', () => {
+    const movida = iglesias.map((iglesia) =>
+      iglesia.id === 'i2' ? { ...iglesia, distritoId: 'd2' } : iglesia,
+    );
+
+    expect(iglesiasQuePuedeSeguir(pastor, movida)).toEqual(['i1']);
+  });
+
   it('offers an admin every iglesia of their asociacion', () => {
     expect(iglesiasQuePuedeSeguir(admin, iglesias)).toEqual(['i1', 'i2', 'i3']);
   });

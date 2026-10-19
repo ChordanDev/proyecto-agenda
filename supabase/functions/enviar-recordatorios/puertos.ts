@@ -11,7 +11,10 @@ import type {
   IglesiaEnEstructura,
 } from '../../../src/features/calendario/dominio/armarCalendario.ts';
 import type { Duenio } from '../../../src/features/eventos/dominio/evento.ts';
-import type { PuertosDeEnvio } from '../../../src/features/recordatorios/dominio/envio.ts';
+import type {
+  DispositivoDelEnvio,
+  PuertosDeEnvio,
+} from '../../../src/features/recordatorios/dominio/envio.ts';
 
 type Cliente = SupabaseClient<Database>;
 
@@ -23,6 +26,45 @@ const PAGE_SIZE = 1000;
 
 /** Tokens per update: they travel in the URL of the request. */
 const TOKENS_POR_PEDIDO = 100;
+
+/** What `leerDispositivos` reads of a phone. */
+type DispositivoLeido = {
+  token: string;
+  dispositivos_iglesias: {
+    iglesias: {
+      id: string;
+      distrito_id: string;
+      de_baja: boolean;
+      distritos: { asociacion_id: string };
+    };
+  }[];
+};
+
+/**
+ * The phones of the sending of an asociacion, with the iglesias each one
+ * follows there. An iglesia dada de baja already left every phone
+ * (20261025300000_prune_dispositivos_iglesias.sql); it is left out here too,
+ * so nothing of it is recordado if a phone still had it. A phone left without
+ * iglesias is not warned.
+ */
+export function toDispositivosDelEnvio(
+  filas: DispositivoLeido[],
+  asociacionId: string,
+): DispositivoDelEnvio[] {
+  return filas.flatMap((fila) => {
+    // Only the iglesias of this asociacion: its 20 h is the one that counts.
+    const iglesias = fila.dispositivos_iglesias
+      .filter(({ iglesias: iglesia }) => !iglesia.de_baja)
+      .map(({ iglesias: iglesia }): IglesiaEnEstructura => ({
+        id: iglesia.id,
+        distritoId: iglesia.distrito_id,
+        asociacionId: iglesia.distritos.asociacion_id,
+      }))
+      .filter((iglesia) => iglesia.asociacionId === asociacionId);
+
+    return iglesias.length === 0 ? [] : [{ token: fila.token, iglesias }];
+  });
+}
 
 /** Reads every page of a query ordered by a unique key, until a page comes back short. */
 async function leerTodo<T>(
@@ -99,7 +141,7 @@ export function crearPuertos({
           servidor
             .from('dispositivos')
             .select(
-              'token, dispositivos_iglesias (iglesias (id, distrito_id, distritos (asociacion_id)))',
+              'token, dispositivos_iglesias (iglesias (id, distrito_id, de_baja, distritos (asociacion_id)))',
             )
             .eq('encendido', true)
             .order('id')
@@ -107,18 +149,7 @@ export function crearPuertos({
         'dispositivos',
       );
 
-      return filas.flatMap((fila) => {
-        // Only the iglesias of this asociacion: its 20 h is the one that counts.
-        const iglesias = fila.dispositivos_iglesias
-          .map(({ iglesias: iglesia }): IglesiaEnEstructura => ({
-            id: iglesia.id,
-            distritoId: iglesia.distrito_id,
-            asociacionId: iglesia.distritos.asociacion_id,
-          }))
-          .filter((iglesia) => iglesia.asociacionId === asociacionId);
-
-        return iglesias.length === 0 ? [] : [{ token: fila.token, iglesias }];
-      });
+      return toDispositivosDelEnvio(filas, asociacionId);
     },
 
     async leerFechas(maniana) {
