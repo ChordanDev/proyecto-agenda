@@ -63,7 +63,7 @@ Una línea por caso, con ✔ o ✘. Cuando falla, debajo dice qué no se cumpli�
 Total: 33 de 34 (97 %)
 ```
 
-El script termina con código 1 si falló algún caso y con 2 si no pudo correr (por ejemplo, el Supabase local apagado).
+El script termina con código 0 si acertó todos los casos, con 1 si el chat respondió y falló alguno, y con 2 si la corrida no midió el chat: el Supabase local apagado, la función sin servir o algún caso que no tuvo respuesta (por ejemplo, `falla: proveedor_caido` o una espera de más de un minuto). Si falla la limpieza final, lo avisa y la próxima corrida borra lo que quedó.
 
 Como el modelo no siempre responde igual, un caso que falla una vez no prueba nada: conviene repetirlo (`npm run evals:chat -- <id>`) antes de sacar conclusiones. Lo que importa es comparar el total antes y después de un cambio.
 
@@ -71,7 +71,7 @@ Como el modelo no siempre responde igual, un caso que falla una vez no prueba na
 
 Está en `scripts/evals-chat/calendario-de-prueba.json`: una asociación, un distrito, dos iglesias y sus eventos. Quien pregunta es encargado de la Iglesia Evals Central, así que su calendario es esa iglesia, el distrito y la asociación. Los eventos de la Iglesia Evals Norte no le corresponden y sirven para probar que el chat no los encuentra.
 
-Las fechas se cuentan en días desde el **anclaje**: el próximo sábado (si hoy es sábado, el de la semana siguiente). `"dia": 0` es ese sábado, `-3` el miércoles anterior. Así "el sábado que viene" señala el mismo evento cualquier día que se corran los evals.
+Las fechas se cuentan en días desde el **anclaje**: el próximo sábado (si hoy es sábado, el de la semana siguiente). `"dia": 0` es ese sábado, `-3` el miércoles anterior. Así "el sábado que viene" señala el mismo evento cualquier día que se corran los evals. El anclaje se calcula al empezar: una corrida que cruza la medianoche del viernes al sábado mezcla dos anclajes, así que no conviene correrlos a esa hora.
 
 Cada evento lleva título, dueño (el nombre de la asociación, del distrito o de una iglesia), `dia`, `hora`, `lugar`, `descripcion` y `enfasis` (o `null` para una actividad regular). Opcionales: `diaFin` para un evento de varios días y `semanalHasta` para una serie semanal.
 
@@ -106,8 +106,9 @@ Cada caso tiene un `id`, su `categoria`, el `mensaje` y lo `esperado`. Puede lle
 
 1. Agregarlo en `casos.ts`, en su categoría, con un `id` nuevo.
 2. Si necesita un evento que no existe, sumarlo a `calendario-de-prueba.json`.
-3. Correr `npm test`: verifica que los títulos esperados existan en el calendario y que los ids no se repitan.
-4. Correrlo solo, unas veces: `npm run evals:chat -- <id>`.
+3. Para una hora, usar `contieneAlguno: hora(19)` en vez de `contiene: ['19']`: un número suelto también aparece en una fecha ("el sábado 19").
+4. Correr `npm test`: verifica que los títulos esperados existan en el calendario y que los ids no se repitan.
+5. Correrlo solo, unas veces: `npm run evals:chat -- <id>`.
 
 Un caso de carga ("Cargame un culto joven el sábado a las 20 h") espera un `borrador` con los campos que importan, y conviene que espere `noContiene` con las formas de decir que el evento quedó guardado: el chat nunca guarda, la persona confirma en la tarjeta.
 

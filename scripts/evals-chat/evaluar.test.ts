@@ -1,5 +1,13 @@
 import type { RespuestaDeConsulta } from '../../src/features/chat/dominio/consulta.ts';
-import { evaluarCaso, getAnclaje, getHoy, resumir, sumarDias } from './evaluar.ts';
+import {
+  evaluarCaso,
+  getAnclaje,
+  getCodigoDeSalida,
+  getHoy,
+  hora,
+  resumir,
+  sumarDias,
+} from './evaluar.ts';
 
 const ANCLAJE = '2026-10-24';
 
@@ -207,5 +215,36 @@ describe('resumir', () => {
         { acierto: true, fallos: [] },
       ]),
     ).toEqual({ aciertos: 2, total: 3 });
+  });
+});
+
+describe('hora', () => {
+  it('names the ways the chat writes an hora, not a bare number a fecha can hold', () => {
+    expect(hora(19)).toEqual(['19 h', '19:00', '19 hs', '19.00', 'las 19']);
+  });
+
+  it('passes a respuesta that says the hora and fails one that only says the dia', () => {
+    const esperado = { contieneAlguno: hora(10) };
+
+    expect(
+      evaluarCaso(esperado, respuesta({ texto: 'Es el sábado a las 10.' }), ANCLAJE).acierto,
+    ).toBe(true);
+    expect(
+      evaluarCaso(esperado, respuesta({ texto: 'Es el sábado 10 de octubre.' }), ANCLAJE).acierto,
+    ).toBe(false);
+  });
+});
+
+describe('getCodigoDeSalida', () => {
+  it('is 0 when every caso passed', () => {
+    expect(getCodigoDeSalida({ aciertos: 3, total: 3, sinRespuesta: 0 })).toBe(0);
+  });
+
+  it('is 1 when the chat answered and some caso failed', () => {
+    expect(getCodigoDeSalida({ aciertos: 2, total: 3, sinRespuesta: 0 })).toBe(1);
+  });
+
+  it('is 2 when some caso got no respuesta, since then the run did not measure the chat', () => {
+    expect(getCodigoDeSalida({ aciertos: 2, total: 3, sinRespuesta: 1 })).toBe(2);
   });
 });

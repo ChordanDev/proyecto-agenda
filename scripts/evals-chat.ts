@@ -20,6 +20,7 @@ import { CASOS } from './evals-chat/casos.ts';
 import {
   evaluarCaso,
   getAnclaje,
+  getCodigoDeSalida,
   getHoy,
   resumir,
   type Caso,
@@ -130,23 +131,42 @@ async function cargarCalendario(servidor: SupabaseClient, anclaje: string) {
   }
 }
 
+/** A respuesta of the model takes a few seconds; one that takes this long is stuck. */
+const ESPERA_MAXIMA_MS = 60_000;
+
+/** The iglesia of the cargo, failing loudly when the file names one it does not have. */
+function getIglesiaDelEncargado(): string {
+  const posicion = CALENDARIO.iglesias.findIndex(
+    (iglesia) => iglesia.nombre === CALENDARIO.encargadoDe,
+  );
+  if (posicion === -1) {
+    throw new Error(
+      `encargadoDe names an iglesia the calendario does not have: ${CALENDARIO.encargadoDe}`,
+    );
+  }
+  return IDS.iglesia(posicion);
+}
+
 /**
  * A new encargado for this run, so the limite diario of an earlier one does
- * not count: their cargo, their consentimiento and their JWT.
+ * not count. `alCrearlo` gets their id as soon as they exist, so the run
+ * deletes them even when a later step fails.
  */
-async function crearEncargado(local: Local, servidor: SupabaseClient) {
+async function crearEncargado(
+  local: Local,
+  servidor: SupabaseClient,
+  alCrearlo: (usuarioId: string) => void,
+) {
+  const iglesiaId = getIglesiaDelEncargado();
   const correo = `evals-${Date.now()}@evals.test`;
   const { user } = exigir(
     await servidor.auth.admin.createUser({ email: correo, email_confirm: true }),
     'create the encargado',
   );
-  const posicion = CALENDARIO.iglesias.findIndex(
-    (iglesia) => iglesia.nombre === CALENDARIO.encargadoDe,
-  );
+  alCrearlo(user.id);
+
   exigir(
-    await servidor
-      .from('cargos')
-      .insert({ usuario_id: user.id, iglesia_id: IDS.iglesia(posicion) }),
+    await servidor.from('cargos').insert({ usuario_id: user.id, iglesia_id: iglesiaId }),
     'give the cargo',
   );
   exigir(
@@ -167,28 +187,51 @@ async function crearEncargado(local: Local, servidor: SupabaseClient) {
   if (!session) {
     throw new Error('Could not open the sesion: no session came back');
   }
-  return { usuarioId: user.id, jwt: session.access_token };
+  return session.access_token;
 }
 
-async function preguntar(local: Local, jwt: string, caso: Caso, anclaje: string) {
-  const respuesta = await fetch(`${local.url}/functions/v1/chat-consulta`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${jwt}`,
-      apikey: local.anonKey,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ mensaje: caso.mensaje, tramo: caso.tramo ?? [] }),
-  });
+type Resultado = { evaluacion: Evaluacion; texto: string | null; conRespuesta: boolean };
+
+async function preguntar(
+  local: Local,
+  jwt: string,
+  caso: Caso,
+  anclaje: string,
+): Promise<Resultado> {
+  let respuesta: Response;
+  try {
+    respuesta = await fetch(`${local.url}/functions/v1/chat-consulta`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${jwt}`,
+        apikey: local.anonKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ mensaje: caso.mensaje, tramo: caso.tramo ?? [] }),
+      signal: AbortSignal.timeout(ESPERA_MAXIMA_MS),
+    });
+  } catch (error) {
+    const causa = error instanceof Error ? error.message : String(error);
+    return {
+      evaluacion: { acierto: false, fallos: [`falla: ${causa}`] },
+      texto: null,
+      conRespuesta: false,
+    };
+  }
   const body = await respuesta.json().catch(() => null);
 
   if (!respuesta.ok || !body?.respuesta) {
     const falla = body?.falla ?? `HTTP ${respuesta.status}`;
-    return { evaluacion: { acierto: false, fallos: [`falla: ${falla}`] }, texto: null };
+    return {
+      evaluacion: { acierto: false, fallos: [`falla: ${falla}`] },
+      texto: null,
+      conRespuesta: false,
+    };
   }
   return {
     evaluacion: evaluarCaso(caso.esperado, body.respuesta, anclaje),
     texto: body.respuesta.texto as string,
+    conRespuesta: true,
   };
 }
 
@@ -201,6 +244,27 @@ function imprimir(caso: Caso, evaluacion: Evaluacion, texto: string | null) {
     if (texto !== null) {
       console.log(`    respondió: ${texto.replace(/\s+/g, ' ')}`);
     }
+  }
+}
+
+/**
+ * Deletes the encargado (who takes their cargo, consentimiento and counters
+ * with them) and the calendario de prueba. A failure here is reported, never
+ * thrown: it must not hide the error or the result of the run.
+ */
+async function limpiarAlFinal(servidor: SupabaseClient, usuarioId: string | null) {
+  try {
+    if (usuarioId !== null) {
+      const { error } = await servidor.auth.admin.deleteUser(usuarioId);
+      if (error) {
+        throw new Error(`Could not delete the encargado ${usuarioId}: ${error.message}`);
+      }
+    }
+    await limpiar(servidor);
+  } catch (error) {
+    console.error(
+      `Cleanup failed, the next run cleans the calendario: ${error instanceof Error ? error.message : error}`,
+    );
   }
 }
 
@@ -223,26 +287,32 @@ async function main() {
   let usuarioId: string | null = null;
   try {
     await cargarCalendario(servidor, anclaje);
-    const encargado = await crearEncargado(local, servidor);
-    usuarioId = encargado.usuarioId;
+    const jwt = await crearEncargado(local, servidor, (id) => {
+      usuarioId = id;
+    });
 
     console.log(`Evals del chat: ${casos.length} casos, anclaje (dia 0) ${anclaje}\n`);
     const evaluaciones: Evaluacion[] = [];
+    let sinRespuesta = 0;
     for (const caso of casos) {
-      const { evaluacion, texto } = await preguntar(local, encargado.jwt, caso, anclaje);
+      const { evaluacion, texto, conRespuesta } = await preguntar(local, jwt, caso, anclaje);
       imprimir(caso, evaluacion, texto);
       evaluaciones.push(evaluacion);
+      if (!conRespuesta) {
+        sinRespuesta += 1;
+      }
     }
 
     const { aciertos, total } = resumir(evaluaciones);
     console.log(`\nTotal: ${aciertos} de ${total} (${Math.round((aciertos / total) * 100)} %)`);
-    process.exitCode = aciertos === total ? 0 : 1;
-  } finally {
-    // The usuario takes their cargo, consentimiento and counters with them.
-    if (usuarioId !== null) {
-      await servidor.auth.admin.deleteUser(usuarioId);
+    if (sinRespuesta > 0) {
+      console.log(
+        `${sinRespuesta} casos no tuvieron respuesta: la corrida no midió el chat. ¿Está servida la función?`,
+      );
     }
-    await limpiar(servidor);
+    process.exitCode = getCodigoDeSalida({ aciertos, total, sinRespuesta });
+  } finally {
+    await limpiarAlFinal(servidor, usuarioId);
   }
 }
 

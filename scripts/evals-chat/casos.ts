@@ -5,7 +5,7 @@
 // Dias count from the anclaje, the next sabado (dia 0). A caso of carga
 // (proponer evento) expects a `borrador`; see docs/evals-chat.md to add one.
 
-import type { Caso } from './evaluar.ts';
+import { hora, type Caso } from './evaluar.ts';
 
 /** Ways the chat says an evento lacks a dato. */
 const SIN_EL_DATO = [
@@ -51,7 +51,7 @@ export const CASOS: readonly Caso[] = [
     id: 'simple-hora',
     categoria: 'simple',
     mensaje: '¿A qué hora es el culto joven?',
-    esperado: { tipo: 'respuesta', eventos: ['Culto joven'], contiene: ['19'] },
+    esperado: { tipo: 'respuesta', eventos: ['Culto joven'], contieneAlguno: hora(19) },
   },
   {
     id: 'simple-de-que-se-trata',
@@ -83,7 +83,7 @@ export const CASOS: readonly Caso[] = [
     id: 'simple-cuando',
     categoria: 'simple',
     mensaje: '¿Cuándo es el bautismo?',
-    esperado: { tipo: 'respuesta', eventos: ['Bautismo'], contiene: ['11'] },
+    esperado: { tipo: 'respuesta', eventos: ['Bautismo'], contieneAlguno: hora(11) },
   },
   {
     id: 'simple-lugar',
@@ -101,7 +101,7 @@ export const CASOS: readonly Caso[] = [
     id: 'simple-santa-cena',
     categoria: 'simple',
     mensaje: '¿Cuándo es la santa cena?',
-    esperado: { tipo: 'respuesta', eventos: ['Santa Cena'], contiene: ['10'] },
+    esperado: { tipo: 'respuesta', eventos: ['Santa Cena'], contieneAlguno: hora(10) },
   },
   {
     id: 'simple-duenio',
@@ -113,7 +113,7 @@ export const CASOS: readonly Caso[] = [
     id: 'simple-miercoles',
     categoria: 'simple',
     mensaje: '¿Hay culto de oración el miércoles que viene?',
-    esperado: { tipo: 'respuesta', eventos: ['Culto de oración'], contiene: ['20'] },
+    esperado: { tipo: 'respuesta', eventos: ['Culto de oración'], contieneAlguno: hora(20) },
   },
 
   // Ambigua: two or three coincidencias, all of them in the respuesta.
@@ -158,7 +158,11 @@ export const CASOS: readonly Caso[] = [
       },
     ],
     mensaje: 'La del sábado que viene',
-    esperado: { tipo: 'respuesta', eventos: ['Escuela Sabática'], contiene: ['9'] },
+    esperado: {
+      tipo: 'respuesta',
+      eventos: ['Escuela Sabática'],
+      contieneAlguno: ['9:30', '9.30', '9 y media', 'las 9'],
+    },
   },
 
   // Demasiadas: more than three coincidencias, so it asks to narrow it.
@@ -175,9 +179,10 @@ export const CASOS: readonly Caso[] = [
     esperado: { tipo: 'repregunta', eventos: [] },
   },
   {
-    id: 'demasiadas-mes',
+    // Four weeks, not "este mes": on the last days of a mes it would hold few eventos.
+    id: 'demasiadas-semanas',
     categoria: 'demasiadas',
-    mensaje: '¿Qué hay este mes?',
+    mensaje: '¿Qué hay en las próximas cuatro semanas?',
     esperado: { tipo: 'repregunta', eventos: [] },
   },
   {

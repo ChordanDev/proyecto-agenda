@@ -79,7 +79,8 @@ export function getHoy(ahora: Date, zonaHoraria: string): string {
 }
 
 function normalizar(texto: string): string {
-  return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  // NFD splits each accent off its letter as a combining mark (\p{M}).
+  return texto.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 }
 
 function citar(fragmentos: readonly string[]): string {
@@ -163,6 +164,34 @@ export function evaluarCaso(
   }
 
   return { acierto: fallos.length === 0, fallos };
+}
+
+/**
+ * The ways the chat writes an hora, for `contieneAlguno`: a bare "19" would
+ * also pass a respuesta that only says the dia 19.
+ */
+export function hora(horas: number): string[] {
+  return [`${horas} h`, `${horas}:00`, `${horas} hs`, `${horas}.00`, `las ${horas}`];
+}
+
+/**
+ * How the run ends: 0 when every caso passed, 1 when the chat answered and
+ * some caso failed, 2 when some caso got no respuesta (the function was down
+ * or failed), since then the run did not measure the chat.
+ */
+export function getCodigoDeSalida({
+  aciertos,
+  total,
+  sinRespuesta,
+}: {
+  aciertos: number;
+  total: number;
+  sinRespuesta: number;
+}): 0 | 1 | 2 {
+  if (sinRespuesta > 0) {
+    return 2;
+  }
+  return aciertos === total ? 0 : 1;
 }
 
 export function resumir(evaluaciones: readonly Evaluacion[]): { aciertos: number; total: number } {
