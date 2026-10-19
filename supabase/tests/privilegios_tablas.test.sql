@@ -198,7 +198,7 @@ select is(
     from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
     where has_table_privilege('authenticated', 'public.iglesias_sumadas', p)
   ), array[]::text[]),
-  array['SELECT']::text[],
+  array['DELETE', 'INSERT', 'SELECT']::text[],
   'authenticated has exactly the expected privileges on iglesias_sumadas'
 );
 

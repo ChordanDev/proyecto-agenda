@@ -57,22 +57,22 @@ insert into public.lugares (id, nombre, duenio_iglesia_id) values
 
 select function_returns(
   'public', 'guardar_evento',
-  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid', 'uuid'],
+  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid', 'uuid', 'uuid[]'],
   'uuid'
 );
 select isnt_definer(
   'public', 'guardar_evento',
-  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid', 'uuid']
+  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid', 'uuid', 'uuid[]']
 );
 select function_privs_are(
   'public', 'guardar_evento',
-  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid', 'uuid'],
+  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid', 'uuid', 'uuid[]'],
   'anon', array[]::text[],
   'anon cannot execute guardar_evento'
 );
 select function_privs_are(
   'public', 'guardar_evento',
-  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid', 'uuid'],
+  array['text', 'alcance', 'time without time zone', 'repeticion', 'date[]', 'uuid', 'text', 'text', 'enfasis', 'uuid', 'uuid', 'uuid', 'date', 'date', 'uuid', 'uuid', 'uuid[]'],
   'authenticated', array['EXECUTE'],
   'authenticated can execute guardar_evento'
 );
