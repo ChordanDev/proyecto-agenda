@@ -54,11 +54,11 @@ insert into public.distritos (id, asociacion_id, nombre) values
   ('dddddddd-0000-4000-8000-000000000002', 'aaaaaaaa-0000-4000-8000-000000000001', 'Otro distrito'),
   ('dddddddd-0000-4000-8000-000000000003', 'aaaaaaaa-0000-4000-8000-000000000002', 'Distrito de otra asociación');
 
-insert into public.iglesias (id, distrito_id, nombre, direccion, localidad) values
-  ('11111111-0000-4000-8000-000000000001', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia del encargado', 'Calle 1', 'Localidad'),
-  ('11111111-0000-4000-8000-000000000002', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia vecina', 'Calle 2', 'Localidad'),
-  ('11111111-0000-4000-8000-000000000003', 'dddddddd-0000-4000-8000-000000000002', 'Iglesia de otro distrito', 'Calle 3', 'Localidad'),
-  ('11111111-0000-4000-8000-000000000004', 'dddddddd-0000-4000-8000-000000000003', 'Iglesia de otra asociación', 'Calle 4', 'Localidad');
+insert into public.iglesias (id, distrito_id, nombre, direccion, ciudad, provincia) values
+  ('11111111-0000-4000-8000-000000000001', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia del encargado', 'Calle 1', 'Ciudad', 'Provincia'),
+  ('11111111-0000-4000-8000-000000000002', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia vecina', 'Calle 2', 'Ciudad', 'Provincia'),
+  ('11111111-0000-4000-8000-000000000003', 'dddddddd-0000-4000-8000-000000000002', 'Iglesia de otro distrito', 'Calle 3', 'Ciudad', 'Provincia'),
+  ('11111111-0000-4000-8000-000000000004', 'dddddddd-0000-4000-8000-000000000003', 'Iglesia de otra asociación', 'Calle 4', 'Ciudad', 'Provincia');
 
 -- The usuarios. Only what the foreign key of cargos and auth.uid() need: these
 -- rows never log in.
@@ -337,8 +337,8 @@ select throws_ok(
   '42501', null, 'the admin cannot insert distritos of another asociacion'
 );
 select throws_ok(
-  $$ insert into public.iglesias (distrito_id, nombre, direccion, localidad)
-     values ('dddddddd-0000-4000-8000-000000000003', 'Rechazada', 'Calle 9', 'Localidad') $$,
+  $$ insert into public.iglesias (distrito_id, nombre, direccion, ciudad, provincia)
+     values ('dddddddd-0000-4000-8000-000000000003', 'Rechazada', 'Calle 9', 'Ciudad', 'Provincia') $$,
   '42501', null, 'the admin cannot insert iglesias of another asociacion'
 );
 

@@ -8,10 +8,14 @@ import { AppText, Button, Card, TextField } from '@/shared/ui';
 import { useOnlineStatus } from '@/shared/useOnlineStatus';
 
 import { useEstructuraDelAdmin, useGuardarIglesia } from '../datos/useGestionAdmin';
+import { useUbicacionDeLaIglesia } from '../datos/useUbicacionDeLaIglesia';
 import { getConfirmacionDeBajaDeIglesia } from '../dominio/bajaDeEstructura';
 import type { DistritoDelAdmin } from '../dominio/distritosSinPastor';
 import {
   getAvisoDeCambioDeDistrito,
+  getAyudaDelMapa,
+  getDireccionParaElMapa,
+  puedeGuardarIglesia,
   validarIglesia,
   type DatosDeLaIglesia,
   type ErroresDeLaIglesia,
@@ -27,6 +31,7 @@ import {
   useSalir,
 } from './FormularioDelAdmin';
 import { HojaDeDistrito } from './HojaDeDistrito';
+import { MapaDeLaIglesia } from './MapaDeLaIglesia';
 
 // Layout of the approved mockup, which the theme has no tokens for. The line
 // numbers are those of diseno/pantallas/09b-iglesia.html.
@@ -38,6 +43,7 @@ const SELECT_ICON_SIZE = 22;
 const SELECT_ICON_STROKE_WIDTH = 2.4;
 const MOVIDA_PADDING_VERTICAL = 12;
 const MOVIDA_PADDING_HORIZONTAL = 14;
+const SIN_MAPA_PADDING = 16;
 const PARAGRAPH_LINE_HEIGHT = 1.4;
 // The mockups draw no pressed state; the same value as `Button`.
 const PRESSED_OPACITY = 0.85;
@@ -47,7 +53,7 @@ export type ModoDeIglesia =
   /** `distritoId`: a distrito to move it to, chosen in "Agregar iglesia" of a distrito. */
   | { tipo: 'editar'; iglesiaId: string; distritoId: string | null };
 
-/** Nueva or Editar iglesia, for the admin: its texts and its distrito. */
+/** Nueva or Editar iglesia, for the admin: its texts, its point on the map and its distrito. */
 export function IglesiaFormScreen({ modo }: { modo: ModoDeIglesia }) {
   const salir = useSalir();
   const consulta = useEstructuraDelAdmin();
@@ -94,12 +100,20 @@ function Formulario({ iglesia, distritoInicial, distritos, onClose }: Formulario
   // A new iglesia gets its id here, once: every try sends the same one.
   const [nuevoId] = useState(newId);
   const guardar = useGuardarIglesia(iglesia === null ? { crear: nuevoId } : { editar: iglesia.id });
-  const [datos, setDatos] = useState<DatosDeLaIglesia>(() => ({
+  const [datos, setDatos] = useState<Omit<DatosDeLaIglesia, 'coordenadas'>>(() => ({
     nombre: iglesia?.nombre ?? '',
     direccion: iglesia?.direccion ?? '',
-    localidad: iglesia?.localidad ?? '',
+    ciudad: iglesia?.ciudad ?? '',
+    // An iglesia whose localidad could not be split has none: the admin writes it.
+    provincia: iglesia?.provincia ?? '',
     distritoId: distritoInicial ?? iglesia?.distritoId ?? null,
   }));
+  const { coordenadas, estimada, marcadorAlDia, moverMarcador } = useUbicacionDeLaIglesia(
+    datos,
+    iglesia?.coordenadas ?? null,
+  );
+  const direccionParaElMapa = getDireccionParaElMapa(datos);
+  const ayudaDelMapa = getAyudaDelMapa(estimada.status, coordenadas !== null);
   // The fields only show what is wrong after a first attempt to save.
   const [errores, setErrores] = useState<ErroresDeLaIglesia>({});
   const [fallo, setFallo] = useState(false);
@@ -111,11 +125,11 @@ function Formulario({ iglesia, distritoInicial, distritos, onClose }: Formulario
   const movida =
     iglesia !== null && datos.distritoId !== null && datos.distritoId !== iglesia.distritoId;
 
-  const cambiar = (campo: 'nombre' | 'direccion' | 'localidad') => (valor: string) =>
+  const cambiar = (campo: 'nombre' | 'direccion' | 'ciudad' | 'provincia') => (valor: string) =>
     setDatos((anteriores) => ({ ...anteriores, [campo]: valor }));
 
   const onGuardar = () => {
-    const validado = validarIglesia(datos);
+    const validado = validarIglesia({ ...datos, coordenadas });
     if (!validado.ok) {
       setErrores(validado.errores);
       return;
@@ -153,17 +167,51 @@ function Formulario({ iglesia, distritoInicial, distritos, onClose }: Formulario
           />
         </Campo>
 
-        <Campo error={errores.localidad}>
+        <Campo error={errores.ciudad}>
           <TextField
-            label="Localidad"
-            value={datos.localidad}
-            onChangeText={cambiar('localidad')}
+            label="Ciudad"
+            value={datos.ciudad}
+            onChangeText={cambiar('ciudad')}
             autoCapitalize="words"
             textContentType="addressCity"
           />
+        </Campo>
+
+        <Campo error={errores.provincia}>
+          <TextField
+            label="Provincia"
+            value={datos.provincia}
+            onChangeText={cambiar('provincia')}
+            autoCapitalize="words"
+            textContentType="addressState"
+          />
           <AppText variant="secundario" color="textoSecundario">
-            Se muestra en el buscador de &quot;Elegir iglesia&quot;.
+            La ciudad y la provincia se muestran en el buscador de &quot;Elegir iglesia&quot;.
           </AppText>
+        </Campo>
+
+        <Campo error={errores.coordenadas}>
+          <View style={styles.select}>
+            <AppText variant="label">Ubicación</AppText>
+            {direccionParaElMapa === null && coordenadas === null ? (
+              <View style={styles.sinMapa}>
+                <AppText variant="secundario" color="textoSecundario">
+                  Completá la dirección, la ciudad y la provincia para ver el mapa.
+                </AppText>
+              </View>
+            ) : (
+              <MapaDeLaIglesia coordenadas={coordenadas} onCambiar={moverMarcador} />
+            )}
+            {ayudaDelMapa !== null && (
+              <AppText
+                variant="secundario"
+                color="textoSecundario"
+                accessibilityLiveRegion="polite"
+              >
+                {ayudaDelMapa}
+              </AppText>
+            )}
+          </View>
         </Campo>
 
         <Campo error={errores.distritoId}>
@@ -210,7 +258,17 @@ function Formulario({ iglesia, distritoInicial, distritos, onClose }: Formulario
 
       {fallo && <ErrorAlGuardar />}
 
-      <Button label={boton} disabled={!conConexion || guardar.isPending} onPress={onGuardar} />
+      <Button
+        label={boton}
+        disabled={
+          !puedeGuardarIglesia({
+            conConexion,
+            guardando: guardar.isPending,
+            marcadorAlDia,
+          })
+        }
+        onPress={onGuardar}
+      />
 
       {iglesia !== null && (
         <DarDeBaja
@@ -256,6 +314,11 @@ const styles = StyleSheet.create({
   },
   selectText: {
     flex: 1,
+  },
+  sinMapa: {
+    padding: SIN_MAPA_PADDING,
+    borderRadius: radius.campo,
+    backgroundColor: colors.campo,
   },
   movida: {
     paddingVertical: MOVIDA_PADDING_VERTICAL,

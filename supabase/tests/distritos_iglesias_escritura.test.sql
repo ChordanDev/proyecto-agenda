@@ -1,7 +1,8 @@
 -- Writing the distritos and the iglesias: only the admin of their asociacion.
 --
 -- 1. The admin creates and edits the distritos and the iglesias of their
---    asociacion, and moves an iglesia between its distritos.
+--    asociacion (with the ciudad, the provincia and the point of the map), and
+--    moves an iglesia between its distritos.
 -- 2. The pastor, the encargado, the admin of another asociacion and anon do
 --    not.
 -- 3. A create sent again with the same id (its answer was lost) saves once.
@@ -18,7 +19,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(47);
+select plan(52);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -31,8 +32,15 @@ insert into public.distritos (id, asociacion_id, nombre) values
   ('dddddddd-0000-4000-8000-000000000002', 'aaaaaaaa-0000-4000-8000-000000000001', 'Distrito Sur'),
   ('dddddddd-0000-4000-8000-000000000003', 'aaaaaaaa-0000-4000-8000-000000000002', 'Distrito de la otra');
 
-insert into public.iglesias (id, distrito_id, nombre, direccion, localidad) values
-  ('11111111-0000-4000-8000-000000000001', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia Las Rosas', 'Pringles 820', 'San Luis');
+insert into public.iglesias (id, distrito_id, nombre, direccion, ciudad, provincia) values
+  ('11111111-0000-4000-8000-000000000001', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia Las Rosas', 'Pringles 820', 'San Luis', 'San Luis');
+
+-- An iglesia whose localidad could not be split: no provincia, to fix by hand.
+-- Only the migration leaves one like that, so its trigger is skipped here.
+alter table public.iglesias disable trigger iglesias_require_provincia;
+insert into public.iglesias (id, distrito_id, nombre, direccion, ciudad, provincia) values
+  ('11111111-0000-4000-8000-000000000002', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia sin provincia', 'Calle 5', 'Merlo', null);
+alter table public.iglesias enable trigger iglesias_require_provincia;
 
 insert into auth.users (id, aud, role, email) values
   ('bbbbbbbb-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'admin@prueba.example.com'),
@@ -87,14 +95,21 @@ select isnt_empty(
   'the admin can rename a distrito of their asociacion'
 );
 select lives_ok(
-  $$ insert into public.iglesias (distrito_id, nombre, direccion, localidad)
-     values ('dddddddd-0000-4000-8000-000000000002', 'Iglesia Juana Koslay', 'Av. Los Fresnos 1450', 'Juana Koslay') $$,
+  $$ insert into public.iglesias (distrito_id, nombre, direccion, ciudad, provincia)
+     values ('dddddddd-0000-4000-8000-000000000002', 'Iglesia Juana Koslay', 'Av. Los Fresnos 1450', 'Juana Koslay', 'San Luis') $$,
   'the admin can create an iglesia in a distrito of their asociacion'
 );
 select isnt_empty(
-  $$ update public.iglesias set nombre = 'Iglesia Las Rosas Centro', direccion = 'Pringles 822', localidad = 'San Luis Capital'
+  $$ update public.iglesias
+     set nombre = 'Iglesia Las Rosas Centro', direccion = 'Pringles 822', ciudad = 'San Luis Capital',
+         provincia = 'San Luis', latitud = -33.2955, longitud = -66.3356
      where id = '11111111-0000-4000-8000-000000000001' returning id $$,
-  'the admin can edit an iglesia of their asociacion'
+  'the admin can edit an iglesia of their asociacion, with the point of the map'
+);
+select isnt_empty(
+  $$ update public.iglesias set latitud = -32.3473, longitud = -65.0119
+     where id = '11111111-0000-4000-8000-000000000002' returning id $$,
+  'the admin can place an iglesia that still has no provincia'
 );
 
 -- Rejected: anything outside their asociacion.
@@ -109,8 +124,8 @@ select is_empty(
   'the admin cannot rename a distrito of another asociacion'
 );
 select throws_ok(
-  $$ insert into public.iglesias (distrito_id, nombre, direccion, localidad)
-     values ('dddddddd-0000-4000-8000-000000000003', 'Ajena', 'Calle 2', 'Localidad') $$,
+  $$ insert into public.iglesias (distrito_id, nombre, direccion, ciudad, provincia)
+     values ('dddddddd-0000-4000-8000-000000000003', 'Ajena', 'Calle 2', 'Ciudad', 'Provincia') $$,
   '42501', null, 'the admin cannot create an iglesia in a distrito of another asociacion'
 );
 select throws_ok(
@@ -124,11 +139,6 @@ select throws_ok(
   $$ update public.distritos set asociacion_id = 'aaaaaaaa-0000-4000-8000-000000000002'
      where id = 'dddddddd-0000-4000-8000-000000000001' $$,
   '42501', 'permission denied for table distritos', 'the admin cannot change the asociacion of a distrito'
-);
-select throws_ok(
-  $$ update public.iglesias set latitud = 0, longitud = 0
-     where id = '11111111-0000-4000-8000-000000000001' $$,
-  '42501', 'permission denied for table iglesias', 'the admin cannot write the coordinates of an iglesia'
 );
 select throws_ok(
   $$ update public.iglesias set excluida_del_buscador = true
@@ -151,9 +161,29 @@ select throws_ok(
   '23514', null, 'a distrito needs a nombre'
 );
 select throws_ok(
-  $$ update public.iglesias set localidad = ''
+  $$ update public.iglesias set ciudad = ' '
      where id = '11111111-0000-4000-8000-000000000001' $$,
-  '23514', null, 'an iglesia needs a localidad'
+  '23514', null, 'an iglesia needs a ciudad'
+);
+select throws_ok(
+  $$ update public.iglesias set provincia = ''
+     where id = '11111111-0000-4000-8000-000000000001' $$,
+  '23514', null, 'an iglesia needs a provincia that is not blank'
+);
+select throws_ok(
+  $$ insert into public.iglesias (distrito_id, nombre, direccion, ciudad)
+     values ('dddddddd-0000-4000-8000-000000000001', 'Sin provincia', 'Calle 6', 'Ciudad') $$,
+  '23502', null, 'a new iglesia needs a provincia'
+);
+select throws_ok(
+  $$ update public.iglesias set provincia = null
+     where id = '11111111-0000-4000-8000-000000000001' $$,
+  '23502', null, 'an iglesia with a provincia cannot lose it'
+);
+select throws_ok(
+  $$ update public.iglesias set latitud = 91, longitud = 0
+     where id = '11111111-0000-4000-8000-000000000001' $$,
+  '23514', null, 'the point of the map is a real one'
 );
 
 -- A create sent again: the app chooses the id and sends the same one on every
@@ -174,13 +204,13 @@ select is(
   'a distrito sent twice is saved once'
 );
 select lives_ok(
-  $$ insert into public.iglesias (id, distrito_id, nombre, direccion, localidad)
-     values ('11111111-0000-4000-8000-000000000010', 'dddddddd-0000-4000-8000-000000000002', 'Iglesia La Florida', 'Calle 3', 'La Florida') $$,
+  $$ insert into public.iglesias (id, distrito_id, nombre, direccion, ciudad, provincia)
+     values ('11111111-0000-4000-8000-000000000010', 'dddddddd-0000-4000-8000-000000000002', 'Iglesia La Florida', 'Calle 3', 'La Florida', 'San Luis') $$,
   'the admin can create an iglesia with the id the app chose'
 );
 select throws_ok(
-  $$ insert into public.iglesias (id, distrito_id, nombre, direccion, localidad)
-     values ('11111111-0000-4000-8000-000000000010', 'dddddddd-0000-4000-8000-000000000002', 'Iglesia La Florida', 'Calle 3', 'La Florida') $$,
+  $$ insert into public.iglesias (id, distrito_id, nombre, direccion, ciudad, provincia)
+     values ('11111111-0000-4000-8000-000000000010', 'dddddddd-0000-4000-8000-000000000002', 'Iglesia La Florida', 'Calle 3', 'La Florida', 'San Luis') $$,
   '23505', null, 'creating the same iglesia again is rejected as a duplicate'
 );
 select is(
@@ -220,14 +250,20 @@ select is_empty(
   'the pastor cannot rename their distrito'
 );
 select throws_ok(
-  $$ insert into public.iglesias (distrito_id, nombre, direccion, localidad)
-     values ('dddddddd-0000-4000-8000-000000000001', 'Del pastor', 'Calle 2', 'Localidad') $$,
+  $$ insert into public.iglesias (distrito_id, nombre, direccion, ciudad, provincia)
+     values ('dddddddd-0000-4000-8000-000000000001', 'Del pastor', 'Calle 2', 'Ciudad', 'Provincia') $$,
   '42501', null, 'the pastor cannot create an iglesia in their distrito'
 );
 select is_empty(
   $$ update public.iglesias set distrito_id = 'dddddddd-0000-4000-8000-000000000002'
      where id = '11111111-0000-4000-8000-000000000001' returning id $$,
   'the pastor cannot move an iglesia of their distrito'
+);
+select is_empty(
+  $$ update public.iglesias
+     set direccion = 'Del pastor 1', ciudad = 'Del pastor', provincia = 'Del pastor', latitud = 0, longitud = 0
+     where id = '11111111-0000-4000-8000-000000000001' returning id $$,
+  'the pastor cannot change the direccion, ciudad, provincia or point of an iglesia of their distrito'
 );
 
 reset role;
@@ -238,8 +274,8 @@ set local role authenticated;
 set local request.jwt.claims to '{"sub": "bbbbbbbb-0000-4000-8000-000000000004", "role": "authenticated"}';
 
 select throws_ok(
-  $$ insert into public.iglesias (distrito_id, nombre, direccion, localidad)
-     values ('dddddddd-0000-4000-8000-000000000001', 'Del encargado', 'Calle 2', 'Localidad') $$,
+  $$ insert into public.iglesias (distrito_id, nombre, direccion, ciudad, provincia)
+     values ('dddddddd-0000-4000-8000-000000000001', 'Del encargado', 'Calle 2', 'Ciudad', 'Provincia') $$,
   '42501', null, 'the encargado cannot create an iglesia'
 );
 select is_empty(
@@ -275,10 +311,10 @@ reset role;
 -- The data is intact after every rejected attempt -----------------------------
 
 select results_eq(
-  $$ select nombre, direccion, localidad, distrito_id, excluida_del_buscador, latitud
+  $$ select nombre, direccion, ciudad, provincia, distrito_id, excluida_del_buscador, latitud, longitud
      from public.iglesias where id = '11111111-0000-4000-8000-000000000001' $$,
-  $$ values ('Iglesia Las Rosas Centro'::text, 'Pringles 822'::text, 'San Luis Capital'::text,
-             'dddddddd-0000-4000-8000-000000000001'::uuid, false, null::double precision) $$,
+  $$ values ('Iglesia Las Rosas Centro'::text, 'Pringles 822'::text, 'San Luis Capital'::text, 'San Luis'::text,
+             'dddddddd-0000-4000-8000-000000000001'::uuid, false, -33.2955::double precision, -66.3356::double precision) $$,
   'the iglesia only has the changes of the admin'
 );
 select results_eq(

@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 
+import { getCiudadYProvincia } from '@/features/iglesias/dominio/ciudadYProvincia';
 import { AppText, Card, SearchField } from '@/shared/ui';
 
 import { useEstructuraDelAdmin } from '../datos/useGestionAdmin';
@@ -53,7 +54,7 @@ export function IglesiasTab({ iglesias }: IglesiasTabProps) {
               }
             >
               <AppText variant="secundario" color="textoSecundario">
-                {iglesia.distritoNombre} · {iglesia.localidad}
+                {iglesia.distritoNombre} · {getCiudadYProvincia(iglesia)}
               </AppText>
             </Fila>
           ))}

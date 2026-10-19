@@ -21,8 +21,8 @@ function calendario(eventos: EventoDePrueba[]): CalendarioDePrueba {
     zonaHoraria: 'America/Argentina/Buenos_Aires',
     distrito: 'Distrito Evals',
     iglesias: [
-      { nombre: 'Iglesia Evals Central', direccion: 'x', localidad: 'y' },
-      { nombre: 'Iglesia Evals Norte', direccion: 'x', localidad: 'y' },
+      { nombre: 'Iglesia Evals Central', direccion: 'x', ciudad: 'y', provincia: 'z' },
+      { nombre: 'Iglesia Evals Norte', direccion: 'x', ciudad: 'y', provincia: 'z' },
     ],
     encargadoDe: 'Iglesia Evals Central',
     eventos,

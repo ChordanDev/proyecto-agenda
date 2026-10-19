@@ -59,7 +59,10 @@ beforeEach(() => {
             id: 'rosas',
             nombre: 'Iglesia Las Rosas',
             direccion: 'Pringles 820',
-            localidad: 'San Luis',
+            ciudad: 'San Luis',
+            provincia: null,
+            latitud: -33.2955,
+            longitud: -66.3356,
             distrito_id: 'norte',
             de_baja: false,
             cargos: [{ count: 1200 }],
@@ -68,7 +71,10 @@ beforeEach(() => {
             id: 'molles',
             nombre: 'Iglesia Los Molles',
             direccion: 'Calle 1',
-            localidad: 'Los Molles',
+            ciudad: 'Los Molles',
+            provincia: 'San Luis',
+            latitud: null,
+            longitud: null,
             distrito_id: 'oeste',
             de_baja: true,
             cargos: [{ count: 0 }],
@@ -85,6 +91,16 @@ describe('getEstructuraDelAdmin', () => {
     const estructura = await getEstructuraDelAdmin();
 
     expect(estructura?.iglesias.map((iglesia) => iglesia.cantidadDeEncargados)).toEqual([1200]);
+  });
+
+  it('reads the ciudad, the provincia and the point of the map of each iglesia', async () => {
+    const estructura = await getEstructuraDelAdmin();
+
+    expect(estructura?.iglesias[0]).toMatchObject({
+      ciudad: 'San Luis',
+      provincia: null,
+      coordenadas: { latitud: -33.2955, longitud: -66.3356 },
+    });
   });
 
   it('lists apart the distritos and iglesias dados de baja', async () => {

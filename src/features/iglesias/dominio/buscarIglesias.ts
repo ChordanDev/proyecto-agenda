@@ -5,7 +5,9 @@ export type Iglesia = {
   id: string;
   nombre: string;
   direccion: string;
-  localidad: string;
+  ciudad: string;
+  /** Null: its localidad could not be split, and it waits to be fixed by hand. */
+  provincia: string | null;
   /** Name of the distrito the church belongs to. */
   distrito: string;
   /** When true, the church never appears in the "Elegir iglesia" search. */

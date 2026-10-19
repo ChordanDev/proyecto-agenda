@@ -5,5 +5,6 @@ module.exports = {
     '<rootDir>/src/**/*.test.ts',
     '<rootDir>/src/**/*.test.tsx',
     '<rootDir>/scripts/**/*.test.ts',
+    '<rootDir>/app.config.test.ts',
   ],
 };

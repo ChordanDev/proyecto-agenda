@@ -89,11 +89,11 @@ function generar(): string {
       )
       .join(',\n') + ';',
     '',
-    'insert into public.iglesias (id, distrito_id, nombre, direccion, localidad) values',
+    'insert into public.iglesias (id, distrito_id, nombre, direccion, ciudad, provincia) values',
     Object.entries(iglesias)
       .map(
         ([id, distrito]) =>
-          `  ('${buscar(idsDeIglesia, id)}', '${buscar(idsDeDistrito, distrito)}', ${literal(id)}, 'Calle 1', 'Localidad')`,
+          `  ('${buscar(idsDeIglesia, id)}', '${buscar(idsDeDistrito, distrito)}', ${literal(id)}, 'Calle 1', 'Ciudad', 'Provincia')`,
       )
       .join(',\n') + ';',
     '',

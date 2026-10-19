@@ -75,7 +75,7 @@ a{color:#1B3550}a:hover{color:#10233A}
       </div>
     </sc-if>
 
-    <!-- Iglesias (#155, #158, #159): distrito and localidad; tapping one opens Editar iglesia (09b). Dadas de baja go apart, with "Reactivar". -->
+    <!-- Iglesias (#155, #158, #159): distrito, ciudad and provincia; tapping one opens Editar iglesia (09b). Dadas de baja go apart, with "Reactivar". -->
     <sc-if value="{{ verIglesias }}" hint-placeholder-val="{{ false }}">
       <a href="Iglesia.dc.html" style="display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 58px; border-radius: 14px; border: 0; background: #1B3550; color: #FFFFFF; font-family: inherit; font-size: 18px; font-weight: 700; text-decoration: none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg><span>Nueva iglesia</span></a>
       <div style="display: flex; align-items: center; gap: 10px; height: 52px; box-sizing: border-box; padding: 0 16px; border-radius: 14px; background: #FFFFFF; color: #717171">
@@ -86,7 +86,7 @@ a{color:#1B3550}a:hover{color:#10233A}
       <div style="display: flex; flex-direction: column; background: #FFFFFF; border-radius: 20px; overflow: hidden">
         <sc-for list="{{ iglesias }}" as="ig" hint-placeholder-count="4">
           <div style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 12px 14px 12px 18px; border-bottom: 1px solid #EEEEEE">
-            <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0"><span style="font-size: 17px; font-weight: 700">{{ ig.nombre }}</span><span style="font-size: 15px; color: #4A4A4A">{{ ig.distrito }} · {{ ig.localidad }}</span></span>
+            <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0"><span style="font-size: 17px; font-weight: 700">{{ ig.nombre }}</span><span style="font-size: 15px; color: #4A4A4A">{{ ig.distrito }} · {{ ig.ciudadYProvincia }}</span></span>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#717171" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left: auto; flex-shrink: 0"><path d="M9 6l6 6-6 6"></path></svg>
           </div>
         </sc-for>
@@ -163,10 +163,10 @@ class Component extends DCLogic {
     ].map((d) => ({ ...d, conPastor: !!d.pastor, sinPastor: !d.pastor }));
 
     const iglesias = [
-      { nombre: 'Iglesia Barrio Norte', distrito: 'Distrito Norte', localidad: 'Villa Mercedes' },
-      { nombre: 'Iglesia Central', distrito: 'Distrito Norte', localidad: 'San Luis' },
-      { nombre: 'Iglesia El Trapiche', distrito: 'Distrito Sur', localidad: 'El Trapiche' },
-      { nombre: 'Iglesia Las Rosas', distrito: 'Distrito Norte', localidad: 'San Luis' }
+      { nombre: 'Iglesia Barrio Norte', distrito: 'Distrito Norte', ciudadYProvincia: 'Villa Mercedes, San Luis' },
+      { nombre: 'Iglesia Central', distrito: 'Distrito Norte', ciudadYProvincia: 'San Luis, San Luis' },
+      { nombre: 'Iglesia El Trapiche', distrito: 'Distrito Sur', ciudadYProvincia: 'El Trapiche, San Luis' },
+      { nombre: 'Iglesia Las Rosas', distrito: 'Distrito Norte', ciudadYProvincia: 'San Luis, San Luis' }
     ];
     const bajas = [{ nombre: 'Iglesia Los Molles', distrito: 'Distrito Sur' }];
 

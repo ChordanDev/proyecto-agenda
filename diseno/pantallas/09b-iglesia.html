@@ -35,9 +35,22 @@ a{color:#1B3550}a:hover{color:#10233A}
         <input id="direccion" type="text" value="{{ direccion }}" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
       </div>
       <div style="display: flex; flex-direction: column; gap: 6px">
-        <label for="localidad" style="font-size: 16px; font-weight: 700">Localidad</label>
-        <input id="localidad" type="text" value="{{ localidad }}" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
-        <span style="font-size: 15px; line-height: 1.4; color: #4A4A4A">Se muestra en el buscador de "Elegir iglesia".</span>
+        <label for="ciudad" style="font-size: 16px; font-weight: 700">Ciudad</label>
+        <input id="ciudad" type="text" value="{{ ciudad }}" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="provincia" style="font-size: 16px; font-weight: 700">Provincia</label>
+        <input id="provincia" type="text" value="{{ provincia }}" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
+        <span style="font-size: 15px; line-height: 1.4; color: #4A4A4A">La ciudad y la provincia se muestran en el buscador de "Elegir iglesia".</span>
+      </div>
+      <!-- Mapa (#219): it opens at the location estimated from the direccion, the ciudad and the provincia. The admin drags the marker, or taps the map, and its point is saved. -->
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span id="tUbicacion" style="font-size: 16px; font-weight: 700">Ubicación</span>
+        <div role="img" aria-labelledby="tUbicacion" style="position: relative; height: 220px; border-radius: 12px; overflow: hidden; background: #E8ECE4">
+          <div style="position: absolute; inset: 0; background-image: linear-gradient(90deg, transparent 46%, #FFFFFF 46%, #FFFFFF 54%, transparent 54%), linear-gradient(0deg, transparent 46%, #FFFFFF 46%, #FFFFFF 54%, transparent 54%); background-size: 96px 96px"></div>
+          <svg width="40" height="52" viewBox="0 0 24 31" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%)"><path d="M12 0C5.4 0 0 5.3 0 11.9 0 20.8 12 31 12 31s12-10.2 12-19.1C24 5.3 18.6 0 12 0z" fill="#B0103F"></path><circle cx="12" cy="11.5" r="4.5" fill="#FFFFFF"></circle></svg>
+        </div>
+        <span style="font-size: 15px; line-height: 1.4; color: #4A4A4A">Mantené apretado el marcador y arrastralo hasta la iglesia.</span>
       </div>
       <!-- Opens a sheet with the active distritos. -->
       <div style="display: flex; flex-direction: column; gap: 6px">
@@ -76,8 +89,8 @@ class Component extends DCLogic {
     const st = this.state || {};
     const nueva = (st.modo || 'nueva') === 'nueva';
     const datos = nueva
-      ? { nombre: 'Iglesia Juana Koslay', direccion: 'Av. Los Fresnos 1450', localidad: 'Juana Koslay', distrito: 'Distrito Centro' }
-      : { nombre: 'Iglesia Las Rosas', direccion: 'Pringles 820', localidad: 'San Luis', distrito: st.movida ? 'Distrito Centro' : 'Distrito Norte' };
+      ? { nombre: 'Iglesia Juana Koslay', direccion: 'Av. Los Fresnos 1450', ciudad: 'Juana Koslay', provincia: 'San Luis', distrito: 'Distrito Centro' }
+      : { nombre: 'Iglesia Las Rosas', direccion: 'Pringles 820', ciudad: 'San Luis', provincia: 'San Luis', distrito: st.movida ? 'Distrito Centro' : 'Distrito Norte' };
     return {
       ...datos,
       titulo: nueva ? 'Nueva iglesia' : 'Editar iglesia',

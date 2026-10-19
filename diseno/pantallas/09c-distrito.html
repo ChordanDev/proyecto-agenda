@@ -46,7 +46,7 @@ a{color:#1B3550}a:hover{color:#10233A}
       <div style="display: flex; flex-direction: column; background: #FFFFFF; border-radius: 20px; overflow: hidden">
         <sc-for list="{{ iglesias }}" as="ig" hint-placeholder-count="3">
           <div style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 12px 14px 12px 18px; border-bottom: 1px solid #EEEEEE">
-            <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0"><span style="font-size: 17px; font-weight: 700">{{ ig.nombre }}</span><span style="font-size: 15px; color: #4A4A4A">{{ ig.localidad }}</span></span>
+            <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0"><span style="font-size: 17px; font-weight: 700">{{ ig.nombre }}</span><span style="font-size: 15px; color: #4A4A4A">{{ ig.ciudadYProvincia }}</span></span>
             <button type="button" onClick="{{ sacar }}" style="margin-left: auto; flex-shrink: 0; min-height: 44px; padding: 0 16px; border-radius: 12px; border: 0; background: #E3EAF2; color: #1B3550; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">Sacar</button>
           </div>
         </sc-for>
@@ -111,9 +111,9 @@ class Component extends DCLogic {
     const st = this.state || {};
     const editando = (st.modo || 'editar') === 'editar';
     const iglesias = [
-      { nombre: 'Iglesia El Trapiche', localidad: 'El Trapiche' },
-      { nombre: 'Iglesia La Florida', localidad: 'La Florida' },
-      { nombre: 'Iglesia Potrero', localidad: 'Potrero de los Funes' }
+      { nombre: 'Iglesia El Trapiche', ciudadYProvincia: 'El Trapiche, San Luis' },
+      { nombre: 'Iglesia La Florida', ciudadYProvincia: 'La Florida, San Luis' },
+      { nombre: 'Iglesia Potrero', ciudadYProvincia: 'Potrero de los Funes, San Luis' }
     ];
     const otras = [
       { nombre: 'Iglesia Barrio Norte', distrito: 'Distrito Norte' },

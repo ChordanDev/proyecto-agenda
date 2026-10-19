@@ -1,5 +1,10 @@
 import {
   buscarIglesiasDelAdmin,
+  getClaveDeUbicacion,
+  getDireccionABuscar,
+  getAyudaDelMapa,
+  getDireccionParaElMapa,
+  puedeGuardarIglesia,
   getAvisoDeCambioDeDistrito,
   getEtiquetaDePastores,
   getSubtituloDeAsociacion,
@@ -15,7 +20,9 @@ function iglesia(nombre: string, distritoNombre = 'Distrito Norte'): IglesiaDelA
     id: nombre,
     nombre,
     direccion: 'Calle 1',
-    localidad: 'San Luis',
+    ciudad: 'San Luis',
+    provincia: 'San Luis',
+    coordenadas: null,
     distritoId: distritoNombre,
     distritoNombre,
     cantidadDeEncargados: 0,
@@ -89,11 +96,22 @@ describe('buscarIglesiasDelAdmin', () => {
     ]);
   });
 
-  it('matches the localidad and the distrito too', () => {
+  it('matches the ciudad, the provincia and the distrito too', () => {
     expect(buscarIglesiasDelAdmin(iglesias, 'distrito sur').map((una) => una.nombre)).toEqual([
       'Iglesia El Trapiche',
     ]);
     expect(buscarIglesiasDelAdmin(iglesias, 'san luis')).toHaveLength(2);
+    expect(
+      buscarIglesiasDelAdmin(
+        [{ ...iglesia('Iglesia Merlo'), ciudad: 'Merlo', provincia: 'San Luis' }],
+        'luis',
+      ),
+    ).toHaveLength(1);
+  });
+
+  it('matches an iglesia that still has no provincia by its ciudad', () => {
+    const sinProvincia = { ...iglesia('Iglesia Merlo'), ciudad: 'Merlo', provincia: null };
+    expect(buscarIglesiasDelAdmin([sinProvincia], 'merlo')).toEqual([sinProvincia]);
   });
 });
 
@@ -128,11 +146,14 @@ describe('validarDistrito', () => {
 });
 
 describe('validarIglesia', () => {
+  const punto = { latitud: -33.2885, longitud: -66.2459 };
   const datos = {
     nombre: ' Iglesia Juana Koslay ',
     direccion: 'Av. Los Fresnos 1450',
-    localidad: 'Juana Koslay ',
+    ciudad: 'Juana Koslay ',
+    provincia: ' San Luis',
     distritoId: 'd1',
+    coordenadas: punto,
   };
 
   it('trims every text', () => {
@@ -141,24 +162,51 @@ describe('validarIglesia', () => {
       valores: {
         nombre: 'Iglesia Juana Koslay',
         direccion: 'Av. Los Fresnos 1450',
-        localidad: 'Juana Koslay',
+        ciudad: 'Juana Koslay',
+        provincia: 'San Luis',
         distritoId: 'd1',
+        coordenadas: punto,
       },
     });
   });
 
   it('asks for every field that is missing', () => {
-    expect(validarIglesia({ nombre: '', direccion: ' ', localidad: '', distritoId: null })).toEqual(
-      {
-        ok: false,
-        errores: {
-          nombre: 'Escribí el nombre de la iglesia.',
-          direccion: 'Escribí la dirección.',
-          localidad: 'Escribí la localidad.',
-          distritoId: 'Elegí el distrito.',
-        },
+    expect(
+      validarIglesia({
+        nombre: '',
+        direccion: ' ',
+        ciudad: '',
+        provincia: '  ',
+        distritoId: null,
+        coordenadas: null,
+      }),
+    ).toEqual({
+      ok: false,
+      errores: {
+        nombre: 'Escribí el nombre de la iglesia.',
+        direccion: 'Escribí la dirección.',
+        ciudad: 'Escribí la ciudad.',
+        provincia: 'Escribí la provincia.',
+        distritoId: 'Elegí el distrito.',
+        coordenadas: 'Marcá en el mapa dónde está la iglesia.',
       },
-    );
+    });
+  });
+
+  it.each(['direccion', 'ciudad', 'provincia'] as const)(
+    'does not save without the %s',
+    (campo) => {
+      const resultado = validarIglesia({ ...datos, [campo]: '' });
+      expect(resultado.ok).toBe(false);
+      expect(resultado.ok ? null : Object.keys(resultado.errores)).toEqual([campo]);
+    },
+  );
+
+  it('does not save without the point of the map', () => {
+    expect(validarIglesia({ ...datos, coordenadas: null })).toEqual({
+      ok: false,
+      errores: { coordenadas: 'Marcá en el mapa dónde está la iglesia.' },
+    });
   });
 
   it('rejects a text that is too long', () => {
@@ -167,5 +215,127 @@ describe('validarIglesia', () => {
       ok: false,
       errores: { direccion: 'Es demasiado larga: usá hasta 200 letras.' },
     });
+    expect(
+      validarIglesia({ ...datos, ciudad: 'x'.repeat(101), provincia: 'x'.repeat(101) }),
+    ).toEqual({
+      ok: false,
+      errores: {
+        ciudad: 'Es demasiado larga: usá hasta 100 letras.',
+        provincia: 'Es demasiado larga: usá hasta 100 letras.',
+      },
+    });
+  });
+});
+
+describe('getDireccionParaElMapa', () => {
+  it('joins the direccion, the ciudad and the provincia, in Argentina', () => {
+    expect(
+      getDireccionParaElMapa({
+        direccion: ' Av. Los Fresnos 1450 ',
+        ciudad: 'Juana Koslay',
+        provincia: 'San Luis ',
+      }),
+    ).toBe('Av. Los Fresnos 1450, Juana Koslay, San Luis, Argentina');
+  });
+
+  it.each(['direccion', 'ciudad', 'provincia'] as const)(
+    'has nothing to look for without the %s',
+    (campo) => {
+      expect(
+        getDireccionParaElMapa({
+          direccion: 'Av. Los Fresnos 1450',
+          ciudad: 'Juana Koslay',
+          provincia: 'San Luis',
+          [campo]: '  ',
+        }),
+      ).toBeNull();
+    },
+  );
+});
+
+describe('getDireccionABuscar', () => {
+  const textos = { direccion: 'Pringles 820', ciudad: 'San Luis', provincia: 'San Luis' };
+  const direccion = 'Pringles 820, San Luis, San Luis, Argentina';
+
+  it('looks for a direccion the marker does not stand for yet', () => {
+    expect(getDireccionABuscar(textos, null)).toEqual({
+      direccion,
+      para: getClaveDeUbicacion(textos),
+    });
+  });
+
+  it('has nothing to look for while a text is missing', () => {
+    expect(getDireccionABuscar({ ...textos, provincia: ' ' }, null)).toBeNull();
+  });
+
+  it('keeps the marker while the direccion is the one it stands for', () => {
+    expect(getDireccionABuscar(textos, getClaveDeUbicacion(textos))).toBeNull();
+  });
+
+  it('ignores case, accents and spaces', () => {
+    expect(
+      getDireccionABuscar(
+        { direccion: ' PRINGLES 820 ', ciudad: 'san luís', provincia: 'San  Luis' },
+        getClaveDeUbicacion(textos),
+      ),
+    ).toBeNull();
+  });
+
+  it.each(['direccion', 'ciudad', 'provincia'] as const)(
+    'looks again when the %s changes',
+    (campo) => {
+      expect(
+        getDireccionABuscar({ ...textos, [campo]: 'Otra' }, getClaveDeUbicacion(textos)),
+      ).not.toBeNull();
+    },
+  );
+
+  it('keeps the saved point when the provincia of an iglesia without one is written', () => {
+    const sinProvincia = getClaveDeUbicacion({ ...textos, provincia: '' });
+
+    expect(getDireccionABuscar(textos, sinProvincia)).toBeNull();
+    expect(getDireccionABuscar({ ...textos, ciudad: 'Juana Koslay' }, sinProvincia)).not.toBeNull();
+  });
+});
+
+describe('puedeGuardarIglesia', () => {
+  const listo = { conConexion: true, guardando: false, marcadorAlDia: true };
+
+  it('saves with a connection, when the marker stands for the direccion', () => {
+    expect(puedeGuardarIglesia(listo)).toBe(true);
+  });
+
+  it('waits until the marker stands for a new direccion, found or placed by hand', () => {
+    expect(puedeGuardarIglesia({ ...listo, marcadorAlDia: false })).toBe(false);
+  });
+
+  it('does not save without a connection or while saving', () => {
+    expect(puedeGuardarIglesia({ ...listo, conConexion: false })).toBe(false);
+    expect(puedeGuardarIglesia({ ...listo, guardando: true })).toBe(false);
+  });
+});
+
+describe('getAyudaDelMapa', () => {
+  it('tells how to move the marker when it is on the map', () => {
+    expect(getAyudaDelMapa('idle', true)).toBe(
+      'Mantené apretado el marcador y arrastralo hasta la iglesia.',
+    );
+  });
+
+  it('says nothing about a marker that is not on the map', () => {
+    expect(getAyudaDelMapa('idle', false)).toBeNull();
+  });
+
+  it('tells while it looks for the direccion', () => {
+    expect(getAyudaDelMapa('buscando', true)).toBe('Buscando la dirección en el mapa…');
+  });
+
+  it('asks for the marker by hand when the direccion is not found', () => {
+    expect(getAyudaDelMapa('noEncontrada', true)).toBe(
+      'No encontramos la dirección nueva. Arrastrá el marcador hasta la iglesia para poder guardar.',
+    );
+    expect(getAyudaDelMapa('noEncontrada', false)).toBe(
+      'No encontramos la dirección. Tocá el mapa donde está la iglesia.',
+    );
   });
 });

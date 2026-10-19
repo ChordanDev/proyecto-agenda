@@ -30,6 +30,7 @@ import { useElegirIglesia } from '../datos/useElegirIglesia';
 import { useIglesias } from '../datos/useIglesias';
 import { useUbicacion, type Ubicacion } from '../datos/useUbicacion';
 import { buscarIglesias, type Iglesia } from '../dominio/buscarIglesias';
+import { getCiudadYProvincia } from '../dominio/ciudadYProvincia';
 import { distanciaEnMetros, formatDistancia, type Punto } from '../dominio/distancia';
 import { estadoSinIglesias } from '../dominio/estadoSinIglesias';
 import { aceptaCambios, puedeConfirmar } from '../dominio/puedeConfirmar';
@@ -437,7 +438,8 @@ type IglesiaRowProps = {
 };
 
 function IglesiaRow({ iglesia, checked, desde, onPress }: IglesiaRowProps) {
-  const { nombre, distrito, localidad, coordenadas } = iglesia;
+  const { nombre, distrito, coordenadas } = iglesia;
+  const ciudadYProvincia = getCiudadYProvincia(iglesia);
   // A church without coordenadas shows no distance.
   const distancia =
     desde && coordenadas ? formatDistancia(distanciaEnMetros(desde, coordenadas)) : undefined;
@@ -446,7 +448,9 @@ function IglesiaRow({ iglesia, checked, desde, onPress }: IglesiaRowProps) {
     <Pressable
       accessibilityRole="radio"
       accessibilityState={{ checked }}
-      accessibilityLabel={[nombre, distrito, localidad, distancia].filter(Boolean).join(', ')}
+      accessibilityLabel={[nombre, distrito, ciudadYProvincia, distancia]
+        .filter(Boolean)
+        .join(', ')}
       onPress={onPress}
       style={styles.row}
     >
@@ -455,7 +459,7 @@ function IglesiaRow({ iglesia, checked, desde, onPress }: IglesiaRowProps) {
           {nombre}
         </AppText>
         <AppText variant="secundario" style={styles.rowDetail}>
-          {distrito} · {localidad}
+          {distrito} · {ciudadYProvincia}
         </AppText>
         {distancia !== undefined && (
           <View style={styles.rowDistance}>
