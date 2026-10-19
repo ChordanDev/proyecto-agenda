@@ -12,7 +12,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(57);
+select plan(59);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -482,6 +482,35 @@ select throws_ok(
      insert into public.excepciones (evento_id, fecha, cambia_lugar, lugar_id) values
        ('eeeeeeee-0000-4000-8000-000000000001', '2026-11-14', true, 'ffffffff-0000-4000-8000-000000000002') $$,
   '23514', null, 'a date cannot take a lugar of another duenio'
+);
+
+-- A save that changes the duenio resets the lugar of a moved date before it
+-- drops that move onto a day the series has again: the save goes through.
+insert into public.lugares (id, nombre, duenio_iglesia_id) values
+  ('ffffffff-0000-4000-8000-000000000001', 'Templo', '11111111-0000-4000-8000-000000000001');
+insert into public.eventos (id, titulo, alcance, duenio_iglesia_id, hora, repeticion, fin_de_serie) values
+  ('eeeeeeee-0000-4000-8000-000000000004', 'Serie con lugar', 'iglesia', '11111111-0000-4000-8000-000000000001', '19:00', 'semanal', '2026-11-14');
+insert into public.eventos_fechas (evento_id, fecha) values
+  ('eeeeeeee-0000-4000-8000-000000000004', '2026-11-07'),
+  ('eeeeeeee-0000-4000-8000-000000000004', '2026-11-14');
+insert into public.excepciones (evento_id, fecha, fecha_nueva, cambia_lugar, lugar_id) values
+  ('eeeeeeee-0000-4000-8000-000000000004', '2026-11-07', '2026-11-10', true, 'ffffffff-0000-4000-8000-000000000001');
+
+select lives_ok(
+  $$ select public.guardar_evento(
+    evento_id => 'eeeeeeee-0000-4000-8000-000000000004',
+    titulo => 'Serie con lugar',
+    alcance => 'distrito',
+    duenio_distrito_id => 'dddddddd-0000-4000-8000-000000000001',
+    hora => '19:00',
+    repeticion => 'semanal',
+    fin_de_serie => '2026-11-14',
+    fechas => array['2026-11-07', '2026-11-10', '2026-11-14']::date[]) $$,
+  'a new duenio and a date on the day another moved to save together'
+);
+select is_empty(
+  $$ select 1 from public.excepciones where evento_id = 'eeeeeeee-0000-4000-8000-000000000004' $$,
+  'the moved date with the lugar of the old duenio loses its excepcion'
 );
 
 select * from finish();

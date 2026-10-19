@@ -101,8 +101,13 @@ begin
   end if;
 
   -- The dates of the series are its own days, but for the ones that moved
-  -- away, plus the days the others moved to.
-  if new.fecha_nueva is not null and (
+  -- away, plus the days the others moved to. Only a new day is checked: an
+  -- update of another field (as guardar_evento resetting a lugar) must not
+  -- fail on a move the series is about to drop; check_dias_de_serie still
+  -- holds when the transaction ends.
+  if new.fecha_nueva is not null
+    and (tg_op = 'INSERT' or new.fecha_nueva is distinct from old.fecha_nueva)
+    and (
     exists (
       select 1
       from public.eventos_fechas
@@ -128,7 +133,9 @@ begin
       using errcode = '23514';
   end if;
 
-  if new.lugar_id is not null and not exists (
+  if new.lugar_id is not null
+    and (tg_op = 'INSERT' or new.lugar_id is distinct from old.lugar_id)
+    and not exists (
     select 1
     from public.lugares
     where lugares.id = new.lugar_id
