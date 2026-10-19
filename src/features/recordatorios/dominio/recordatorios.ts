@@ -59,12 +59,19 @@ export function registroInicial({ cargos, iglesiaElegidaId }: Contexto): Registr
   }
 }
 
-/** The iglesias a pastor or an admin can choose: those their cargos cover, in the given order. */
+/** An iglesia with its place in the structure and whether it was dada de baja. */
+type IglesiaConBaja = IglesiaEnEstructura & { deBaja?: boolean };
+
+/**
+ * The iglesias a pastor or an admin can choose: the active ones their cargos
+ * cover, in the given order. An iglesia de baja is never followed (#217).
+ */
 export function iglesiasQuePuedeSeguir(
   cargos: readonly Cargo[],
-  iglesias: readonly IglesiaEnEstructura[],
+  iglesias: readonly IglesiaConBaja[],
 ): string[] {
   return iglesias
+    .filter((iglesia) => !iglesia.deBaja)
     .filter((iglesia) =>
       cargosAbarcanDuenio(cargos, {
         alcance: 'iglesia',
@@ -76,10 +83,24 @@ export function iglesiasQuePuedeSeguir(
     .map((iglesia) => iglesia.id);
 }
 
+/**
+ * The iglesia elegida a hermano follows: none when it was dada de baja. Then
+ * they choose another one, and the one de baja is not followed again when it
+ * is reactivada (issue #217).
+ */
+export function iglesiaElegidaVigente(
+  iglesiaElegidaId: string | null,
+  iglesias: readonly IglesiaConBaja[],
+): string | null {
+  const deBaja = iglesias.some((iglesia) => iglesia.id === iglesiaElegidaId && iglesia.deBaja);
+
+  return deBaja ? null : iglesiaElegidaId;
+}
+
 type ContextoGuardado = Contexto & {
   guardado: RegistroGuardado | null;
   /** Every iglesia with its place in the structure, to know which ones the cargos cover. */
-  iglesias: readonly IglesiaEnEstructura[];
+  iglesias: readonly IglesiaConBaja[];
 };
 
 /**
@@ -90,7 +111,7 @@ type ContextoGuardado = Contexto & {
  * elegida again) or another usuario signed in. Otherwise it keeps the switch,
  * and the iglesias follow the rule of the cargos: a hermano the iglesia
  * elegida, an encargado their iglesias, and a pastor or an admin what they
- * chose that their cargos still cover.
+ * chose that their cargos still cover and is not de baja.
  */
 export function registroDeseado({
   cargos,

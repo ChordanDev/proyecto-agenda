@@ -1,6 +1,7 @@
 import {
   cambioQuienLoUsa,
   elegirIglesias,
+  iglesiaElegidaVigente,
   iglesiasQuePuedeSeguir,
   mismoRegistro,
   modoDeRecordatorios,
@@ -82,6 +83,22 @@ describe('iglesiasQuePuedeSeguir', () => {
     expect(iglesiasQuePuedeSeguir(pastor, iglesias)).toEqual(['i1', 'i2']);
   });
 
+  it('no longer offers a pastor an iglesia that moved to another distrito', () => {
+    const movida = iglesias.map((iglesia) =>
+      iglesia.id === 'i2' ? { ...iglesia, distritoId: 'd2' } : iglesia,
+    );
+
+    expect(iglesiasQuePuedeSeguir(pastor, movida)).toEqual(['i1']);
+  });
+
+  it('does not offer an iglesia dada de baja', () => {
+    const conBaja = iglesias.map((iglesia) =>
+      iglesia.id === 'i2' ? { ...iglesia, deBaja: true } : iglesia,
+    );
+
+    expect(iglesiasQuePuedeSeguir(admin, conBaja)).toEqual(['i1', 'i3']);
+  });
+
   it('offers an admin every iglesia of their asociacion', () => {
     expect(iglesiasQuePuedeSeguir(admin, iglesias)).toEqual(['i1', 'i2', 'i3']);
   });
@@ -149,6 +166,19 @@ describe('registroDeseado', () => {
     ).toEqual({ encendido: true, iglesiaIds: ['i2'] });
   });
 
+  it('drops an iglesia dada de baja a pastor had chosen', () => {
+    expect(
+      registroDeseado({
+        cargos: pastor,
+        iglesiaElegidaId: 'i1',
+        guardado: guardado({ iglesiaIds: ['i1', 'i2'], conUsuario: true, delUsuario: true }),
+        iglesias: iglesias.map((iglesia) =>
+          iglesia.id === 'i2' ? { ...iglesia, deBaja: true } : iglesia,
+        ),
+      }),
+    ).toEqual({ encendido: true, iglesiaIds: ['i1'] });
+  });
+
   it('turns a pastor off when none of their chosen iglesias is left', () => {
     expect(
       registroDeseado({
@@ -208,5 +238,24 @@ describe('cambioQuienLoUsa', () => {
     expect(cambioQuienLoUsa(encargado, guardado({ conUsuario: true, delUsuario: true }))).toBe(
       false,
     );
+  });
+});
+
+describe('iglesiaElegidaVigente', () => {
+  const conBaja = [
+    { id: 'i1', distritoId: 'd1', asociacionId: 'a1', deBaja: false },
+    { id: 'i2', distritoId: 'd1', asociacionId: 'a1', deBaja: true },
+  ];
+
+  it('keeps an active iglesia elegida', () => {
+    expect(iglesiaElegidaVigente('i1', conBaja)).toBe('i1');
+  });
+
+  it('drops an iglesia elegida dada de baja: the hermano chooses again', () => {
+    expect(iglesiaElegidaVigente('i2', conBaja)).toBeNull();
+  });
+
+  it('keeps nothing when none was chosen', () => {
+    expect(iglesiaElegidaVigente(null, conBaja)).toBeNull();
   });
 });
