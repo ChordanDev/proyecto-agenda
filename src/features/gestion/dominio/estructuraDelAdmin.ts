@@ -13,6 +13,8 @@ export type IglesiaDelAdmin = {
   localidad: string;
   distritoId: string;
   distritoNombre: string;
+  /** Encargados and secretarias: they lose the cargo if it is given de baja. */
+  cantidadDeEncargados: number;
 };
 
 // The same bounds for every text of the structure: a nombre or a direccion

@@ -25,8 +25,8 @@ export type GestionDelPastor = {
 };
 
 /**
- * The iglesias of the distritos of the pastor, with their encargados and the
- * eventos their calendarios show in the month in course of the asociacion.
+ * The active iglesias of the distritos of the pastor, with their encargados and
+ * the eventos their calendarios show in the month in course of the asociacion.
  *
  * The policies let the pastor read the cargos of the iglesias of their distrito,
  * with their nombres and correos (20261018000000_create_perfiles_y_secretaria.sql),
@@ -43,6 +43,7 @@ export async function getGestionDelPastor(
       .from('iglesias')
       .select('id, nombre, distrito_id, distritos (asociacion_id)')
       .in('distrito_id', distritoIds)
+      .eq('de_baja', false)
       .order('nombre'),
     supabase.rpc('get_zona_horaria_de_usuario'),
   ]);

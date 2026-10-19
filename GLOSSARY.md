@@ -21,6 +21,10 @@ _Avoid_: Misión, campo, campo local
 **Unión**:
 Nivel que agrupa asociaciones. Está fuera de alcance: la agenda contempla una sola asociación.
 
+**Dar de baja**:
+Lo que hace el admin con una iglesia o un distrito en lugar de borrarlo. Lo dado de baja deja de aparecer en el buscador, en el calendario y en la gestión, y quienes tenían un cargo en él lo pierden; sus eventos quedan guardados. Un distrito solo se da de baja sin iglesias activas. Se deshace con **Reactivar**, que devuelve los eventos pero no los cargos.
+_Avoid_: Borrar, eliminar, desactivar, archivar
+
 ### Personas y cargos
 
 **Hermano**:

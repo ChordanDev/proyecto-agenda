@@ -10,6 +10,7 @@ function iglesia(nombre: string, coordenadas?: Punto): Iglesia {
     localidad: 'Córdoba',
     distrito: 'Córdoba Centro',
     excluidaDelBuscador: false,
+    deBaja: false,
     coordenadas,
   };
 }

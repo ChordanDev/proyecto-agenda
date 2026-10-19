@@ -93,6 +93,18 @@ describe('getIglesiasDeCargos', () => {
     ).toEqual([]);
   });
 
+  it('leaves out an iglesia dada de baja, and gives it again once reactivada', () => {
+    const admin: Cargo[] = [{ nivel: 'asociacion', asociacionId: 'asociacion-central' }];
+
+    expect(ids(getIglesiasDeCargos(admin, [central, { ...nueva, deBaja: true }]))).toEqual([
+      'iglesia-central',
+    ]);
+    expect(ids(getIglesiasDeCargos(admin, [central, { ...nueva, deBaja: false }]))).toEqual([
+      'iglesia-central',
+      'iglesia-nueva',
+    ]);
+  });
+
   it('keeps whatever else the iglesias carry', () => {
     const conNombre = [{ ...central, nombre: 'Córdoba Central' }];
 
@@ -176,6 +188,23 @@ describe('armarCalendarioDeUsuario', () => {
       'Culto de Central',
       'Culto de Nueva',
       'Culto de Argüello',
+      'Encuentro del distrito',
+      'Congreso',
+    ]);
+  });
+
+  it('does not show the eventos of an iglesia dada de baja, and shows them again once reactivada', () => {
+    const conNuevaDeBaja = [central, { ...nueva, deBaja: true }, arguello, lejana];
+    const conNuevaReactivada = [central, { ...nueva, deBaja: false }, arguello, lejana];
+
+    expect(titulos(armarCalendarioDeUsuario(pastor, conNuevaDeBaja, fechas))).toEqual([
+      'Culto de Central',
+      'Encuentro del distrito',
+      'Congreso',
+    ]);
+    expect(titulos(armarCalendarioDeUsuario(pastor, conNuevaReactivada, fechas))).toEqual([
+      'Culto de Central',
+      'Culto de Nueva',
       'Encuentro del distrito',
       'Congreso',
     ]);

@@ -8,6 +8,7 @@ function iglesia(overrides: Partial<Iglesia>): Iglesia {
     localidad: 'Córdoba',
     distrito: 'Córdoba Centro',
     excluidaDelBuscador: false,
+    deBaja: false,
     ...overrides,
   };
 }
@@ -100,5 +101,19 @@ describe('buscarIglesias', () => {
         'Villa María Centro',
       ]);
     });
+  });
+});
+
+describe('buscarIglesias with iglesias dadas de baja', () => {
+  it('never returns an iglesia dada de baja, and returns it again once reactivada', () => {
+    const deBaja = [
+      iglesia({ nombre: 'Córdoba Central' }),
+      iglesia({ nombre: 'Los Molles', deBaja: true }),
+    ];
+    const reactivada = [deBaja[0], { ...deBaja[1], deBaja: false }];
+
+    expect(nombres(buscarIglesias(deBaja, ''))).toEqual(['Córdoba Central']);
+    expect(nombres(buscarIglesias(deBaja, 'molles'))).toEqual([]);
+    expect(nombres(buscarIglesias(reactivada, 'molles'))).toEqual(['Los Molles']);
   });
 });

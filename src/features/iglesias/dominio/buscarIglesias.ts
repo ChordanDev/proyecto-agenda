@@ -10,6 +10,8 @@ export type Iglesia = {
   distrito: string;
   /** When true, the church never appears in the "Elegir iglesia" search. */
   excluidaDelBuscador: boolean;
+  /** Dada de baja by the admin: out of the search until it is reactivada. */
+  deBaja: boolean;
   /** Where the church is; missing until the developers load it. */
   coordenadas?: Punto;
 };
@@ -26,7 +28,7 @@ export function normalize(text: string): string {
 /**
  * Search of "Elegir iglesia": matches by a part of the name, ignoring case and
  * accents. An empty text returns every church. Churches excluded from the
- * search are never returned. Without a ubicación the order of the list is
+ * search or dadas de baja are never returned. Without a ubicación the order of the list is
  * kept; with one, the results go from the nearest to the farthest.
  */
 export function buscarIglesias(
@@ -37,7 +39,8 @@ export function buscarIglesias(
   const query = normalize(texto);
 
   const results = iglesias.filter(
-    (iglesia) => !iglesia.excluidaDelBuscador && normalize(iglesia.nombre).includes(query),
+    (iglesia) =>
+      !iglesia.excluidaDelBuscador && !iglesia.deBaja && normalize(iglesia.nombre).includes(query),
   );
 
   return ubicacion ? ordenarPorDistancia(results, ubicacion) : results;

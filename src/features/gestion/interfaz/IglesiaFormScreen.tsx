@@ -8,6 +8,7 @@ import { AppText, Button, Card, TextField } from '@/shared/ui';
 import { useOnlineStatus } from '@/shared/useOnlineStatus';
 
 import { useEstructuraDelAdmin, useGuardarIglesia } from '../datos/useGestionAdmin';
+import { getConfirmacionDeBajaDeIglesia } from '../dominio/bajaDeEstructura';
 import type { DistritoDelAdmin } from '../dominio/distritosSinPastor';
 import {
   getAvisoDeCambioDeDistrito,
@@ -16,6 +17,7 @@ import {
   type ErroresDeLaIglesia,
   type IglesiaDelAdmin,
 } from '../dominio/estructuraDelAdmin';
+import { DarDeBaja } from './BajaDelAdmin';
 import {
   AvisoSinConexion,
   Campo,
@@ -209,6 +211,17 @@ function Formulario({ iglesia, distritoInicial, distritos, onClose }: Formulario
       {fallo && <ErrorAlGuardar />}
 
       <Button label={boton} disabled={!conConexion || guardar.isPending} onPress={onGuardar} />
+
+      {iglesia !== null && (
+        <DarDeBaja
+          baja={{ iglesiaId: iglesia.id }}
+          confirmacion={getConfirmacionDeBajaDeIglesia(
+            iglesia.nombre,
+            iglesia.cantidadDeEncargados,
+          )}
+          onHecho={onClose}
+        />
+      )}
 
       <HojaDeDistrito
         visible={eligiendoDistrito}
