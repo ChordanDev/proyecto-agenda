@@ -71,11 +71,13 @@ describe('clasificarErrorDeFecha', () => {
     );
   });
 
-  it('tells the last date left of a series, which another write left alone', () => {
-    // borrar_fecha rejects it: the cached dates of the series were old.
-    expect(clasificarErrorDeFecha('22023', 'The last fecha of the evento e1')).toBe(
-      'fecha-cambiada',
-    );
+  it('tells the last date left of a series only when deleting a date', () => {
+    // borrar_fecha rejects it: the cached dates of the series were old. Any
+    // other 22023 is an invalid value, as for every write.
+    expect(
+      clasificarErrorDeFecha('22023', 'The last fecha of the evento e1', { borrandoFecha: true }),
+    ).toBe('fecha-cambiada');
+    expect(clasificarErrorDeFecha('22023', 'invalid value')).toBe('otro');
   });
 
   it('classifies any other error as every write does', () => {

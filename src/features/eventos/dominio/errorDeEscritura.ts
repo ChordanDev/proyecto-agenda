@@ -18,9 +18,10 @@ const SIN_PERMISO_CODE = '42501';
 // is no longer one of the series, or a day another date of it took meanwhile.
 const FECHA_CAMBIADA_CODE = '23514';
 
-// What public.borrar_fecha raises for the last date left of a series: the
-// dates the app had were old, as another write left only that one.
-const ULTIMA_FECHA_CODE = '22023';
+// An invalid value. public.borrar_fecha raises it for the last date left of a
+// series: there it means the dates the app had were old, as another write
+// left only that one.
+const VALOR_INVALIDO_CODE = '22023';
 
 // What fetch says when the request never reached the server.
 const SIN_CONEXION_PATTERN = /network request failed|failed to fetch|network error/i;
@@ -56,17 +57,20 @@ export function clasificarError(
 
 /**
  * Classifies an error of a write of a single date of a series: a date that is
- * no longer one of the series, a day another date took, or a last date left
- * that another write left alone, is told apart.
+ * no longer one of the series, a day another date took, or, when deleting a
+ * date (`borrandoFecha`), a last date left that another write left alone, is
+ * told apart.
  */
 export function clasificarErrorDeFecha(
   code: string | undefined,
   message: string,
-  contexto: { eventoExiste?: boolean } = {},
+  { borrandoFecha = false, ...contexto }: { eventoExiste?: boolean; borrandoFecha?: boolean } = {},
 ): TipoDeErrorDeFecha {
-  return code === FECHA_CAMBIADA_CODE || code === ULTIMA_FECHA_CODE
-    ? 'fecha-cambiada'
-    : clasificarError(code, message, contexto);
+  if (code === FECHA_CAMBIADA_CODE || (borrandoFecha && code === VALOR_INVALIDO_CODE)) {
+    return 'fecha-cambiada';
+  }
+
+  return clasificarError(code, message, contexto);
 }
 
 const MENSAJES: Record<TipoDeErrorDeFecha, string> = {

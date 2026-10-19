@@ -215,6 +215,7 @@ type Motivo =
   | 'dia-ocupado';
 
 const MOTIVOS: Record<Motivo, [singular: string, plural: string]> = {
+  // Mixed reasons need two dates at least: the singular is never shown.
   mezclados: [
     'que pierde sus cambios propios con los cambios de la serie',
     'que pierden sus cambios propios con los cambios de la serie',

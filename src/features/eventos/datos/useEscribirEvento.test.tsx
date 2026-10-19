@@ -219,7 +219,7 @@ describe('useGuardarExcepcion and useBorrarFecha', () => {
     ]);
   });
 
-  it('reads the evento again when it was deleted meanwhile', async () => {
+  it('marks the evento to be read again when it was deleted meanwhile', async () => {
     mockRpc.mockResolvedValue({ data: null, error: { code: 'P0002', message: 'no evento' } });
     const { get, invalidated } = renderDeFecha(() => useBorrarFecha('e1'));
 
@@ -229,7 +229,8 @@ describe('useGuardarExcepcion and useBorrarFecha', () => {
         .catch(() => undefined);
     });
 
-    // A series deleted meanwhile is already what was asked: it is read again as a success.
+    // A series deleted meanwhile is already what was asked: as a success, the
+    // evento is marked stale, to be read when it is opened again.
     expect(invalidated).toEqual([
       [['calendario'], undefined],
       [['evento', 'e1'], 'none'],

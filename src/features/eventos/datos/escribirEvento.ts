@@ -178,7 +178,9 @@ export async function borrarFecha(eventoId: string, fecha: string): Promise<void
   const { error } = await supabase.rpc('borrar_fecha', { evento_id: eventoId, fecha });
 
   if (error) {
-    const failure = await toErrorDeEscritura(error, eventoId, clasificarErrorDeFecha);
+    const failure = await toErrorDeEscritura(error, eventoId, (code, message, contexto) =>
+      clasificarErrorDeFecha(code, message, { ...contexto, borrandoFecha: true }),
+    );
 
     if (failure.tipo !== 'no-existe') {
       throw failure;

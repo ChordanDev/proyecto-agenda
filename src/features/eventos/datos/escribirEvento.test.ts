@@ -203,6 +203,14 @@ describe('guardarExcepcion', () => {
     });
   });
 
+  it('keeps any 22023 of a saved date as any other error', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { code: '22023', message: 'invalid' } });
+
+    await expect(
+      guardarExcepcion('e1', { fecha: '2026-10-17', fechaNueva: null, cambios: { titulo: 'X' } }),
+    ).rejects.toMatchObject({ tipo: 'otro' });
+  });
+
   it('tells a date that changed meanwhile', async () => {
     mockRpc.mockResolvedValue({ data: null, error: { code: '23514', message: 'deleted' } });
 
@@ -213,6 +221,14 @@ describe('guardarExcepcion', () => {
 });
 
 describe('borrarFecha', () => {
+  it('tells a last date left that the cached dates did not know about', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { code: '22023', message: 'last fecha' } });
+
+    await expect(borrarFecha('e1', '2026-10-17')).rejects.toMatchObject({
+      tipo: 'fecha-cambiada',
+    });
+  });
+
   it('deletes a single date of the series', async () => {
     mockRpc.mockResolvedValue({ data: null, error: null });
 
