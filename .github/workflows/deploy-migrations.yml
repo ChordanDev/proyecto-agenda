@@ -25,15 +25,16 @@ jobs:
     # A manual run from another branch must not push its migrations.
     if: github.ref == 'refs/heads/main'
     env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      # The Session pooler connection string of the development project
+      # (dashboard > Connect > Session pooler), with the database password.
+      # GitHub runners have no IPv6, and the direct database address is IPv6
+      # only, so db push goes through the IPv4 pooler instead of `supabase link`.
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
         with:
           # Keep in sync with the `supabase` dev dependency in package.json.
           version: 2.120.0
-      - run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
       # The seed is simulated data for local development: it is not pushed.
-      - run: supabase db push --yes
+      - run: supabase db push --db-url "$SUPABASE_DB_URL" --yes
