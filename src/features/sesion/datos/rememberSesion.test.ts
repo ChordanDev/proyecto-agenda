@@ -1,4 +1,4 @@
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryObserver } from '@tanstack/react-query';
 
 import { rememberSesion } from './rememberSesion';
 
@@ -23,12 +23,37 @@ describe('rememberSesion', () => {
     expect(queryClient.getQueryData(['chat', 'consentimiento'])).toBeUndefined();
   });
 
-  it('reads the cargos again', async () => {
+  it('forgets the cargos and encargados left by a session the server ended', async () => {
     const queryClient = newClient();
-    queryClient.setQueryData(['cargos'], []);
+    queryClient.setQueryData(['cargos'], [{ rol: 'secretaria' }]);
+    queryClient.setQueryData(['cargos', 'gestor'], { nombre: 'Ana' });
+    queryClient.setQueryData(
+      ['cargos', 'encargados', 'iglesia-1'],
+      [{ correo: 'ana@example.com' }],
+    );
 
     await rememberSesion(queryClient);
 
-    expect(queryClient.getQueryState(['cargos'])?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData(['cargos'])).toBeUndefined();
+    expect(queryClient.getQueryData(['cargos', 'gestor'])).toBeUndefined();
+    expect(queryClient.getQueryData(['cargos', 'encargados', 'iglesia-1'])).toBeUndefined();
+  });
+
+  it('reads the cargos on screen again', async () => {
+    const queryClient = newClient();
+    queryClient.setQueryData(['cargos'], []);
+    const queryFn = jest.fn().mockResolvedValue([]);
+    const observer = new QueryObserver(queryClient, {
+      queryKey: ['cargos'],
+      queryFn,
+      // Fresh: only rememberSesion makes it fetch.
+      staleTime: Infinity,
+    });
+    const unsubscribe = observer.subscribe(() => {});
+
+    await rememberSesion(queryClient);
+
+    expect(queryFn).toHaveBeenCalled();
+    unsubscribe();
   });
 });
