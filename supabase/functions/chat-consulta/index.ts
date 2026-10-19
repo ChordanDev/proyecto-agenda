@@ -32,6 +32,25 @@ const ESTADOS: Record<FallaDeConsulta, number> = {
   error_servidor: 500,
 };
 
+/**
+ * Characters of a body: a mensaje of 500 and a tramo of six mensajes fit with
+ * room to spare. A longer one is not read.
+ */
+const MAX_LARGO_DEL_PEDIDO = 20_000;
+
+/** The body as JSON; null when it is too long or not JSON, which the domain rejects. */
+async function leerBody(request: Request): Promise<unknown> {
+  const texto = await request.text();
+  if (texto.length > MAX_LARGO_DEL_PEDIDO) {
+    return null;
+  }
+  try {
+    return JSON.parse(texto);
+  } catch {
+    return null;
+  }
+}
+
 function responder(estado: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status: estado,
@@ -72,7 +91,7 @@ Deno.serve(async (request) => {
       return fallar('sin_sesion');
     }
 
-    const body = await request.json().catch(() => null);
+    const body = await leerBody(request);
     const servidor = createClient<Database>(url, getEnv('SUPABASE_SERVICE_ROLE_KEY'), {
       auth: { persistSession: false, autoRefreshToken: false },
     });

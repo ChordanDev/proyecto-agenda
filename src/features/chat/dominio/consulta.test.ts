@@ -1,6 +1,7 @@
 import {
   MAX_BUSQUEDAS,
   MAX_LARGO_DE_MENSAJE,
+  MAX_LLAMADAS_POR_RONDA,
   MAX_MENSAJES_DEL_TRAMO,
   responderConsulta,
   type Busqueda,
@@ -388,6 +389,30 @@ describe('responderConsulta', () => {
         falla: 'proveedor_caido',
       });
       expect(f.registros).toHaveLength(0);
+    });
+
+    it(`runs at most ${MAX_LLAMADAS_POR_RONDA} busquedas of one round, and tells the model about the rest`, async () => {
+      const f = fake({
+        respuestas: [
+          {
+            tipo: 'busqueda',
+            llamadas: Array.from({ length: MAX_LLAMADAS_POR_RONDA + 2 }, (_, i) => ({
+              id: `llamada-${i}`,
+              argumentos: BUSQUEDA_VALIDA,
+            })),
+            costoUsd: 0.001,
+          },
+          texto('Listo.'),
+        ],
+      });
+
+      await responderConsulta(pedido('¿Qué hay?'), USUARIO, f.puertos);
+
+      expect(f.busquedas).toHaveLength(MAX_LLAMADAS_POR_RONDA);
+      // Every llamada gets its result, as the provider expects.
+      const resultados = f.llamadasAlProveedor[1].mensajes.filter((m) => m.rol === 'busqueda');
+      expect(resultados).toHaveLength(MAX_LLAMADAS_POR_RONDA + 2);
+      expect(JSON.parse(resultados[MAX_LLAMADAS_POR_RONDA].contenido)).toHaveProperty('error');
     });
   });
 

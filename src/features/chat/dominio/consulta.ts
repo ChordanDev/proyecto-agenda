@@ -29,6 +29,9 @@ const MAX_LARGO_DEL_TRAMO = 2000;
 /** Rounds of busquedas the model can ask for in one consulta. */
 export const MAX_BUSQUEDAS = 3;
 
+/** Busquedas the model can ask for at once, in one round. */
+export const MAX_LLAMADAS_POR_RONDA = 3;
+
 /** Days a busqueda can span, so one cannot read the whole calendario. */
 export const MAX_DIAS_DE_BUSQUEDA = 366;
 
@@ -408,8 +411,12 @@ export async function responderConsulta(
       }
 
       mensajes.push({ rol: 'pedido_de_busqueda', llamadas: respuesta.llamadas });
-      for (const llamada of respuesta.llamadas) {
-        const busqueda = leerBusqueda(llamada.argumentos);
+      for (const [indice, llamada] of respuesta.llamadas.entries()) {
+        // Every llamada needs its result, so the extra ones get an error.
+        const busqueda =
+          indice < MAX_LLAMADAS_POR_RONDA
+            ? leerBusqueda(llamada.argumentos)
+            : { error: `Solo se hacen ${MAX_LLAMADAS_POR_RONDA} búsquedas a la vez.` };
 
         if ('error' in busqueda) {
           mensajes.push({
