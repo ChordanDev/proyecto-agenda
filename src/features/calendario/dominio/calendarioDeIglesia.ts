@@ -1,5 +1,5 @@
 import { armarCalendario, type FechaDeEvento, type IglesiaEnEstructura } from './armarCalendario';
-import { armarEtiquetas, type NombresDeDuenios } from './calendarioTexts';
+import { armarEtiquetas, type DatosDeEtiquetas } from './calendarioTexts';
 
 /** An iglesia with its place in the structure and the nombres a header shows. */
 export type IglesiaConNombres = IglesiaEnEstructura & {
@@ -25,7 +25,7 @@ export type CalendarioDeIglesia = {
 export function armarCalendarioDeIglesia(
   iglesia: IglesiaConNombres | null,
   fechas: readonly FechaDeEvento[],
-  nombres: NombresDeDuenios,
+  datos: DatosDeEtiquetas,
 ): CalendarioDeIglesia {
   if (iglesia === null) {
     return { iglesia: null, fechas: [], nombresDeDistritos: {}, etiquetas: {} };
@@ -36,7 +36,7 @@ export function armarCalendarioDeIglesia(
   return {
     iglesia: { nombre: iglesia.nombre, distrito: iglesia.distrito },
     fechas: calendario,
-    nombresDeDistritos: { ...nombres.distritos },
-    etiquetas: armarEtiquetas([iglesia], calendario, nombres),
+    nombresDeDistritos: { ...datos.distritos },
+    etiquetas: armarEtiquetas([iglesia], calendario, datos),
   };
 }

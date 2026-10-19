@@ -69,7 +69,7 @@ export async function getCalendarioDeUsuario(
     return { fechas: [], nombresDeDistritos: {}, etiquetas: {} };
   }
 
-  const { fechas, nombresDeDistritos, nombresDeIglesias } = await getFechasDelMes(
+  const { fechas, nombresDeDistritos, nombresDeIglesias, sumadas } = await getFechasDelMes(
     ownedOrSumada,
     month,
   );
@@ -83,6 +83,7 @@ export async function getCalendarioDeUsuario(
     etiquetas: armarEtiquetas(covered, calendario, {
       distritos: nombresDeDistritos,
       iglesias: nombresDeIglesias,
+      sumadas,
     }),
   };
 }

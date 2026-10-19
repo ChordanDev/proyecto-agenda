@@ -4,7 +4,7 @@ import type { FechaDeEvento } from './armarCalendario';
 import { armarCalendarioDeIglesia, type IglesiaConNombres } from './calendarioDeIglesia';
 import { getEventosDelDia } from './dayOfCalendario';
 
-const SIN_NOMBRES = { distritos: {}, iglesias: {} };
+const SIN_NOMBRES = { distritos: {}, iglesias: {}, sumadas: {} };
 
 const cordobaCentral: IglesiaConNombres = {
   id: 'iglesia-cordoba-central',
@@ -43,6 +43,7 @@ describe('armarCalendarioDeIglesia', () => {
       armarCalendarioDeIglesia(cordobaCentral, [propio], {
         distritos: { 'distrito-centro': 'Distrito Centro' },
         iglesias: {},
+        sumadas: {},
       }),
     ).toEqual({
       iglesia: { nombre: 'Córdoba Central', distrito: 'Distrito Centro' },
@@ -65,6 +66,7 @@ describe('armarCalendarioDeIglesia', () => {
       armarCalendarioDeIglesia(null, [fecha('2026-10-07', 'Culto')], {
         distritos: { a: 'b' },
         iglesias: {},
+        sumadas: {},
       }),
     ).toEqual({ iglesia: null, fechas: [], nombresDeDistritos: {}, etiquetas: {} });
   });
@@ -79,6 +81,7 @@ describe('armarCalendarioDeIglesia', () => {
       armarCalendarioDeIglesia(cordobaCentral, [sumado], {
         distritos: {},
         iglesias: { 'iglesia-barrio-norte': 'Barrio Norte' },
+        sumadas: {},
       }).etiquetas,
     ).toEqual({ [sumado.evento.id]: 'Compartido por Iglesia Barrio Norte' });
   });
@@ -92,6 +95,7 @@ describe('armarCalendarioDeIglesia', () => {
     const calendario = armarCalendarioDeIglesia(cordobaCentral, [delDistrito, delDistrito], {
       distritos: { 'distrito-centro': 'Distrito Centro' },
       iglesias: {},
+      sumadas: {},
     });
 
     expect(getEventosDelDia(calendario.fechas, '2026-10-10')).toHaveLength(1);

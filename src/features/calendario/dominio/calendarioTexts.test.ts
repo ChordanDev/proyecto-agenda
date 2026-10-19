@@ -209,6 +209,7 @@ describe('getEtiquetaDelEvento', () => {
   const nombres = {
     iglesias: { 'iglesia-central': 'Central' },
     distritos: { 'distrito-norte': 'Distrito Norte' },
+    sumadas: {},
   };
 
   function evento(overrides: Partial<Evento>): Evento {
@@ -284,6 +285,32 @@ describe('getEtiquetaDelEvento', () => {
     });
 
     expect(getEtiquetaDelEvento(delDistrito, [mudada], nombres)).toBe('Distrito Norte');
+  });
+
+  it('does not count an iglesia sumada outside the calendario that now sees it by its alcance', () => {
+    // Norte moved to the distrito that owns the evento; Central looks at it.
+    const delDistrito = evento({
+      duenio: { alcance: 'distrito', distritoId: 'distrito-norte' },
+      iglesiasSumadas: [norte.id, 'iglesia-sur'],
+    });
+    const conSumadas = {
+      ...nombres,
+      sumadas: {
+        [norte.id]: { ...norte, distritoId: 'distrito-norte' },
+        'iglesia-sur': {
+          id: 'iglesia-sur',
+          distritoId: 'distrito-sur',
+          asociacionId: 'asociacion-central',
+        },
+      },
+    };
+
+    expect(getEtiquetaDelEvento(delDistrito, [central], conSumadas)).toBe(
+      'Distrito Norte · Compartido con 1 iglesia',
+    );
+    expect(
+      getEtiquetaDelEvento({ ...delDistrito, iglesiasSumadas: [norte.id] }, [central], conSumadas),
+    ).toBe('Distrito Norte');
   });
 
   it('counts an iglesia sumada of the calendario of a pastor that also covers the duenio', () => {

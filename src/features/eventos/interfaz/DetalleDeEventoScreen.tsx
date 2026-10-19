@@ -28,7 +28,7 @@ import {
   getCompartidoDelDetalle,
   getConfirmacionDeQuitar,
   getIglesiasParaQuitar,
-  getQuitadoDe,
+  getAvisoDeQuitado,
   type IglesiaSumada,
 } from '../dominio/eventoCompartido';
 import { formatHasta, formatRepeticionDelDetalle } from '../dominio/repeticion';
@@ -166,8 +166,9 @@ function Detalle({ detallado, fecha, onDeleted }: DetalleProps) {
   const quienMira = useQuienMira();
   const borrar = useBorrarEvento(evento.id);
   const quitar = useQuitarEventoDeIglesia(evento.id);
-  // The iglesia the evento was just quitado from: the detail stays and says so.
-  const [quitadoDe, setQuitadoDe] = useState<string | null>(null);
+  // The iglesia the evento was just quitado from. The detail stays and says
+  // so once the evento read again confirms it (`getAvisoDeQuitado`).
+  const [quitada, setQuitada] = useState<IglesiaSumada | null>(null);
   const categoria = getCategoria(evento.enfasis);
   const enfasis = getEnfasisDelDetalle(evento.enfasis);
   const duenio = getDuenioDelDetalle(evento.duenio, nombreDelDuenio);
@@ -178,7 +179,9 @@ function Detalle({ detallado, fecha, onDeleted }: DetalleProps) {
       : getCompartidoDelDetalle(quienMira, duenioEnEstructura, duenio.nombre, sumadas);
   const paraQuitar =
     quienMira === undefined ? [] : getIglesiasParaQuitar(quienMira, duenioEnEstructura, sumadas);
-  const hasActions = puedeEditar || paraQuitar.length > 0 || quitadoDe !== null;
+  const avisoDeQuitado =
+    quitada === null ? null : getAvisoDeQuitado(quitada, duenioEnEstructura, sumadas);
+  const hasActions = puedeEditar || paraQuitar.length > 0 || avisoDeQuitado !== null;
 
   const askQuitar = (iglesia: IglesiaSumada, nombreDeIglesia: string) => {
     if (!avisarSinConexion()) {
@@ -192,7 +195,8 @@ function Detalle({ detallado, fecha, onDeleted }: DetalleProps) {
         style: 'destructive',
         onPress: () =>
           quitar.mutate(iglesia.id, {
-            onSuccess: () => setQuitadoDe(nombreDeIglesia),
+            // The evento was already read again (`useQuitarEventoDeIglesia`).
+            onSuccess: () => setQuitada(iglesia),
             onError: (error) =>
               Alert.alert('No se pudo quitar', getMensajeDeError(getTipoDeError(error))),
           }),
@@ -324,10 +328,10 @@ function Detalle({ detallado, fecha, onDeleted }: DetalleProps) {
       {/* The actions stay at the bottom of the screen, as in capture 5b. */}
       {hasActions && <View style={styles.spacer} />}
 
-      {quitadoDe !== null && (
+      {avisoDeQuitado !== null && (
         <View accessibilityRole="alert" style={styles.quitado}>
           <AppText weight="bold" style={styles.quitadoText}>
-            {getQuitadoDe(quitadoDe)}
+            {avisoDeQuitado}
           </AppText>
         </View>
       )}

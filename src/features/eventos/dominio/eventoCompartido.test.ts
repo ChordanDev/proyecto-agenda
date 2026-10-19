@@ -5,7 +5,7 @@ import {
   getCompartidoDelDetalle,
   getConfirmacionDeQuitar,
   getIglesiasParaQuitar,
-  getQuitadoDe,
+  getAvisoDeQuitado,
   type IglesiaSumada,
 } from './eventoCompartido';
 
@@ -161,8 +161,28 @@ describe('the texts of Quitar', () => {
       'Solo lo quita de Iglesia Norte. Las demás iglesias lo siguen viendo.',
     );
   });
+});
 
-  it('says where it was quitado from', () => {
-    expect(getQuitadoDe('Iglesia Norte')).toBe('Ya no aparece en el calendario de Iglesia Norte.');
+describe('getAvisoDeQuitado', () => {
+  it('says where it was quitado from once the evento read again no longer has the iglesia', () => {
+    expect(getAvisoDeQuitado(norte, central, [lasRosas])).toBe(
+      'Ya no aparece en el calendario de Iglesia Norte.',
+    );
+  });
+
+  it('says nothing while the evento read again still has the iglesia sumada', () => {
+    expect(getAvisoDeQuitado(norte, central, [norte, lasRosas])).toBeNull();
+  });
+
+  it('says nothing when the iglesia still sees the evento by its alcance', () => {
+    // Meanwhile the duenio made it an evento of the distrito of Norte, which
+    // dropped her as sumada: the quitar found nothing to delete.
+    const delDistritoDeNorte: DuenioEnEstructura = {
+      alcance: 'distrito',
+      distritoId: norte.distritoId,
+      asociacionId: norte.asociacionId,
+    };
+
+    expect(getAvisoDeQuitado(norte, delDistritoDeNorte, [])).toBeNull();
   });
 });

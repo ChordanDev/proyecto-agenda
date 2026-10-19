@@ -70,7 +70,9 @@ const ROW = {
     fecha_fin: null,
     repeticion: 'ninguna',
     fin_de_serie: null,
-    iglesias_sumadas: [{ iglesia_id: 'i9' }],
+    iglesias_sumadas: [
+      { iglesia_id: 'i9', iglesias: { distrito_id: 'd2', distritos: { asociacion_id: 'a1' } } },
+    ],
     iglesias: null,
     distritos: { nombre: 'Centro' },
   },
@@ -114,6 +116,7 @@ describe('getFechasDelMes', () => {
       ],
       nombresDeDistritos: { d1: 'Centro' },
       nombresDeIglesias: {},
+      sumadas: { i9: { id: 'i9', distritoId: 'd2', asociacionId: 'a1' } },
     });
   });
 

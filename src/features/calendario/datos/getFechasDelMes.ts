@@ -1,7 +1,7 @@
 import { toEvento } from '@/features/eventos/datos/eventoRow';
 import { supabase } from '@/shared/supabase';
 
-import type { FechaDeEvento } from '../dominio/armarCalendario';
+import type { FechaDeEvento, IglesiaEnEstructura } from '../dominio/armarCalendario';
 import { getMonthRange, type Month } from '../dominio/getMonthRange';
 import { armarNombresDeDistritos } from '../dominio/nombresDeDistritos';
 
@@ -29,6 +29,11 @@ export type FechasDelMes = {
   nombresDeDistritos: Record<string, string>;
   /** Nombre of each iglesia that owns one of the eventos read: an iglesia sumada says who shares it. */
   nombresDeIglesias: Record<string, string>;
+  /**
+   * The place in the structure, now, of each iglesia sumada of the eventos read:
+   * one that moved under the duenio sees the evento by its alcance.
+   */
+  sumadas: Record<string, IglesiaEnEstructura>;
 };
 
 /**
@@ -43,7 +48,7 @@ const FECHA_COLUMNS = `
     id, titulo, lugar, lugar_id, descripcion, enfasis, alcance,
     duenio_iglesia_id, duenio_distrito_id, duenio_asociacion_id,
     hora, fecha_fin, repeticion, fin_de_serie,
-    iglesias_sumadas (iglesia_id),
+    iglesias_sumadas (iglesia_id, iglesias (distrito_id, distritos (asociacion_id))),
     lugares (nombre),
     iglesias!eventos_duenio_iglesia_id_fkey (nombre),
     distritos (nombre)
@@ -141,12 +146,21 @@ export async function getFechasDelMes(
   );
 
   const nombresDeIglesias: Record<string, string> = {};
+  const sumadas: Record<string, IglesiaEnEstructura> = {};
 
   for (const { eventos } of rows) {
     if (eventos.duenio_iglesia_id && eventos.iglesias) {
       nombresDeIglesias[eventos.duenio_iglesia_id] = eventos.iglesias.nombre;
     }
+
+    for (const { iglesia_id, iglesias } of eventos.iglesias_sumadas) {
+      sumadas[iglesia_id] = {
+        id: iglesia_id,
+        distritoId: iglesias.distrito_id,
+        asociacionId: iglesias.distritos.asociacion_id,
+      };
+    }
   }
 
-  return { fechas, nombresDeDistritos, nombresDeIglesias };
+  return { fechas, nombresDeDistritos, nombresDeIglesias, sumadas };
 }

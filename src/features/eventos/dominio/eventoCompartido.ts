@@ -122,7 +122,21 @@ export function getAvisoDeQuitar(nombreDeIglesia: string): string {
   return `Solo lo quita de ${nombreDeIglesia}. Las demás iglesias lo siguen viendo.`;
 }
 
-/** What the detail says once the evento was quitado. */
-export function getQuitadoDe(nombreDeIglesia: string): string {
-  return `Ya no aparece en el calendario de ${nombreDeIglesia}.`;
+/**
+ * What the detail says after quitar the evento from an iglesia, from the
+ * evento read again: "Ya no aparece en el calendario de Iglesia Norte." only
+ * when it really left her calendario. A quitar succeeds as well when the
+ * duenio had dropped her meanwhile, for instance by moving the evento to her
+ * distrito: then she still sees it, and nothing is said.
+ */
+export function getAvisoDeQuitado(
+  quitada: IglesiaSumada,
+  duenio: DuenioEnEstructura,
+  sumadas: readonly IglesiaSumada[],
+): string | null {
+  if (sumadas.some((iglesia) => iglesia.id === quitada.id) || seVePorAlcance(quitada, duenio)) {
+    return null;
+  }
+
+  return `Ya no aparece en el calendario de ${nombrarConNivel('iglesia', quitada.nombre)}.`;
 }

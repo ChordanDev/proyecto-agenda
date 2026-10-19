@@ -129,18 +129,22 @@ export function nombrarConNivel(alcance: Alcance, nombre: string): string {
     : `${level} ${nombre}`;
 }
 
-/** The nombres a calendario knows of the iglesias and distritos that own its eventos, by id. */
-export type NombresDeDuenios = {
+/** What the labels of a calendario need besides its eventos, all by id. */
+export type DatosDeEtiquetas = {
+  /** Nombre of each iglesia that owns one of its eventos. */
   iglesias: Readonly<Record<string, string>>;
+  /** Nombre of each distrito that owns one of its eventos. */
   distritos: Readonly<Record<string, string>>;
+  /** The place in the structure, read now, of each iglesia sumada of its eventos. */
+  sumadas: Readonly<Record<string, IglesiaEnEstructura>>;
 };
 
-function nombrarDuenio(duenio: Duenio, nombres: NombresDeDuenios): string {
+function nombrarDuenio(duenio: Duenio, datos: DatosDeEtiquetas): string {
   switch (duenio.alcance) {
     case 'iglesia':
-      return nombrarConNivel('iglesia', nombres.iglesias[duenio.iglesiaId] ?? '').trim();
+      return nombrarConNivel('iglesia', datos.iglesias[duenio.iglesiaId] ?? '').trim();
     case 'distrito':
-      return nombrarConNivel('distrito', nombres.distritos[duenio.distritoId] ?? '').trim();
+      return nombrarConNivel('distrito', datos.distritos[duenio.distritoId] ?? '').trim();
     case 'asociacion':
       return 'Asociación';
   }
@@ -156,28 +160,28 @@ function formatCompartidoCon(count: number): string {
  *
  * - Seen only as iglesia sumada: "Compartido por Iglesia Central".
  * - Seen by its alcance: its alcance (`getAlcanceLabel`) and, when shared,
- *   "Compartido con 3 iglesias". An iglesia sumada of the calendario that also
- *   sees it by its alcance (it moved to the distrito of the duenio) is not
- *   counted: for her the evento is not shared.
+ *   "Compartido con 3 iglesias". An iglesia sumada that also sees it by its
+ *   alcance (it moved to the distrito of the duenio) is not counted: for her
+ *   the evento is not shared. The detail leaves her out the same way.
  *
  * Null when there is nothing to say: an evento of the iglesia, not shared.
  */
 export function getEtiquetaDelEvento(
   evento: Evento,
   iglesias: readonly IglesiaEnEstructura[],
-  nombres: NombresDeDuenios,
+  datos: DatosDeEtiquetas,
 ): string | null {
   if (!iglesias.some((iglesia) => seVePorAlcance(iglesia, evento.duenio))) {
-    return `Compartido por ${nombrarDuenio(evento.duenio, nombres)}`;
+    return `Compartido por ${nombrarDuenio(evento.duenio, datos)}`;
   }
 
   const sumadas = evento.iglesiasSumadas.filter((id) => {
-    const delCalendario = iglesias.find((iglesia) => iglesia.id === id);
+    const sumada = datos.sumadas[id] ?? iglesias.find((iglesia) => iglesia.id === id);
 
-    return delCalendario === undefined || !seVePorAlcance(delCalendario, evento.duenio);
+    return sumada === undefined || !seVePorAlcance(sumada, evento.duenio);
   });
   const etiqueta = [
-    getAlcanceLabel(evento.duenio, nombres.distritos),
+    getAlcanceLabel(evento.duenio, datos.distritos),
     sumadas.length > 0 ? formatCompartidoCon(sumadas.length) : null,
   ]
     .filter((text) => text !== null)
@@ -193,12 +197,12 @@ export function getEtiquetaDelEvento(
 export function armarEtiquetas(
   iglesias: readonly IglesiaEnEstructura[],
   fechas: readonly FechaDeEvento[],
-  nombres: NombresDeDuenios,
+  datos: DatosDeEtiquetas,
 ): Record<string, string> {
   const etiquetas: Record<string, string> = {};
 
   for (const { evento } of fechas) {
-    const etiqueta = getEtiquetaDelEvento(evento, iglesias, nombres);
+    const etiqueta = getEtiquetaDelEvento(evento, iglesias, datos);
 
     if (etiqueta !== null) {
       etiquetas[evento.id] = etiqueta;
