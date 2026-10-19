@@ -9,7 +9,7 @@ import { DUPLICADO, type GuardarComo } from './guardarDistrito';
  * calendario follows the new distrito, and its eventos, lugares and encargados
  * stay with it. Only the admin of the asociacion can
  * (20261022100000_write_distritos_e_iglesias.sql and
- * 20261025200000_ciudad_y_provincia_de_iglesias.sql). Returns its id.
+ * 20261025400000_ciudad_y_provincia_de_iglesias.sql). Returns its id.
  *
  * A create sent again after its answer was lost finds the iglesia already
  * created, and saves what the form holds on it instead of creating another.

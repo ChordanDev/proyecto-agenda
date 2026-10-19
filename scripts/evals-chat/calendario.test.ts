@@ -20,7 +20,10 @@ function calendario(eventos: EventoDePrueba[]): CalendarioDePrueba {
     asociacion: 'Asociación Evals',
     zonaHoraria: 'America/Argentina/Buenos_Aires',
     distrito: 'Distrito Evals',
-    iglesias: [{ nombre: 'Iglesia Evals Central', direccion: 'x', ciudad: 'y', provincia: 'z' }],
+    iglesias: [
+      { nombre: 'Iglesia Evals Central', direccion: 'x', ciudad: 'y', provincia: 'z' },
+      { nombre: 'Iglesia Evals Norte', direccion: 'x', ciudad: 'y', provincia: 'z' },
+    ],
     encargadoDe: 'Iglesia Evals Central',
     eventos,
   };
@@ -55,6 +58,7 @@ describe('getEventosParaCargar', () => {
           fin_de_serie: null,
         },
         fechas: ['2026-10-24'],
+        sumadas: [],
       },
     ]);
   });
@@ -100,6 +104,24 @@ describe('getEventosParaCargar', () => {
     });
   });
 
+  it('shares an evento with the iglesias sumadas', () => {
+    const [{ fila, sumadas }] = getEventosParaCargar(
+      calendario([
+        { ...EVENTO, duenio: 'Iglesia Evals Norte', sumadas: ['Iglesia Evals Central'] },
+      ]),
+      ANCLAJE,
+    );
+
+    expect(fila.duenio_iglesia_id).toBe(IDS.iglesia(1));
+    expect(sumadas).toEqual([IDS.iglesia(0)]);
+  });
+
+  it('rejects an iglesia sumada that is not in the calendario', () => {
+    expect(() =>
+      getEventosParaCargar(calendario([{ ...EVENTO, sumadas: ['Otra iglesia'] }]), ANCLAJE),
+    ).toThrow('Unknown iglesia in the calendario de prueba: Otra iglesia');
+  });
+
   it('rejects a duenio that is not in the calendario', () => {
     expect(() =>
       getEventosParaCargar(calendario([{ ...EVENTO, duenio: 'Otra iglesia' }]), ANCLAJE),
@@ -119,6 +141,32 @@ describe('the versioned calendario de prueba and its casos', () => {
     );
 
     expect(desconocidos).toEqual([]);
+  });
+
+  it('finds the word coro only in the Ensayo del coro, as buscar_eventos matches part of a word', () => {
+    const normalizar = (texto: string) =>
+      texto.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+    const titulos = ARCHIVO.eventos
+      .filter((evento) =>
+        normalizar([evento.titulo, evento.lugar, evento.descripcion].join(' ')).includes('coro'),
+      )
+      .map((evento) => evento.titulo);
+
+    expect(new Set(titulos)).toEqual(new Set(['Ensayo del coro']));
+  });
+
+  it('expects the shared evento to be said with its duenio, not just its lugar', () => {
+    const caso = CASOS.find((candidato) => candidato.id === 'simple-compartido');
+    const [titulo] = caso?.esperado.eventos ?? [];
+    const evento = ARCHIVO.eventos.find((candidato) => candidato.titulo === titulo);
+    const fragmentos = caso?.esperado.contiene ?? [];
+
+    expect(evento?.sumadas).toEqual([ARCHIVO.encargadoDe]);
+    expect(fragmentos).not.toEqual([]);
+    for (const fragmento of fragmentos) {
+      expect(evento?.duenio).toContain(fragmento);
+      expect(evento?.lugar ?? '').not.toContain(fragmento);
+    }
   });
 
   it('gives each caso its own id', () => {

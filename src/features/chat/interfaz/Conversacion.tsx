@@ -1,12 +1,14 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
 
 import { useOnlineStatus } from '@/shared/useOnlineStatus';
 
 import type { ConversacionEnCurso } from '../datos/useConversacion';
 import { puedeEnviar } from '../dominio/conversacion';
+import { getMotivoDeLaHoja, getReporte, REPORTE_INICIAL } from '../dominio/reporte';
 import { CuadroDeTexto } from './CuadroDeTexto';
 import { AvisoDeLimite, AvisoSinConexion } from './EstadoDeFalla';
+import { HojaDeReporte } from './HojaDeReporte';
 import { Buscando, MensajeDeChat } from './MensajeDeChat';
 
 // Layout of the approved mockup, which the theme has no tokens for. The line
@@ -32,6 +34,7 @@ export function Conversacion({
   enviar,
   reintentar,
   confirmar,
+  reportar,
   onIrAlFormulario,
   onEditar,
   onVerEvento,
@@ -39,6 +42,8 @@ export function Conversacion({
   const isOnline = useOnlineStatus();
   const list = useRef<ScrollView>(null);
   const ultimo = conversacion.mensajes.at(-1);
+  // The respuesta whose hoja of motivos is open.
+  const [reportando, setReportando] = useState<string | null>(null);
 
   return (
     <KeyboardAvoidingView
@@ -64,6 +69,7 @@ export function Conversacion({
             onConfirmar={confirmar}
             onEditar={onEditar}
             onVerEvento={onVerEvento}
+            onReportar={setReportando}
           />
         ))}
         {conversacion.enviando && <Buscando />}
@@ -76,6 +82,21 @@ export function Conversacion({
           puedeEnviar={(texto) => isOnline && puedeEnviar(conversacion, texto)}
           onEnviar={enviar}
           aviso={conversacion.aviso}
+        />
+      )}
+
+      {reportando !== null && (
+        // Keyed by the respuesta: each one opens on its own motivo.
+        <HojaDeReporte
+          key={reportando}
+          visible
+          // After a failed try it opens on its motivo, so sending it again saves it once.
+          motivoInicial={getMotivoDeLaHoja(getReporte(conversacion, reportando) ?? REPORTE_INICIAL)}
+          onEnviar={(motivo) => {
+            setReportando(null);
+            reportar(reportando, motivo);
+          }}
+          onClose={() => setReportando(null)}
         />
       )}
     </KeyboardAvoidingView>
