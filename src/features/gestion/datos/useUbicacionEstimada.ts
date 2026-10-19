@@ -1,0 +1,81 @@
+import * as Location from 'expo-location';
+import { useEffect, useEffectEvent, useState } from 'react';
+
+import type { Punto } from '@/features/iglesias/dominio/distancia';
+
+/**
+ * Where the map of "Nueva iglesia" and "Editar iglesia" stands with the
+ * direccion it looks for:
+ * - `idle`: nothing to look for.
+ * - `buscando`: the phone is looking for it.
+ * - `encontrada`: the estimated location, already handed to `onEncontrada`.
+ * - `noEncontrada`: the phone could not find it; the admin places the marker.
+ */
+export type UbicacionEstimada =
+  | { status: 'idle' }
+  | { status: 'buscando' }
+  | { status: 'encontrada' }
+  | { status: 'noEncontrada' };
+
+// Looks for the direccion once the admin stops typing, not on every letter:
+// the geocoder of the phone rejects too many requests.
+const ESPERA_MS = 800;
+// A phone without a connection would otherwise leave "Buscando…" with no end.
+const TIMEOUT_MS = 15_000;
+
+/** The point of a direccion, with the geocoder of the phone; null when it is not found. */
+async function ubicarDireccion(direccion: string): Promise<Punto | null> {
+  const resultado = await Promise.race([
+    Location.geocodeAsync(direccion),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Geocoding timed out')), TIMEOUT_MS),
+    ),
+  ]);
+  const [primero] = resultado;
+
+  return primero ? { latitud: primero.latitude, longitud: primero.longitude } : null;
+}
+
+/**
+ * Estimates where a direccion is (getDireccionParaElMapa), and hands the point
+ * to `onEncontrada`. Null: nothing to look for. A direccion that changes while
+ * it is being looked for drops the earlier answer.
+ */
+export function useUbicacionEstimada(
+  direccion: string | null,
+  onEncontrada: (punto: Punto, direccion: string) => void,
+): UbicacionEstimada {
+  const [respuesta, setRespuesta] = useState<{
+    direccion: string;
+    status: 'encontrada' | 'noEncontrada';
+  } | null>(null);
+  const entregar = useEffectEvent(onEncontrada);
+
+  useEffect(() => {
+    if (direccion === null) {
+      return;
+    }
+
+    let vigente = true;
+    const timer = setTimeout(() => {
+      ubicarDireccion(direccion)
+        .catch(() => null)
+        .then((punto) => {
+          if (!vigente) return;
+          if (punto !== null) entregar(punto, direccion);
+          setRespuesta({ direccion, status: punto === null ? 'noEncontrada' : 'encontrada' });
+        });
+    }, ESPERA_MS);
+
+    return () => {
+      vigente = false;
+      clearTimeout(timer);
+    };
+  }, [direccion]);
+
+  if (direccion === null) {
+    return { status: 'idle' };
+  }
+
+  return respuesta?.direccion === direccion ? { status: respuesta.status } : { status: 'buscando' };
+}

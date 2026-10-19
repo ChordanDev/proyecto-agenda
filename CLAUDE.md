@@ -122,7 +122,7 @@ El trabajo se divide en dos entregas, cada una con su milestone en GitHub. Todas
 ### v1 (vence el viernes 4 de diciembre de 2026)
 Prueba que la app reemplaza a la agenda impresa de punta a punta.
 
-- Recorrido del hermano: bienvenida, elegir iglesia con buscador por nombre (cada resultado muestra distrito y localidad), calendario mensual con marcadores, lista del día y detalle del evento.
+- Recorrido del hermano: bienvenida, elegir iglesia con buscador por nombre (cada resultado muestra distrito, ciudad y provincia), calendario mensual con marcadores, lista del día y detalle del evento.
 - Calendario con eventos de iglesia, distrito y asociación, con su alcance visible.
 - Los cuatro énfasis y la actividad regular, con forma y color. Filtros por énfasis (con la actividad regular como una opción más) y, para pastor y admin, por iglesia.
 - Crear, editar y borrar eventos para encargado, pastor y admin, con inicio de sesión.

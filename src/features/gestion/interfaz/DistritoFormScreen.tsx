@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { HojaInferior } from '@/features/eventos/interfaz/HojaInferior';
+import { getCiudadYProvincia } from '@/features/iglesias/dominio/ciudadYProvincia';
 import { newId } from '@/shared/newId';
 import { accesibilidad, colors, fontSize, radius } from '@/shared/theme';
 import { AppText, Button, Card, SearchField, TextField } from '@/shared/ui';
@@ -197,7 +198,7 @@ function Formulario({ asociacionId, distrito, distritos, iglesias, onClose }: Fo
                         {iglesia.nombre}
                       </AppText>
                       <AppText variant="secundario" color="textoSecundario">
-                        {iglesia.localidad}
+                        {getCiudadYProvincia(iglesia)}
                       </AppText>
                     </View>
                     <Pressable

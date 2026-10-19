@@ -1,5 +1,6 @@
 import {
   buscarIglesiasDelAdmin,
+  getDireccionParaElMapa,
   getAvisoDeCambioDeDistrito,
   getEtiquetaDePastores,
   getSubtituloDeAsociacion,
@@ -15,7 +16,9 @@ function iglesia(nombre: string, distritoNombre = 'Distrito Norte'): IglesiaDelA
     id: nombre,
     nombre,
     direccion: 'Calle 1',
-    localidad: 'San Luis',
+    ciudad: 'San Luis',
+    provincia: 'San Luis',
+    coordenadas: null,
     distritoId: distritoNombre,
     distritoNombre,
     cantidadDeEncargados: 0,
@@ -89,11 +92,22 @@ describe('buscarIglesiasDelAdmin', () => {
     ]);
   });
 
-  it('matches the localidad and the distrito too', () => {
+  it('matches the ciudad, the provincia and the distrito too', () => {
     expect(buscarIglesiasDelAdmin(iglesias, 'distrito sur').map((una) => una.nombre)).toEqual([
       'Iglesia El Trapiche',
     ]);
     expect(buscarIglesiasDelAdmin(iglesias, 'san luis')).toHaveLength(2);
+    expect(
+      buscarIglesiasDelAdmin(
+        [{ ...iglesia('Iglesia Merlo'), ciudad: 'Merlo', provincia: 'San Luis' }],
+        'luis',
+      ),
+    ).toHaveLength(1);
+  });
+
+  it('matches an iglesia that still has no provincia by its ciudad', () => {
+    const sinProvincia = { ...iglesia('Iglesia Merlo'), ciudad: 'Merlo', provincia: null };
+    expect(buscarIglesiasDelAdmin([sinProvincia], 'merlo')).toEqual([sinProvincia]);
   });
 });
 
@@ -128,11 +142,14 @@ describe('validarDistrito', () => {
 });
 
 describe('validarIglesia', () => {
+  const punto = { latitud: -33.2885, longitud: -66.2459 };
   const datos = {
     nombre: ' Iglesia Juana Koslay ',
     direccion: 'Av. Los Fresnos 1450',
-    localidad: 'Juana Koslay ',
+    ciudad: 'Juana Koslay ',
+    provincia: ' San Luis',
     distritoId: 'd1',
+    coordenadas: punto,
   };
 
   it('trims every text', () => {
@@ -141,24 +158,51 @@ describe('validarIglesia', () => {
       valores: {
         nombre: 'Iglesia Juana Koslay',
         direccion: 'Av. Los Fresnos 1450',
-        localidad: 'Juana Koslay',
+        ciudad: 'Juana Koslay',
+        provincia: 'San Luis',
         distritoId: 'd1',
+        coordenadas: punto,
       },
     });
   });
 
   it('asks for every field that is missing', () => {
-    expect(validarIglesia({ nombre: '', direccion: ' ', localidad: '', distritoId: null })).toEqual(
-      {
-        ok: false,
-        errores: {
-          nombre: 'Escribí el nombre de la iglesia.',
-          direccion: 'Escribí la dirección.',
-          localidad: 'Escribí la localidad.',
-          distritoId: 'Elegí el distrito.',
-        },
+    expect(
+      validarIglesia({
+        nombre: '',
+        direccion: ' ',
+        ciudad: '',
+        provincia: '  ',
+        distritoId: null,
+        coordenadas: null,
+      }),
+    ).toEqual({
+      ok: false,
+      errores: {
+        nombre: 'Escribí el nombre de la iglesia.',
+        direccion: 'Escribí la dirección.',
+        ciudad: 'Escribí la ciudad.',
+        provincia: 'Escribí la provincia.',
+        distritoId: 'Elegí el distrito.',
+        coordenadas: 'Marcá en el mapa dónde está la iglesia.',
       },
-    );
+    });
+  });
+
+  it.each(['direccion', 'ciudad', 'provincia'] as const)(
+    'does not save without the %s',
+    (campo) => {
+      const resultado = validarIglesia({ ...datos, [campo]: '' });
+      expect(resultado.ok).toBe(false);
+      expect(resultado.ok ? null : Object.keys(resultado.errores)).toEqual([campo]);
+    },
+  );
+
+  it('does not save without the point of the map', () => {
+    expect(validarIglesia({ ...datos, coordenadas: null })).toEqual({
+      ok: false,
+      errores: { coordenadas: 'Marcá en el mapa dónde está la iglesia.' },
+    });
   });
 
   it('rejects a text that is too long', () => {
@@ -167,5 +211,40 @@ describe('validarIglesia', () => {
       ok: false,
       errores: { direccion: 'Es demasiado larga: usá hasta 200 letras.' },
     });
+    expect(
+      validarIglesia({ ...datos, ciudad: 'x'.repeat(101), provincia: 'x'.repeat(101) }),
+    ).toEqual({
+      ok: false,
+      errores: {
+        ciudad: 'Es demasiado larga: usá hasta 100 letras.',
+        provincia: 'Es demasiado larga: usá hasta 100 letras.',
+      },
+    });
   });
+});
+
+describe('getDireccionParaElMapa', () => {
+  it('joins the direccion, the ciudad and the provincia, in Argentina', () => {
+    expect(
+      getDireccionParaElMapa({
+        direccion: ' Av. Los Fresnos 1450 ',
+        ciudad: 'Juana Koslay',
+        provincia: 'San Luis ',
+      }),
+    ).toBe('Av. Los Fresnos 1450, Juana Koslay, San Luis, Argentina');
+  });
+
+  it.each(['direccion', 'ciudad', 'provincia'] as const)(
+    'has nothing to look for without the %s',
+    (campo) => {
+      expect(
+        getDireccionParaElMapa({
+          direccion: 'Av. Los Fresnos 1450',
+          ciudad: 'Juana Koslay',
+          provincia: 'San Luis',
+          [campo]: '  ',
+        }),
+      ).toBeNull();
+    },
+  );
 });

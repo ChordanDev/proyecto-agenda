@@ -4,6 +4,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { HojaInferior } from '@/features/eventos/interfaz/HojaInferior';
 import { RadioMark } from '@/features/eventos/interfaz/RadioMark';
+import { getCiudadYProvincia } from '@/features/iglesias/dominio/ciudadYProvincia';
 import { colors, radius } from '@/shared/theme';
 import { AppText, Button, Card, SearchField, TextField } from '@/shared/ui';
 import { useOnlineStatus } from '@/shared/useOnlineStatus';
@@ -349,7 +350,7 @@ function HojaDeIglesia({ visible, iglesias, selected, onSelect, onClose }: HojaD
                   {iglesia.nombre}
                 </AppText>
                 <AppText variant="secundario" color="textoSecundario">
-                  {iglesia.distritoNombre} · {iglesia.localidad}
+                  {iglesia.distritoNombre} · {getCiudadYProvincia(iglesia)}
                 </AppText>
               </View>
             </Pressable>

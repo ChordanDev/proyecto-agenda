@@ -4,10 +4,12 @@ import type { ValoresDeLaIglesia } from '../dominio/estructuraDelAdmin';
 import { DUPLICADO, type GuardarComo } from './guardarDistrito';
 
 /**
- * Creates an iglesia, or edits one. Editing its distrito moves it: its
+ * Creates an iglesia, or edits one, with the point of the marker of its map.
+ * Editing its distrito moves it: its
  * calendario follows the new distrito, and its eventos, lugares and encargados
  * stay with it. Only the admin of the asociacion can
- * (20261022100000_write_distritos_e_iglesias.sql). Returns its id.
+ * (20261022100000_write_distritos_e_iglesias.sql and
+ * 20261025200000_ciudad_y_provincia_de_iglesias.sql). Returns its id.
  *
  * A create sent again after its answer was lost finds the iglesia already
  * created, and saves what the form holds on it instead of creating another.
@@ -19,7 +21,10 @@ export async function guardarIglesia(
   const fila = {
     nombre: valores.nombre,
     direccion: valores.direccion,
-    localidad: valores.localidad,
+    ciudad: valores.ciudad,
+    provincia: valores.provincia,
+    latitud: valores.coordenadas.latitud,
+    longitud: valores.coordenadas.longitud,
     distrito_id: valores.distritoId,
   };
 

@@ -69,7 +69,7 @@ a{color:#1B3550}a:hover{color:#10233A}
         <button type="button" role="radio" aria-checked="{{ ig.checked }}" onClick="{{ ig.pick }}" style="display: flex; align-items: center; gap: 14px; min-height: 72px; padding: 12px 16px; border: 0; border-bottom: 1px solid #EEEEEE; background: transparent; text-align: left; font-family: inherit; color: #222222; cursor: pointer">
           <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
             <span style="font-size: 18px; font-weight: 700">{{ ig.nombre }}</span>
-            <span style="font-size: 15px; color: #4A4A4A">{{ ig.distrito }} · {{ ig.localidad }}</span>
+            <span style="font-size: 15px; color: #4A4A4A">{{ ig.distrito }} · {{ ig.ciudadYProvincia }}</span>
             <sc-if value="{{ ig.distancia }}" hint-placeholder-val="{{ false }}">
               <span style="display: flex; align-items: center; gap: 4px; font-size: 15px; font-weight: 700; color: #1B3550"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>{{ ig.distancia }}</span>
             </sc-if>
@@ -98,22 +98,22 @@ class Component extends DCLogic {
     const ubicacion = st.ubicacion || null;
     const sel = st.sel || (ubicacion ? '' : 'central');
     const v1 = [
-      { id: 'central', nombre: 'Iglesia Central', distrito: 'Distrito Norte', localidad: 'Córdoba' },
-      { id: 'norte', nombre: 'Iglesia Barrio Norte', distrito: 'Distrito Norte', localidad: 'Córdoba' },
-      { id: 'rosas', nombre: 'Iglesia Las Rosas', distrito: 'Distrito Norte', localidad: 'Villa Allende' },
-      { id: 'jardin', nombre: 'Iglesia Jardín', distrito: 'Distrito Sur', localidad: 'Alta Gracia' }
+      { id: 'central', nombre: 'Iglesia Central', distrito: 'Distrito Norte', ciudadYProvincia: 'Córdoba, Córdoba' },
+      { id: 'norte', nombre: 'Iglesia Barrio Norte', distrito: 'Distrito Norte', ciudadYProvincia: 'Córdoba, Córdoba' },
+      { id: 'rosas', nombre: 'Iglesia Las Rosas', distrito: 'Distrito Norte', ciudadYProvincia: 'Villa Allende, Córdoba' },
+      { id: 'jardin', nombre: 'Iglesia Jardín', distrito: 'Distrito Sur', ciudadYProvincia: 'Alta Gracia, Córdoba' }
     ];
     // Distance: meters under 1 km, one decimal under 10 km, none from 10 km (#165).
     const cercania = [
-      { id: 'norte', nombre: 'Iglesia Barrio Norte', distrito: 'Distrito Norte', localidad: 'Córdoba', distancia: 'a 800 m' },
-      { id: 'central', nombre: 'Iglesia Central', distrito: 'Distrito Norte', localidad: 'Córdoba', distancia: 'a 3,2 km' },
-      { id: 'rosas', nombre: 'Iglesia Las Rosas', distrito: 'Distrito Norte', localidad: 'Villa Allende', distancia: 'a 25 km' },
-      { id: 'jardin', nombre: 'Iglesia Jardín', distrito: 'Distrito Sur', localidad: 'Alta Gracia', distancia: 'a 38 km' },
-      { id: 'sanmartin', nombre: 'Iglesia San Martín', distrito: 'Distrito Norte', localidad: 'Córdoba', distancia: '' }
+      { id: 'norte', nombre: 'Iglesia Barrio Norte', distrito: 'Distrito Norte', ciudadYProvincia: 'Córdoba, Córdoba', distancia: 'a 800 m' },
+      { id: 'central', nombre: 'Iglesia Central', distrito: 'Distrito Norte', ciudadYProvincia: 'Córdoba, Córdoba', distancia: 'a 3,2 km' },
+      { id: 'rosas', nombre: 'Iglesia Las Rosas', distrito: 'Distrito Norte', ciudadYProvincia: 'Villa Allende, Córdoba', distancia: 'a 25 km' },
+      { id: 'jardin', nombre: 'Iglesia Jardín', distrito: 'Distrito Sur', ciudadYProvincia: 'Alta Gracia, Córdoba', distancia: 'a 38 km' },
+      { id: 'sanmartin', nombre: 'Iglesia San Martín', distrito: 'Distrito Norte', ciudadYProvincia: 'Córdoba, Córdoba', distancia: '' }
     ];
     const filtrada = [
       cercania[1],
-      { id: 'centenario', nombre: 'Iglesia Centenario', distrito: 'Distrito Sur', localidad: 'Alta Gracia', distancia: 'a 36 km' }
+      { id: 'centenario', nombre: 'Iglesia Centenario', distrito: 'Distrito Sur', ciudadYProvincia: 'Alta Gracia, Córdoba', distancia: 'a 36 km' }
     ];
     const data = { cercania: cercania.slice(0, 4), filtrada, final: cercania.slice(2), error: v1.slice(0, 3), definitivo: v1.slice(0, 3) }[ubicacion] || v1;
     const porCercania = ['cercania', 'filtrada', 'final'].includes(ubicacion);

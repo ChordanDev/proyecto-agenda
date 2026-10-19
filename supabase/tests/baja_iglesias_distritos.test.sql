@@ -37,9 +37,9 @@ insert into public.distritos (id, asociacion_id, nombre) values
   -- Touched by no step but the last one: no earlier lock hides the one of a new cargo.
   ('dddddddd-0000-4000-8000-000000000004', 'aaaaaaaa-0000-4000-8000-000000000001', 'Distrito Este');
 
-insert into public.iglesias (id, distrito_id, nombre, direccion, localidad) values
-  ('11111111-0000-4000-8000-000000000001', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia Las Rosas', 'Pringles 820', 'San Luis'),
-  ('11111111-0000-4000-8000-000000000002', 'dddddddd-0000-4000-8000-000000000002', 'Iglesia El Trapiche', 'Ruta 9', 'El Trapiche');
+insert into public.iglesias (id, distrito_id, nombre, direccion, ciudad, provincia) values
+  ('11111111-0000-4000-8000-000000000001', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia Las Rosas', 'Pringles 820', 'San Luis', 'San Luis'),
+  ('11111111-0000-4000-8000-000000000002', 'dddddddd-0000-4000-8000-000000000002', 'Iglesia El Trapiche', 'Ruta 9', 'El Trapiche', 'San Luis');
 
 insert into auth.users (id, aud, role, email) values
   ('bbbbbbbb-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'admin@prueba.example.com'),
@@ -333,8 +333,8 @@ select throws_ok(
   '23514', null, 'an iglesia cannot be moved to a distrito de baja'
 );
 select throws_ok(
-  $$ insert into public.iglesias (distrito_id, nombre, direccion, localidad)
-     values ('dddddddd-0000-4000-8000-000000000003', 'Iglesia Nueva', 'Calle 1', 'Localidad') $$,
+  $$ insert into public.iglesias (distrito_id, nombre, direccion, ciudad, provincia)
+     values ('dddddddd-0000-4000-8000-000000000003', 'Iglesia Nueva', 'Calle 1', 'Ciudad', 'Provincia') $$,
   '23514', null, 'an iglesia cannot be created in a distrito de baja'
 );
 

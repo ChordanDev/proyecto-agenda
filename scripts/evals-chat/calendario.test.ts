@@ -20,7 +20,7 @@ function calendario(eventos: EventoDePrueba[]): CalendarioDePrueba {
     asociacion: 'Asociación Evals',
     zonaHoraria: 'America/Argentina/Buenos_Aires',
     distrito: 'Distrito Evals',
-    iglesias: [{ nombre: 'Iglesia Evals Central', direccion: 'x', localidad: 'y' }],
+    iglesias: [{ nombre: 'Iglesia Evals Central', direccion: 'x', ciudad: 'y', provincia: 'z' }],
     encargadoDe: 'Iglesia Evals Central',
     eventos,
   };

@@ -25,7 +25,7 @@ export type CalendarioDePrueba = {
   asociacion: string;
   zonaHoraria: string;
   distrito: string;
-  iglesias: { nombre: string; direccion: string; localidad: string }[];
+  iglesias: { nombre: string; direccion: string; ciudad: string; provincia: string }[];
   /** The iglesia of the cargo of the person who asks. */
   encargadoDe: string;
   eventos: EventoDePrueba[];

@@ -1,5 +1,6 @@
--- Tests for the coordinates of the iglesias: anyone reads them, nobody changes
--- them from the app, and only valid values are stored.
+-- Tests for the coordinates of the iglesias: anyone reads them, only the admin
+-- changes them from the app (distritos_iglesias_escritura.test.sql), and only
+-- valid values are stored.
 --
 -- The way permission tests are written is explained at the top of
 -- estructura_permisos.test.sql, and how a test acts as a usuario at the top of
@@ -21,9 +22,9 @@ insert into public.asociaciones (id, nombre) values
 insert into public.distritos (id, asociacion_id, nombre) values
   ('dddddddd-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'Distrito de la prueba');
 
-insert into public.iglesias (id, distrito_id, nombre, direccion, localidad, latitud, longitud) values
-  ('11111111-0000-4000-8000-000000000001', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia del encargado', 'Calle 1', 'Localidad', -31.4201, -64.1888),
-  ('11111111-0000-4000-8000-000000000002', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia sin coordenadas', 'Calle 2', 'Localidad', null, null);
+insert into public.iglesias (id, distrito_id, nombre, direccion, ciudad, provincia, latitud, longitud) values
+  ('11111111-0000-4000-8000-000000000001', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia del encargado', 'Calle 1', 'Ciudad', 'Provincia', -31.4201, -64.1888),
+  ('11111111-0000-4000-8000-000000000002', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia sin coordenadas', 'Calle 2', 'Ciudad', 'Provincia', null, null);
 
 insert into auth.users (id, aud, role, email) values
   ('bbbbbbbb-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'encargado@prueba.example.com');
@@ -78,9 +79,11 @@ select results_eq(
   $$ values (-31.4201::double precision, -64.1888::double precision) $$,
   'an encargado reads the coordinates of their iglesia'
 );
-select throws_ok(
-  $$ update public.iglesias set latitud = 0, longitud = 0 where id = '11111111-0000-4000-8000-000000000001' $$,
-  '42501', 'permission denied for table iglesias',
+-- Only the admin of the asociacion places an iglesia on the map
+-- (20261025200000_ciudad_y_provincia_de_iglesias.sql).
+select is_empty(
+  $$ update public.iglesias set latitud = 0, longitud = 0
+     where id = '11111111-0000-4000-8000-000000000001' returning id $$,
   'an encargado cannot change the coordinates of their iglesia'
 );
 

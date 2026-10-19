@@ -12,7 +12,7 @@ export async function getIglesias(): Promise<Iglesia[]> {
   const { data, error } = await supabase
     .from('iglesias')
     .select(
-      'id, nombre, direccion, localidad, excluida_del_buscador, de_baja, latitud, longitud, distritos (nombre)',
+      'id, nombre, direccion, ciudad, provincia, excluida_del_buscador, de_baja, latitud, longitud, distritos (nombre)',
     )
     .order('nombre');
 
@@ -24,7 +24,8 @@ export async function getIglesias(): Promise<Iglesia[]> {
     id: row.id,
     nombre: row.nombre,
     direccion: row.direccion,
-    localidad: row.localidad,
+    ciudad: row.ciudad,
+    provincia: row.provincia,
     distrito: row.distritos.nombre,
     excluidaDelBuscador: row.excluida_del_buscador,
     deBaja: row.de_baja,

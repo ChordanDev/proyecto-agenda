@@ -2,6 +2,7 @@
 // (diseno/pantallas/09-gestion-admin.html, 09b-iglesia.html and 09c-distrito.html).
 
 import { normalize } from '@/features/iglesias/dominio/buscarIglesias';
+import type { Punto } from '@/features/iglesias/dominio/distancia';
 
 import { enumerar } from './distritosSinPastor';
 
@@ -10,7 +11,11 @@ export type IglesiaDelAdmin = {
   id: string;
   nombre: string;
   direccion: string;
-  localidad: string;
+  ciudad: string;
+  /** Null: its localidad could not be split, and it waits to be fixed by hand. */
+  provincia: string | null;
+  /** Where the marker of the map is; null until it is placed. */
+  coordenadas: Punto | null;
   distritoId: string;
   distritoNombre: string;
   /** Encargados and secretarias: they lose the cargo if it is given de baja. */
@@ -21,7 +26,12 @@ export type IglesiaDelAdmin = {
 // longer than this is a mistake, and does not fit a row.
 export const MAX_LARGO_DE_NOMBRE = 100;
 export const MAX_LARGO_DE_DIRECCION = 200;
-export const MAX_LARGO_DE_LOCALIDAD = 100;
+export const MAX_LARGO_DE_CIUDAD = 100;
+export const MAX_LARGO_DE_PROVINCIA = 100;
+
+// Every iglesia of the asociacion is in this country: it helps the map find
+// the direccion.
+const PAIS = 'Argentina';
 
 function plural(cantidad: number, singular: string, pluralDe: string): string {
   return `${cantidad} ${cantidad === 1 ? singular : pluralDe}`;
@@ -56,8 +66,8 @@ export function ordenarPorNombre<T extends { nombre: string }>(lista: readonly T
 }
 
 /**
- * The search of the tab Iglesias: a part of the nombre, the localidad or the
- * distrito, ignoring accents and case. An empty text returns every iglesia.
+ * The search of the tab Iglesias: a part of the nombre, the ciudad, the
+ * provincia or the distrito, ignoring accents and case. An empty text returns every iglesia.
  */
 export function buscarIglesiasDelAdmin(
   iglesias: readonly IglesiaDelAdmin[],
@@ -66,8 +76,8 @@ export function buscarIglesiasDelAdmin(
   const query = normalize(texto);
 
   return iglesias.filter((iglesia) =>
-    [iglesia.nombre, iglesia.localidad, iglesia.distritoNombre].some((campo) =>
-      normalize(campo).includes(query),
+    [iglesia.nombre, iglesia.ciudad, iglesia.provincia ?? '', iglesia.distritoNombre].some(
+      (campo) => normalize(campo).includes(query),
     ),
   );
 }
@@ -88,19 +98,26 @@ export type DatosDelDistrito = { nombre: string };
 
 export type ErroresDelDistrito = Partial<Record<keyof DatosDelDistrito, string>>;
 
-/** What the admin writes in Nueva or Editar iglesia. Null distrito: none chosen yet. */
+/**
+ * What the admin writes in Nueva or Editar iglesia. Null distrito: none chosen
+ * yet. Null coordenadas: the marker is not on the map yet.
+ */
 export type DatosDeLaIglesia = {
   nombre: string;
   direccion: string;
-  localidad: string;
+  ciudad: string;
+  provincia: string;
   distritoId: string | null;
+  coordenadas: Punto | null;
 };
 
 export type ValoresDeLaIglesia = {
   nombre: string;
   direccion: string;
-  localidad: string;
+  ciudad: string;
+  provincia: string;
   distritoId: string;
+  coordenadas: Punto;
 };
 
 export type ErroresDeLaIglesia = Partial<Record<keyof DatosDeLaIglesia, string>>;
@@ -149,7 +166,8 @@ export function validarIglesia(
 ): Validacion<ValoresDeLaIglesia, ErroresDeLaIglesia> {
   const nombre = datos.nombre.trim();
   const direccion = datos.direccion.trim();
-  const localidad = datos.localidad.trim();
+  const ciudad = datos.ciudad.trim();
+  const provincia = datos.provincia.trim();
   const errores: ErroresDeLaIglesia = {};
 
   const errorDeNombre = validarTexto(
@@ -168,19 +186,48 @@ export function validarIglesia(
   );
   if (errorDeDireccion !== null) errores.direccion = errorDeDireccion;
 
-  const errorDeLocalidad = validarTexto(
-    localidad,
-    MAX_LARGO_DE_LOCALIDAD,
-    'Escribí la localidad.',
+  const errorDeCiudad = validarTexto(ciudad, MAX_LARGO_DE_CIUDAD, 'Escribí la ciudad.', 'larga');
+  if (errorDeCiudad !== null) errores.ciudad = errorDeCiudad;
+
+  const errorDeProvincia = validarTexto(
+    provincia,
+    MAX_LARGO_DE_PROVINCIA,
+    'Escribí la provincia.',
     'larga',
   );
-  if (errorDeLocalidad !== null) errores.localidad = errorDeLocalidad;
+  if (errorDeProvincia !== null) errores.provincia = errorDeProvincia;
 
   if (datos.distritoId === null) errores.distritoId = 'Elegí el distrito.';
 
-  if (Object.keys(errores).length > 0 || datos.distritoId === null) {
+  if (datos.coordenadas === null) {
+    errores.coordenadas = 'Marcá en el mapa dónde está la iglesia.';
+  }
+
+  if (Object.keys(errores).length > 0 || datos.distritoId === null || datos.coordenadas === null) {
     return { ok: false, errores };
   }
 
-  return { ok: true, valores: { nombre, direccion, localidad, distritoId: datos.distritoId } };
+  return {
+    ok: true,
+    valores: {
+      nombre,
+      direccion,
+      ciudad,
+      provincia,
+      distritoId: datos.distritoId,
+      coordenadas: datos.coordenadas,
+    },
+  };
+}
+
+/**
+ * What the map looks for to place the marker at the estimated location: the
+ * direccion, the ciudad and the provincia. Null while one of them is missing.
+ */
+export function getDireccionParaElMapa(
+  datos: Pick<DatosDeLaIglesia, 'direccion' | 'ciudad' | 'provincia'>,
+): string | null {
+  const partes = [datos.direccion, datos.ciudad, datos.provincia].map((parte) => parte.trim());
+
+  return partes.some((parte) => parte.length === 0) ? null : [...partes, PAIS].join(', ');
 }

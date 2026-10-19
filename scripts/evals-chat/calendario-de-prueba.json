@@ -6,9 +6,15 @@
     {
       "nombre": "Iglesia Evals Central",
       "direccion": "Av. Siempre Viva 742",
-      "localidad": "Rosario"
+      "ciudad": "Rosario",
+      "provincia": "Santa Fe"
     },
-    { "nombre": "Iglesia Evals Norte", "direccion": "Calle Falsa 123", "localidad": "Rosario" }
+    {
+      "nombre": "Iglesia Evals Norte",
+      "direccion": "Calle Falsa 123",
+      "ciudad": "Rosario",
+      "provincia": "Santa Fe"
+    }
   ],
   "encargadoDe": "Iglesia Evals Central",
   "eventos": [
