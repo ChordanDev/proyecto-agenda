@@ -70,11 +70,6 @@ const REPETICIONES: readonly Repeticion[] = ['ninguna', 'semanal', 'mensual'];
 
 const FECHA = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-/** Characters of the texts the model writes, as the form allows them. */
-const MAX_LARGO_DE_TITULO = 120;
-const MAX_LARGO_DE_LUGAR = 120;
-const MAX_LARGO_DE_DESCRIPCION = 1000;
-
 /** The herramienta the model calls to propose an evento, described for any provider. */
 export const HERRAMIENTA_PROPONER_EVENTO = {
   nombre: 'proponer_evento',
@@ -148,9 +143,9 @@ function isTextoONull(value: unknown): value is string | null {
   return value === null || typeof value === 'string';
 }
 
-/** An optional text, trimmed and cut to its length; null when nothing is left. */
-function optionalText(value: string | null, largo: number): string | null {
-  const trimmed = value?.trim().slice(0, largo) ?? '';
+/** An optional text, trimmed; null when nothing is left. */
+function optionalText(value: string | null): string | null {
+  const trimmed = value?.trim() ?? '';
   return trimmed === '' ? null : trimmed;
 }
 
@@ -263,7 +258,7 @@ export function leerPropuesta(
     repeticion === 'ninguna' ? null : (pedido.hasta ?? getHastaSugerido(pedido.fecha));
   const resultado = validarFormulario(
     {
-      titulo: pedido.titulo.slice(0, MAX_LARGO_DE_TITULO),
+      titulo: pedido.titulo,
       duenio: opcion.duenio,
       fecha: pedido.fecha,
       hora: pedido.hora,
@@ -289,8 +284,8 @@ export function leerPropuesta(
       fecha: pedido.fecha,
       hora: evento.hora,
       fechaFin: evento.fechaFin,
-      lugar: optionalText(pedido.lugar, MAX_LARGO_DE_LUGAR),
-      descripcion: optionalText(pedido.descripcion, MAX_LARGO_DE_DESCRIPCION),
+      lugar: optionalText(pedido.lugar),
+      descripcion: optionalText(pedido.descripcion),
       enfasis: evento.enfasis,
       duenio: evento.duenio,
       duenioNombre: opcion.nombre,

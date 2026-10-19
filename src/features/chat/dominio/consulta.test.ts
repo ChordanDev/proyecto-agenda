@@ -975,6 +975,77 @@ describe('responderConsulta', () => {
       });
     });
 
+    it('proposes one evento per mensaje: a second propuesta is an error, not lost', async () => {
+      const dos: RespuestaDelProveedor = {
+        tipo: 'busqueda',
+        llamadas: [
+          {
+            id: 'propuesta-a',
+            herramienta: 'proponer_evento',
+            argumentos: { ...PROPUESTA_VALIDA, titulo: 'Evento A' },
+          },
+          {
+            id: 'propuesta-b',
+            herramienta: 'proponer_evento',
+            argumentos: { ...PROPUESTA_VALIDA, titulo: 'Evento B' },
+          },
+        ],
+        costoUsd: 0.001,
+      };
+      const f = fake({ respuestas: [dos, texto('Te dejé el primero; el otro, en otro mensaje.')] });
+
+      const resultado = await responderConsulta(pedido(CARGA), USUARIO, f.puertos);
+
+      expect(resultado).toMatchObject({ respuesta: { borrador: { titulo: 'Evento A' } } });
+      const mensajes = f.llamadasAlProveedor[1].mensajes;
+      const segunda = mensajes.find(
+        (mensaje) => mensaje.rol === 'busqueda' && mensaje.llamadaId === 'propuesta-b',
+      );
+      expect(segunda).toBeDefined();
+      expect(JSON.parse((segunda as { contenido: string }).contenido).error).toMatch(
+        /un evento por mensaje/,
+      );
+      const [instrucciones] = f.llamadasAlProveedor[0].mensajes;
+      expect(instrucciones).toHaveProperty(
+        'texto',
+        expect.stringContaining('un evento por mensaje'),
+      );
+    });
+
+    it('keeps the first borrador when a later propuesta of the same mensaje fails', async () => {
+      const f = fake({
+        respuestas: [
+          propuesta({ titulo: 'Evento A' }),
+          propuesta({ titulo: 'Evento B', enfasis: null }),
+          texto('El otro evento, mandalo en otro mensaje.'),
+        ],
+      });
+
+      const resultado = await responderConsulta(pedido(CARGA), USUARIO, f.puertos);
+
+      expect(resultado).toMatchObject({
+        respuesta: { tipo: 'respuesta', borrador: { titulo: 'Evento A' } },
+      });
+      expect(resultadoDePropuesta(f, 2).error).toMatch(/un evento por mensaje/);
+    });
+
+    it('shows no eventos on a repregunta for a dato of the propuesta', async () => {
+      const f = fake({
+        respuestas: [
+          busqueda(BUSQUEDA_VALIDA),
+          propuesta({ enfasis: null }),
+          texto('¿De qué énfasis es?'),
+        ],
+        eventos: [evento(1)],
+      });
+
+      const resultado = await responderConsulta(pedido(CARGA), USUARIO, f.puertos);
+
+      expect(resultado).toMatchObject({
+        respuesta: { tipo: 'repregunta', eventos: [], borrador: null },
+      });
+    });
+
     it('counts a mensaje de carga as one consulta and saves nothing', async () => {
       const f = fake({ respuestas: [propuesta({}), texto('Listo.')] });
 

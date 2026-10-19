@@ -288,6 +288,7 @@ function getInstruccionesDeCarga(duenios: ReturnType<typeof getDueniosDelUsuario
   return [
     'Para cargar un evento nuevo usá proponer_evento. Nunca digas que el evento quedó guardado: la persona lo revisa en una tarjeta y lo guarda con Confirmar.',
     'Antes de proponer, preguntá lo que falte y no lo inventes: el énfasis (Identidad, Liderazgo, Nuevas Generaciones, Discipulado o actividad regular) y, si hay más de un dueño posible y la persona no lo dijo, de quién es el evento.',
+    'Proponé un evento por mensaje. Si la persona pide varios, proponé el primero y decile que los demás los pida en otro mensaje.',
     'Por el chat solo se crean eventos. Para editar o borrar uno, indicá que lo haga desde el detalle del evento.',
     `Dueños que puede usar (id: nombre):\n${describirDuenios(duenios)}`,
   ];
@@ -464,6 +465,13 @@ function sumarPropuesta(
   if (!contexto.puedeProponer) {
     return JSON.stringify({ error: 'Esta persona no puede crear eventos.' });
   }
+  // The respuesta carries one borrador: a second one would be lost unseen.
+  if (propuesta.borrador !== null) {
+    return JSON.stringify({
+      error:
+        'Ya propusiste un evento: se propone un evento por mensaje. Decile a la persona que los demás los pida en otro mensaje.',
+    });
+  }
 
   const resultado = leerPropuesta(argumentos, contexto.cargos, contexto.hoy);
   if ('error' in resultado) {
@@ -616,15 +624,16 @@ export async function responderConsulta(
         costoUsd,
       });
 
+      const repreguntar =
+        coincidencias.repreguntar || (propuesta.faltaDato && propuesta.borrador === null);
+
       return {
         ok: true,
         respuesta: {
-          tipo:
-            coincidencias.repreguntar || (propuesta.faltaDato && propuesta.borrador === null)
-              ? 'repregunta'
-              : 'respuesta',
+          tipo: repreguntar ? 'repregunta' : 'respuesta',
           texto,
-          eventos: getEventosDeRespuesta(coincidencias),
+          // A repregunta lists no eventos, whatever made it one.
+          eventos: repreguntar ? [] : getEventosDeRespuesta(coincidencias),
           aviso: getAvisoDeConsultasRestantes(consultasDelDia),
           borrador: propuesta.borrador,
         },

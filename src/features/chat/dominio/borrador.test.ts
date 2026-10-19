@@ -137,6 +137,16 @@ describe('leerPropuesta', () => {
     });
   });
 
+  it('keeps long texts whole, as the form does', () => {
+    const titulo = 'T'.repeat(121);
+    const lugar = 'L'.repeat(121);
+    const descripcion = 'D'.repeat(1001);
+
+    expect(leer({ titulo, lugar, descripcion })).toMatchObject({
+      borrador: { titulo, lugar, descripcion },
+    });
+  });
+
   it('rejects arguments that are not an evento', () => {
     expect(leerPropuesta(null, { cargos: ENCARGADO, estructura: ESTRUCTURA }, HOY)).toEqual({
       error: expect.any(String),
