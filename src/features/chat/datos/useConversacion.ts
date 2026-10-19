@@ -3,7 +3,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { toLocalDate } from '@/features/calendario/dominio/localDate';
 import { guardarEvento } from '@/features/eventos/datos/escribirEvento';
-import { precargarFormulario } from '@/features/eventos/datos/formularioPrecargado';
+import {
+  olvidarFormularioPrecargado,
+  olvidarFormulariosPrecargados,
+  precargarFormulario,
+} from '@/features/eventos/datos/formularioPrecargado';
 import { getTipoDeError, hasConexion } from '@/features/eventos/datos/useEscribirEvento';
 import { getMensajeDeError } from '@/features/eventos/dominio/errorDeEscritura';
 import { useSesion } from '@/features/sesion/datos/useSesion';
@@ -83,6 +87,8 @@ export function useConversacion(): ConversacionEnCurso {
   }, []);
 
   const nueva = useCallback(() => {
+    // The forms its cards opened go with the conversacion.
+    olvidarFormulariosPrecargados();
     dispatch({ tipo: 'nueva', id: proximoId.current++ });
   }, [dispatch]);
 
@@ -174,6 +180,7 @@ export function useConversacion(): ConversacionEnCurso {
     // Created with the id of the propuesta: a save tried again saves that same evento.
     guardarEvento(resultado.evento, { crear: id })
       .then(() => {
+        olvidarFormularioPrecargado(id);
         dispatch({ tipo: 'guardar', id });
         return queryClient.invalidateQueries({ queryKey: ['calendario'] });
       })

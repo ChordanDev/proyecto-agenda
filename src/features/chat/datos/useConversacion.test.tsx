@@ -268,3 +268,35 @@ describe('useConversacion: Editar', () => {
     expect(getEstado(chat, id)).toEqual({ estado: 'guardado', error: null });
   });
 });
+
+describe('useConversacion: forms precargados', () => {
+  it('forgets the form of a propuesta once Confirmar saves it', async () => {
+    const { getFormularioPrecargado } = jest.requireActual(
+      '@/features/eventos/datos/formularioPrecargado',
+    );
+    const { chat, id } = await renderConPropuesta();
+    mockGuardarEvento.mockResolvedValue(id);
+    act(() => {
+      chat().editar(id);
+    });
+
+    act(() => chat().confirmar(id));
+    await settle();
+
+    expect(getFormularioPrecargado(id)).toBeUndefined();
+  });
+
+  it('forgets the forms of the conversacion when a new one starts', async () => {
+    const { getFormularioPrecargado } = jest.requireActual(
+      '@/features/eventos/datos/formularioPrecargado',
+    );
+    const { chat, id } = await renderConPropuesta();
+    act(() => {
+      chat().editar(id);
+    });
+
+    act(() => chat().nueva());
+
+    expect(getFormularioPrecargado(id)).toBeUndefined();
+  });
+});

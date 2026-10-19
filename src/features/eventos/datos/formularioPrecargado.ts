@@ -33,3 +33,8 @@ export function getFormularioPrecargado(clave: string): FormularioPrecargado | u
 export function olvidarFormularioPrecargado(clave: string): void {
   precargados.delete(clave);
 }
+
+/** Forgets every form kept, as when the conversacion that opened them is left. */
+export function olvidarFormulariosPrecargados(): void {
+  precargados.clear();
+}
