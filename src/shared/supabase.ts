@@ -5,6 +5,7 @@ import * as SecureStore from 'expo-secure-store';
 import { AppState } from 'react-native';
 
 import type { Database } from './database.types';
+import { createFetchWithTimeout } from './fetchWithTimeout';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -48,6 +49,9 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     detectSessionInUrl: false,
   },
+  // A request that never gets an answer fails as a lost connection instead of
+  // leaving a write on "Guardando…" forever.
+  global: { fetch: createFetchWithTimeout(fetch) },
 });
 
 // A timer does not run while the app is in the background: renew only while it
