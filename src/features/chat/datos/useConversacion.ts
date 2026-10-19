@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useSesion } from '@/features/sesion/datos/useSesion';
@@ -14,13 +14,21 @@ import {
   type Conversacion,
   type PedidoDeConsulta,
 } from '../dominio/conversacion';
-import { getVueltaDelChat } from '../dominio/fallas';
+import { formatVuelta, getDiaDeVuelta, getHoy } from '../dominio/fallas';
 import { enviarConsulta } from './enviarConsulta';
 import { CONSENTIMIENTO_QUERY_KEY } from './useConsentimiento';
 import { getZonaHoraria } from './zonaHoraria';
 
 /** Under `['chat']`, so leaving the session removes it. */
 const ZONA_HORARIA_QUERY_KEY = ['chat', 'zonaHoraria'] as const;
+
+/** How often a chat closed by the presupuesto checks whether its dia of vuelta arrived. */
+const REVISAR_VUELTA_MS = 60_000;
+
+/** The zona of the phone: the asociacion is where the phone is. */
+function getZonaDelTelefono(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
 
 export type ConversacionEnCurso = {
   conversacion: Conversacion;
@@ -75,6 +83,23 @@ export function useConversacion(): ConversacionEnCurso {
       dispatch({ tipo: 'responder', conversacionId, id: newId(), respuesta: resultado.respuesta });
       return;
     }
+    if (resultado.falla === 'presupuesto_agotado') {
+      const zonaHoraria = await queryClient
+        .fetchQuery({
+          queryKey: ZONA_HORARIA_QUERY_KEY,
+          queryFn: getZonaHoraria,
+          staleTime: Infinity,
+        })
+        .catch(getZonaDelTelefono);
+      dispatch({
+        tipo: 'fallar',
+        conversacionId,
+        id: newId(),
+        falla: resultado.falla,
+        vuelta: getDiaDeVuelta(new Date(), zonaHoraria),
+      });
+      return;
+    }
     if (resultado.falla === 'sin_consentimiento') {
       // Taken back on another phone: the tab asks for the aviso again.
       void queryClient.invalidateQueries({ queryKey: CONSENTIMIENTO_QUERY_KEY });
@@ -107,20 +132,23 @@ export function useConversacion(): ConversacionEnCurso {
           void consultar(siguiente.id, pedido);
         };
 
+  // A chat closed by the presupuesto opens again by itself once its dia of
+  // vuelta arrives, even if the app stayed open since then.
   const sinPresupuesto = conversacion.bloqueo === 'presupuesto-agotado';
-  const zonaHoraria = useQuery({
-    queryKey: ZONA_HORARIA_QUERY_KEY,
-    queryFn: getZonaHoraria,
-    enabled: hasSesion && sinPresupuesto,
-    staleTime: Infinity,
-  });
-  // Until it is read, the one of the phone: the asociacion is where the phone is.
-  const vuelta = sinPresupuesto
-    ? getVueltaDelChat(
-        new Date(),
-        zonaHoraria.data ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
-      )
-    : null;
+  useEffect(() => {
+    if (!sinPresupuesto) {
+      return;
+    }
+    const revisar = setInterval(() => {
+      const zonaHoraria =
+        queryClient.getQueryData<string>(ZONA_HORARIA_QUERY_KEY) ?? getZonaDelTelefono();
+      dispatch({ tipo: 'reabrir', hoy: getHoy(new Date(), zonaHoraria) });
+    }, REVISAR_VUELTA_MS);
+    return () => clearInterval(revisar);
+  }, [sinPresupuesto, queryClient, dispatch]);
+
+  const vuelta =
+    sinPresupuesto && conversacion.vuelta !== null ? formatVuelta(conversacion.vuelta) : null;
 
   return { conversacion, vuelta, enviar, reintentar, nueva };
 }

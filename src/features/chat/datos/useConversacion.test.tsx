@@ -113,3 +113,29 @@ describe('useConversacion', () => {
     });
   });
 });
+
+describe('useConversacion with the presupuesto agotado', () => {
+  afterEach(() => jest.useRealTimers());
+
+  it('opens the chat again once the day it works again arrives', async () => {
+    // Only the clock and the intervals are faked: the consulta still settles.
+    jest.useFakeTimers({
+      now: new Date('2026-10-31T12:00:00Z'),
+      doNotFake: ['setTimeout', 'clearTimeout', 'setImmediate', 'nextTick', 'queueMicrotask'],
+    });
+    mockEnviarConsulta.mockResolvedValue({ ok: false, falla: 'presupuesto_agotado' });
+    const chat = renderConversacion();
+
+    act(() => chat().enviar('¿Qué hay el sábado?'));
+    await settle();
+    expect(chat().vuelta).toBe('1 de noviembre');
+
+    act(() => {
+      jest.setSystemTime(new Date('2026-11-01T12:00:00Z'));
+      jest.advanceTimersByTime(60_000);
+    });
+
+    expect(chat().vuelta).toBeNull();
+    expect(chat().conversacion.bloqueo).toBeNull();
+  });
+});

@@ -51,6 +51,7 @@ describe('crearConversacion', () => {
       enviando: false,
       aviso: null,
       bloqueo: null,
+      vuelta: null,
     });
     expect(hasMensajes(conversacion)).toBe(false);
   });
@@ -216,15 +217,17 @@ describe('fallar', () => {
     expect(puedeEnviar(conversacion, 'Otra')).toBe(false);
   });
 
-  it('with the presupuesto agotado closes the chat', () => {
+  it('with the presupuesto agotado closes the chat until the day it works again', () => {
     const conversacion = aplicar(preguntando(), {
       tipo: 'fallar',
       conversacionId: 1,
       id: 'f1',
       falla: 'presupuesto_agotado',
+      vuelta: '2026-11-01',
     });
 
     expect(conversacion.bloqueo).toBe('presupuesto-agotado');
+    expect(conversacion.vuelta).toBe('2026-11-01');
     expect(puedeEnviar(conversacion, 'Otra')).toBe(false);
   });
 
@@ -268,6 +271,40 @@ describe('reintentar', () => {
 
   it('is not offered while a pregunta is in flight', () => {
     expect(getPreguntaAReintentar(preguntando())).toBeNull();
+  });
+});
+
+describe('reabrir', () => {
+  const sinPresupuesto = aplicar(preguntando(), {
+    tipo: 'fallar',
+    conversacionId: 1,
+    id: 'f1',
+    falla: 'presupuesto_agotado',
+    vuelta: '2026-11-01',
+  });
+
+  it('keeps the chat closed before the day it works again', () => {
+    expect(aplicar(sinPresupuesto, { tipo: 'reabrir', hoy: '2026-10-31' })).toEqual(sinPresupuesto);
+  });
+
+  it('opens the chat again on that day, keeping the mensajes', () => {
+    const conversacion = aplicar(sinPresupuesto, { tipo: 'reabrir', hoy: '2026-11-01' });
+
+    expect(conversacion.bloqueo).toBeNull();
+    expect(conversacion.vuelta).toBeNull();
+    expect(conversacion.mensajes).toEqual(sinPresupuesto.mensajes);
+    expect(puedeEnviar(conversacion, 'Otra')).toBe(true);
+  });
+
+  it('does not lift the limite diario', () => {
+    const conLimite = aplicar(preguntando(), {
+      tipo: 'fallar',
+      conversacionId: 1,
+      id: 'f1',
+      falla: 'limite_diario',
+    });
+
+    expect(aplicar(conLimite, { tipo: 'reabrir', hoy: '2027-01-01' })).toEqual(conLimite);
   });
 });
 

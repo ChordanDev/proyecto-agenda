@@ -1,4 +1,11 @@
-import { getEstadoDeFalla, getVueltaDelChat, leerFalla, type Falla } from './fallas';
+import {
+  formatVuelta,
+  getDiaDeVuelta,
+  getEstadoDeFalla,
+  getHoy,
+  leerFalla,
+  type Falla,
+} from './fallas';
 
 describe('getEstadoDeFalla', () => {
   it('shows each typed falla with its own estado', () => {
@@ -35,19 +42,34 @@ describe('leerFalla', () => {
   });
 });
 
-describe('getVueltaDelChat', () => {
+describe('getDiaDeVuelta', () => {
   const zona = 'America/Argentina/Buenos_Aires';
 
   it('is the first day of the next mes of the asociacion', () => {
-    expect(getVueltaDelChat(new Date('2026-10-19T15:00:00Z'), zona)).toBe('1 de noviembre');
+    expect(getDiaDeVuelta(new Date('2026-10-19T15:00:00Z'), zona)).toBe('2026-11-01');
   });
 
   it('counts the mes in the zona horaria of the asociacion, not in UTC', () => {
     // 1 November 01:00 UTC is still 31 October 22:00 in Buenos Aires.
-    expect(getVueltaDelChat(new Date('2026-11-01T01:00:00Z'), zona)).toBe('1 de noviembre');
+    expect(getDiaDeVuelta(new Date('2026-11-01T01:00:00Z'), zona)).toBe('2026-11-01');
   });
 
-  it('turns December into the 1 of January', () => {
-    expect(getVueltaDelChat(new Date('2026-12-15T15:00:00Z'), zona)).toBe('1 de enero');
+  it('turns December into the 1 of January of the next year', () => {
+    expect(getDiaDeVuelta(new Date('2026-12-15T15:00:00Z'), zona)).toBe('2027-01-01');
+  });
+});
+
+describe('formatVuelta', () => {
+  it('says the day the chat works again, without its year', () => {
+    expect(formatVuelta('2026-11-01')).toBe('1 de noviembre');
+    expect(formatVuelta('2027-01-01')).toBe('1 de enero');
+  });
+});
+
+describe('getHoy', () => {
+  it('is the dia of the asociacion, not of UTC', () => {
+    expect(getHoy(new Date('2026-11-01T01:00:00Z'), 'America/Argentina/Buenos_Aires')).toBe(
+      '2026-10-31',
+    );
   });
 });

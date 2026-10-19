@@ -56,16 +56,24 @@ export function leerFalla(body: unknown): FallaDeConsulta {
   return FALLAS.find((conocida) => conocida === falla) ?? 'error_servidor';
 }
 
+/** The dia of the asociacion at this moment, `YYYY-MM-DD`. */
+export function getHoy(ahora: Date, zonaHoraria: string): string {
+  return getPeriodo(ahora, zonaHoraria).dia;
+}
+
 /**
- * When the chat works again after the presupuesto ran out: the first day of
- * the next mes of the asociacion, "1 de noviembre".
+ * The dia the chat works again after the presupuesto ran out: the first day
+ * of the next mes of the asociacion, `YYYY-MM-DD`.
  */
-export function getVueltaDelChat(ahora: Date, zonaHoraria: string): string {
+export function getDiaDeVuelta(ahora: Date, zonaHoraria: string): string {
   const { mes } = getPeriodo(ahora, zonaHoraria);
   const [year, month] = mes.split('-').map(Number);
-  const proximo =
-    month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, '0')}-01`;
 
+  return month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, '0')}-01`;
+}
+
+/** The dia of vuelta as the chat says it: "1 de noviembre". */
+export function formatVuelta(dia: string): string {
   // "1 de noviembre de 2026" without its year: it is always the next mes.
-  return formatLongDate(proximo).replace(/ de \d{4}$/, '');
+  return formatLongDate(dia).replace(/ de \d{4}$/, '');
 }

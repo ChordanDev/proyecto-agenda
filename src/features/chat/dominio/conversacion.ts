@@ -41,20 +41,31 @@ export type Conversacion = {
   /** "Te quedan 5 consultas por hoy", from the last respuesta. */
   aviso: string | null;
   bloqueo: Bloqueo | null;
+  /** With the presupuesto agotado, the dia the chat works again, `YYYY-MM-DD`. */
+  vuelta: string | null;
 };
 
 export type AccionDeConversacion =
   | { tipo: 'preguntar'; id: string; texto: string }
   | { tipo: 'responder'; conversacionId: number; id: string; respuesta: RespuestaDeConsulta }
-  | { tipo: 'fallar'; conversacionId: number; id: string; falla: Falla }
+  | {
+      tipo: 'fallar';
+      conversacionId: number;
+      id: string;
+      falla: Falla;
+      /** For `presupuesto_agotado`: the dia the chat works again. */
+      vuelta?: string;
+    }
   | { tipo: 'reintentar' }
+  /** Opens the chat again once `hoy`, of the asociacion, reaches the dia of vuelta. */
+  | { tipo: 'reabrir'; hoy: string }
   | { tipo: 'nueva'; id: number };
 
 /** What the app sends to the server function: the mensaje and the tramo before it. */
 export type PedidoDeConsulta = { mensaje: string; tramo: MensajeDelTramo[] };
 
 export function crearConversacion(id: number): Conversacion {
-  return { id, mensajes: [], enviando: false, aviso: null, bloqueo: null };
+  return { id, mensajes: [], enviando: false, aviso: null, bloqueo: null, vuelta: null };
 }
 
 export function hasMensajes(conversacion: Conversacion): boolean {
@@ -146,7 +157,13 @@ export function reducirConversacion(
       const estado = getEstadoDeFalla(accion.falla);
       if (estado === 'limite-diario' || estado === 'presupuesto-agotado') {
         // The aviso of the consultas left gives way to the one of the bloqueo.
-        return { ...conversacion, enviando: false, aviso: null, bloqueo: estado };
+        return {
+          ...conversacion,
+          enviando: false,
+          aviso: null,
+          bloqueo: estado,
+          vuelta: estado === 'presupuesto-agotado' ? (accion.vuelta ?? null) : null,
+        };
       }
       return {
         ...conversacion,
@@ -160,6 +177,15 @@ export function reducirConversacion(
         return conversacion;
       }
       return { ...conversacion, mensajes: conversacion.mensajes.slice(0, -1), enviando: true };
+    }
+
+    case 'reabrir': {
+      const { bloqueo, vuelta } = conversacion;
+      // Both are `YYYY-MM-DD`, so they compare as text.
+      if (bloqueo !== 'presupuesto-agotado' || vuelta === null || accion.hoy < vuelta) {
+        return conversacion;
+      }
+      return { ...conversacion, bloqueo: null, vuelta: null };
     }
 
     case 'nueva':
