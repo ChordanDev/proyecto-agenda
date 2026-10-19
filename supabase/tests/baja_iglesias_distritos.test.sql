@@ -22,7 +22,7 @@ create extension if not exists pgtap with schema extensions;
 -- To see which locks the triggers take on a row.
 create extension if not exists pgrowlocks with schema extensions;
 
-select plan(50);
+select plan(51);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -33,7 +33,9 @@ insert into public.asociaciones (id, nombre) values
 insert into public.distritos (id, asociacion_id, nombre) values
   ('dddddddd-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'Distrito Norte'),
   ('dddddddd-0000-4000-8000-000000000002', 'aaaaaaaa-0000-4000-8000-000000000001', 'Distrito Sur'),
-  ('dddddddd-0000-4000-8000-000000000003', 'aaaaaaaa-0000-4000-8000-000000000001', 'Distrito Vacío');
+  ('dddddddd-0000-4000-8000-000000000003', 'aaaaaaaa-0000-4000-8000-000000000001', 'Distrito Vacío'),
+  -- Touched by no step but the last one: no earlier lock hides the one of a new cargo.
+  ('dddddddd-0000-4000-8000-000000000004', 'aaaaaaaa-0000-4000-8000-000000000001', 'Distrito Este');
 
 insert into public.iglesias (id, distrito_id, nombre, direccion, localidad) values
   ('11111111-0000-4000-8000-000000000001', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia Las Rosas', 'Pringles 820', 'San Luis'),
@@ -404,13 +406,21 @@ select ok(
   ),
   'a new cargo on an iglesia locks it for share'
 );
+select ok(
+  not exists (
+    select 1
+    from extensions.pgrowlocks('public.distritos')
+    where locked_row = (select ctid from public.distritos where id = 'dddddddd-0000-4000-8000-000000000004')
+  ),
+  'the distrito has no lock before the cargo'
+);
 insert into public.cargos (usuario_id, distrito_id)
-  values ('bbbbbbbb-0000-4000-8000-000000000006', 'dddddddd-0000-4000-8000-000000000003');
+  values ('bbbbbbbb-0000-4000-8000-000000000006', 'dddddddd-0000-4000-8000-000000000004');
 select ok(
   exists (
     select 1
     from extensions.pgrowlocks('public.distritos')
-    where locked_row = (select ctid from public.distritos where id = 'dddddddd-0000-4000-8000-000000000003')
+    where locked_row = (select ctid from public.distritos where id = 'dddddddd-0000-4000-8000-000000000004')
       and 'For Share' = any (modes)
   ),
   'a new cargo on a distrito locks it for share'
