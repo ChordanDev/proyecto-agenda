@@ -290,11 +290,21 @@ isOneToOne: false
             "borrar_evento":
 { Args: { "evento_id": string }; Returns: undefined
                            },
+"buscar_eventos":
+{ Args: { "desde": string,"hasta": string,"maximo"?: number,"texto"?: string }; Returns: {
+              "alcance": Database["public"]['Enums']["alcance"],"descripcion": string,"duenio": string,"enfasis": Database["public"]['Enums']["enfasis"],"evento_id": string,"fecha": string,"fecha_fin": string,"hora": string,"lugar": string,"titulo": string,"total": number
+            }[]
+                           },
 "can_read_cargo":
 { Args: { "cargo_asociacion_id": string,"cargo_distrito_id": string,"cargo_iglesia_id": string }; Returns: boolean
                            },
 "cargos_abarcan_duenio":
 { Args: { "duenio_asociacion_id": string,"duenio_distrito_id": string,"duenio_iglesia_id": string }; Returns: boolean
+                           },
+"confirmar_consulta":
+{ Args: { "costo_usd": number,"dia": string,"mes": string,"usuario_id": string }; Returns: {
+              "consultas_del_dia": number,"gasto_del_mes": number
+            }[]
                            },
 "delete_own_usuario":
 { Args: Record<PropertyKey, never>; Returns: undefined
@@ -303,6 +313,9 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: {
               "email": string,"usuario_id": string
             }[]
+                           },
+"get_zona_horaria_de_usuario":
+{ Args: Record<PropertyKey, never>; Returns: string
                            },
 "guardar_evento":
 { Args: { "alcance": Database["public"]['Enums']["alcance"],"descripcion"?: string,"duenio_asociacion_id"?: string,"duenio_distrito_id"?: string,"duenio_iglesia_id"?: string,"enfasis"?: Database["public"]['Enums']["enfasis"],"evento_id"?: string,"fecha_fin"?: string,"fechas": (string)[],"fin_de_serie"?: string,"hora": string,"iglesias_sumadas"?: (string)[],"lugar"?: string,"lugar_id"?: string,"nuevo_evento_id"?: string,"repeticion": Database["public"]['Enums']["repeticion"],"titulo": string }; Returns: string
@@ -324,6 +337,9 @@ isOneToOne: false
 "iglesia_ve_evento_por_alcance":
 { Args: { "evento_id": string,"iglesia_id": string }; Returns: boolean
                            },
+"liberar_consulta":
+{ Args: { "dia": string,"usuario_id": string }; Returns: undefined
+                           },
 "lugar_nombre_key":
 { Args: { "nombre": string }; Returns: string
                            },
@@ -334,6 +350,9 @@ isOneToOne: false
 { Args: { "costo_usd": number,"dia": string,"mes": string,"usuario_id": string }; Returns: {
               "consultas_del_dia": number,"gasto_del_mes": number
             }[]
+                           },
+"reservar_consulta":
+{ Args: { "dia": string,"limite_diario": number,"mes": string,"presupuesto_usd": number,"usuario_id": string }; Returns: string
                            }
           }
           Enums: {
