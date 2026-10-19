@@ -23,7 +23,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(45);
+select plan(54);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -47,7 +47,8 @@ insert into auth.users (id, aud, role, email) values
   ('bbbbbbbb-0000-4000-8000-000000000006', 'authenticated', 'authenticated', 'pastor@prueba.example.com'),
   ('bbbbbbbb-0000-4000-8000-000000000007', 'authenticated', 'authenticated', 'otro-pastor@prueba.example.com'),
   ('bbbbbbbb-0000-4000-8000-000000000008', 'authenticated', 'authenticated', 'admin@prueba.example.com'),
-  ('bbbbbbbb-0000-4000-8000-000000000009', 'authenticated', 'authenticated', 'otra-admin@prueba.example.com');
+  ('bbbbbbbb-0000-4000-8000-000000000009', 'authenticated', 'authenticated', 'otra-admin@prueba.example.com'),
+  ('bbbbbbbb-0000-4000-8000-000000000010', 'authenticated', 'authenticated', 'nuevo@prueba.example.com');
 
 -- The otro encargado has no perfil: a usuario loaded by the developers.
 insert into public.perfiles (usuario_id, nombre) values
@@ -69,7 +70,10 @@ insert into public.cargos (id, usuario_id, iglesia_id, distrito_id, asociacion_i
   ('cccccccc-0000-4000-8000-000000000006', 'bbbbbbbb-0000-4000-8000-000000000006', null, 'dddddddd-0000-4000-8000-000000000001', null, false, null),
   ('cccccccc-0000-4000-8000-000000000007', 'bbbbbbbb-0000-4000-8000-000000000007', null, 'dddddddd-0000-4000-8000-000000000002', null, false, null),
   ('cccccccc-0000-4000-8000-000000000008', 'bbbbbbbb-0000-4000-8000-000000000008', null, null, 'aaaaaaaa-0000-4000-8000-000000000001', false, null),
-  ('cccccccc-0000-4000-8000-000000000009', 'bbbbbbbb-0000-4000-8000-000000000009', null, null, 'aaaaaaaa-0000-4000-8000-000000000001', false, null);
+  ('cccccccc-0000-4000-8000-000000000009', 'bbbbbbbb-0000-4000-8000-000000000009', null, null, 'aaaaaaaa-0000-4000-8000-000000000001', false, null),
+  -- The encargado of the Iglesia de otro distrito is also an encargado of the
+  -- Iglesia de la secretaria: she manages only one of their two cargos.
+  ('cccccccc-0000-4000-8000-000000000010', 'bbbbbbbb-0000-4000-8000-000000000005', '11111111-0000-4000-8000-000000000001', null, null, false, null);
 
 -- The privileges -----------------------------------------------------------------------
 
@@ -243,6 +247,42 @@ select is(
   'the rejected edit left the other secretaria as she was'
 );
 
+-- The nombre is one per usuario, and shows in all of their cargos: it changes only
+-- when the gestor manages every one of them. The funcion is of the cargo.
+
+set local role authenticated;
+set local request.jwt.claims to '{"sub": "bbbbbbbb-0000-4000-8000-000000000001", "role": "authenticated"}';
+
+select throws_ok(
+  $$ select public.editar_cargo('cccccccc-0000-4000-8000-000000000010', 'Renombrado', null) $$,
+  '42501', 'The usuario holds cargos this one does not manage: their nombre cannot change',
+  'rejected: a secretaria renames a usuario who also holds a cargo she does not manage'
+);
+select lives_ok(
+  $$ select public.editar_cargo('cccccccc-0000-4000-8000-000000000010', 'De otro distrito', 'Diácono') $$,
+  'allowed: she edits the funcion of that cargo, keeping the nombre'
+);
+select throws_ok(
+  $$ select public.editar_cargo('cccccccc-0000-4000-8000-000000000003', repeat('a', 101), null) $$,
+  '22023', 'The nombre has more than 100 characters',
+  'rejected: a nombre longer than 100 characters'
+);
+select throws_ok(
+  $$ select public.editar_cargo('cccccccc-0000-4000-8000-000000000003', 'Encargado Pérez', repeat('a', 61)) $$,
+  '22023', 'The funcion has more than 60 characters',
+  'rejected: a funcion longer than 60 characters'
+);
+
+reset role;
+
+select results_eq(
+  $$ select perfiles.nombre, cargos.funcion
+     from public.cargos join public.perfiles using (usuario_id)
+     where cargos.id = 'cccccccc-0000-4000-8000-000000000010' $$,
+  $$ values ('De otro distrito'::text, 'Diácono'::text) $$,
+  'the nombre stayed and the funcion changed'
+);
+
 -- A pastor --------------------------------------------------------------------------------
 
 set local role authenticated;
@@ -319,7 +359,7 @@ select isnt(
 );
 select is(
   public.guardar_cargo_invitado(
-    usuario_id => 'bbbbbbbb-0000-4000-8000-000000000003', nombre => 'Encargado Pérez',
+    usuario_id => 'bbbbbbbb-0000-4000-8000-000000000003', nombre => 'Otro nombre',
     es_secretaria => false, funcion => 'Diácono mayor',
     iglesia_id => '11111111-0000-4000-8000-000000000002'
   ),
@@ -338,6 +378,38 @@ select results_eq(
        ('11111111-0000-4000-8000-000000000001'::uuid, 'Anciano'::text),
        ('11111111-0000-4000-8000-000000000002'::uuid, 'Diácono mayor'::text) $$,
   'the invitation added one cargo to the existing usuario, never two, and updated its funcion'
+);
+select is(
+  (select nombre from public.perfiles where usuario_id = 'bbbbbbbb-0000-4000-8000-000000000003'),
+  'Encargado Pérez',
+  'inviting a usuario who already has a perfil keeps their nombre'
+);
+
+set local role service_role;
+
+select isnt(
+  public.guardar_cargo_invitado(
+    usuario_id => 'bbbbbbbb-0000-4000-8000-000000000010', nombre => 'Nuevo',
+    es_secretaria => false, iglesia_id => '11111111-0000-4000-8000-000000000002'
+  ),
+  null,
+  'an invitation of a usuario without a perfil saves the cargo'
+);
+select throws_ok(
+  $$ select public.guardar_cargo_invitado(
+       usuario_id => 'bbbbbbbb-0000-4000-8000-000000000010', nombre => repeat('a', 101),
+       es_secretaria => false, iglesia_id => '11111111-0000-4000-8000-000000000001'
+     ) $$,
+  '22023', 'The nombre has more than 100 characters',
+  'rejected: an invitation with a nombre longer than 100 characters'
+);
+
+reset role;
+
+select is(
+  (select nombre from public.perfiles where usuario_id = 'bbbbbbbb-0000-4000-8000-000000000010'),
+  'Nuevo',
+  'inviting a usuario without a perfil creates it with the nombre'
 );
 
 set local role service_role;

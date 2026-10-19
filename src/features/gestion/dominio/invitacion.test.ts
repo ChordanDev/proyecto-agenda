@@ -15,25 +15,28 @@ const ENLACES = {
 
 const IGLESIA_CENTRAL: CargoEnEstructura = {
   nivel: 'iglesia',
-  iglesiaId: 'iglesia-central',
-  distritoId: 'distrito-centro',
+  iglesiaId: '10000000-0000-4000-8000-000000000001',
+  distritoId: 'd0000000-0000-4000-8000-000000000001',
   asociacionId: 'asociacion',
   esSecretaria: false,
 };
 
-const IGLESIA_VECINA: CargoEnEstructura = { ...IGLESIA_CENTRAL, iglesiaId: 'iglesia-vecina' };
+const IGLESIA_VECINA: CargoEnEstructura = {
+  ...IGLESIA_CENTRAL,
+  iglesiaId: '10000000-0000-4000-8000-000000000002',
+};
 
 const IGLESIA_DE_OTRO_DISTRITO: CargoEnEstructura = {
   ...IGLESIA_CENTRAL,
-  iglesiaId: 'iglesia-norte',
-  distritoId: 'distrito-norte',
+  iglesiaId: '10000000-0000-4000-8000-000000000003',
+  distritoId: 'd0000000-0000-4000-8000-000000000002',
 };
 
 const SECRETARIA_DE_CENTRAL: CargoEnEstructura = { ...IGLESIA_CENTRAL, esSecretaria: true };
 
 const PASTOR_DE_CENTRO: CargoEnEstructura = {
   nivel: 'distrito',
-  distritoId: 'distrito-centro',
+  distritoId: 'd0000000-0000-4000-8000-000000000001',
   asociacionId: 'asociacion',
 };
 
@@ -41,12 +44,16 @@ const ADMIN: CargoEnEstructura = { nivel: 'asociacion', asociacionId: 'asociacio
 
 /** The places of the structure the fake knows, by their id. */
 const LUGARES: Record<string, { cargo: CargoEnEstructura; nombre: string }> = {
-  'iglesia-central': { cargo: IGLESIA_CENTRAL, nombre: 'Córdoba Central' },
-  'iglesia-vecina': { cargo: IGLESIA_VECINA, nombre: 'Nueva Córdoba' },
-  'iglesia-norte': { cargo: IGLESIA_DE_OTRO_DISTRITO, nombre: 'Argüello' },
-  'distrito-centro': { cargo: PASTOR_DE_CENTRO, nombre: 'Córdoba Centro' },
-  'distrito-norte': {
-    cargo: { nivel: 'distrito', distritoId: 'distrito-norte', asociacionId: 'asociacion' },
+  '10000000-0000-4000-8000-000000000001': { cargo: IGLESIA_CENTRAL, nombre: 'Córdoba Central' },
+  '10000000-0000-4000-8000-000000000002': { cargo: IGLESIA_VECINA, nombre: 'Nueva Córdoba' },
+  '10000000-0000-4000-8000-000000000003': { cargo: IGLESIA_DE_OTRO_DISTRITO, nombre: 'Argüello' },
+  'd0000000-0000-4000-8000-000000000001': { cargo: PASTOR_DE_CENTRO, nombre: 'Córdoba Centro' },
+  'd0000000-0000-4000-8000-000000000002': {
+    cargo: {
+      nivel: 'distrito',
+      distritoId: 'd0000000-0000-4000-8000-000000000002',
+      asociacionId: 'asociacion',
+    },
     nombre: 'Córdoba Norte',
   },
 };
@@ -121,7 +128,7 @@ const ENCARGADO_EN_CENTRAL = {
   nombre: 'Ana Gómez',
   correo: 'ana@example.com',
   funcion: 'Tesorera',
-  iglesiaId: 'iglesia-central',
+  iglesiaId: '10000000-0000-4000-8000-000000000001',
 };
 
 describe('leerPedidoDeInvitacion', () => {
@@ -131,32 +138,40 @@ describe('leerPedidoDeInvitacion', () => {
         nombre: '  Ana Gómez ',
         correo: ' Ana@Example.com ',
         funcion: ' Tesorera ',
-        iglesiaId: 'iglesia-central',
+        iglesiaId: '10000000-0000-4000-8000-000000000001',
       }),
     ).toEqual({
       nombre: 'Ana Gómez',
       correo: 'ana@example.com',
       funcion: 'Tesorera',
-      lugar: { nivel: 'iglesia', iglesiaId: 'iglesia-central', esSecretaria: false },
+      lugar: {
+        nivel: 'iglesia',
+        iglesiaId: '10000000-0000-4000-8000-000000000001',
+        esSecretaria: false,
+      },
     });
   });
 
   it('reads a secretaria de iglesia', () => {
     expect(leerPedidoDeInvitacion({ ...ENCARGADO_EN_CENTRAL, esSecretaria: true })?.lugar).toEqual({
       nivel: 'iglesia',
-      iglesiaId: 'iglesia-central',
+      iglesiaId: '10000000-0000-4000-8000-000000000001',
       esSecretaria: true,
     });
   });
 
   it('reads a pastor of a distrito, with no funcion', () => {
     expect(
-      leerPedidoDeInvitacion({ nombre: 'Juan', correo: 'juan@example.com', distritoId: 'd1' }),
+      leerPedidoDeInvitacion({
+        nombre: 'Juan',
+        correo: 'juan@example.com',
+        distritoId: 'd0000000-0000-4000-8000-000000000009',
+      }),
     ).toEqual({
       nombre: 'Juan',
       correo: 'juan@example.com',
       funcion: null,
-      lugar: { nivel: 'distrito', distritoId: 'd1' },
+      lugar: { nivel: 'distrito', distritoId: 'd0000000-0000-4000-8000-000000000009' },
     });
   });
 
@@ -169,13 +184,26 @@ describe('leerPedidoDeInvitacion', () => {
     ['a blank nombre', { ...ENCARGADO_EN_CENTRAL, nombre: '  ' }],
     ['a correo that is not one', { ...ENCARGADO_EN_CENTRAL, correo: 'ana-at-example' }],
     ['no iglesia nor distrito', { nombre: 'Ana', correo: 'ana@example.com' }],
-    ['both an iglesia and a distrito', { ...ENCARGADO_EN_CENTRAL, distritoId: 'd1' }],
+    [
+      'both an iglesia and a distrito',
+      { ...ENCARGADO_EN_CENTRAL, distritoId: 'd0000000-0000-4000-8000-000000000009' },
+    ],
     [
       'a secretaria on a distrito',
-      { nombre: 'Ana', correo: 'ana@example.com', distritoId: 'd1', esSecretaria: true },
+      {
+        nombre: 'Ana',
+        correo: 'ana@example.com',
+        distritoId: 'd0000000-0000-4000-8000-000000000009',
+        esSecretaria: true,
+      },
     ],
     ['a funcion that is not text', { ...ENCARGADO_EN_CENTRAL, funcion: 3 }],
     ['a nombre too long', { ...ENCARGADO_EN_CENTRAL, nombre: 'a'.repeat(101) }],
+    ['an iglesia that is not a UUID', { ...ENCARGADO_EN_CENTRAL, iglesiaId: 'x' }],
+    [
+      'a distrito that is not a UUID',
+      { nombre: 'Juan', correo: 'juan@example.com', distritoId: 'x' },
+    ],
   ])('rejects %s', (_caso, body) => {
     expect(leerPedidoDeInvitacion(body)).toBeNull();
   });
@@ -184,7 +212,11 @@ describe('leerPedidoDeInvitacion', () => {
 describe('getCorreoDeBienvenida', () => {
   it('names the cargo of encargado and the iglesia, with the links to the stores', () => {
     const correo = getCorreoDeBienvenida({
-      lugar: { nivel: 'iglesia', iglesiaId: 'iglesia-central', esSecretaria: false },
+      lugar: {
+        nivel: 'iglesia',
+        iglesiaId: '10000000-0000-4000-8000-000000000001',
+        esSecretaria: false,
+      },
       nombreDelLugar: 'Córdoba Central',
       enlaces: ENLACES,
     });
@@ -199,7 +231,11 @@ describe('getCorreoDeBienvenida', () => {
 
   it('names a secretaria de iglesia', () => {
     const { texto } = getCorreoDeBienvenida({
-      lugar: { nivel: 'iglesia', iglesiaId: 'iglesia-central', esSecretaria: true },
+      lugar: {
+        nivel: 'iglesia',
+        iglesiaId: '10000000-0000-4000-8000-000000000001',
+        esSecretaria: true,
+      },
       nombreDelLugar: 'Córdoba Central',
       enlaces: ENLACES,
     });
@@ -209,7 +245,7 @@ describe('getCorreoDeBienvenida', () => {
 
   it('names a pastor and the distrito', () => {
     const { texto } = getCorreoDeBienvenida({
-      lugar: { nivel: 'distrito', distritoId: 'distrito-centro' },
+      lugar: { nivel: 'distrito', distritoId: 'd0000000-0000-4000-8000-000000000001' },
       nombreDelLugar: 'Córdoba Centro',
       enlaces: ENLACES,
     });
@@ -232,7 +268,11 @@ describe('invitarCargo', () => {
         usuarioId: 'usuario-1',
         funcion: 'Tesorera',
         esSecretaria: false,
-        lugar: { nivel: 'iglesia', iglesiaId: 'iglesia-central', esSecretaria: false },
+        lugar: {
+          nivel: 'iglesia',
+          iglesiaId: '10000000-0000-4000-8000-000000000001',
+          esSecretaria: false,
+        },
       },
     ]);
     expect(estado.correos).toHaveLength(1);
@@ -241,13 +281,21 @@ describe('invitarCargo', () => {
   });
 
   it.each([
-    ['an encargado of another iglesia', [SECRETARIA_DE_CENTRAL], { iglesiaId: 'iglesia-vecina' }],
+    [
+      'an encargado of another iglesia',
+      [SECRETARIA_DE_CENTRAL],
+      { iglesiaId: '10000000-0000-4000-8000-000000000002' },
+    ],
     [
       'a secretaria, even of her own iglesia',
       [SECRETARIA_DE_CENTRAL],
-      { iglesiaId: 'iglesia-central', esSecretaria: true },
+      { iglesiaId: '10000000-0000-4000-8000-000000000001', esSecretaria: true },
     ],
-    ['a pastor', [SECRETARIA_DE_CENTRAL], { iglesiaId: undefined, distritoId: 'distrito-centro' }],
+    [
+      'a pastor',
+      [SECRETARIA_DE_CENTRAL],
+      { iglesiaId: undefined, distritoId: 'd0000000-0000-4000-8000-000000000001' },
+    ],
   ])('rejected: a secretaria invites %s', async (_caso, cargosDelGestor, lugar) => {
     const { puertos, estado } = crearPuertos({ cargosDelGestor });
 
@@ -263,7 +311,11 @@ describe('invitarCargo', () => {
     const { puertos, estado } = crearPuertos({ cargosDelGestor: [PASTOR_DE_CENTRO] });
 
     const resultado = await invitarCargo(
-      { ...ENCARGADO_EN_CENTRAL, iglesiaId: 'iglesia-vecina', esSecretaria: true },
+      {
+        ...ENCARGADO_EN_CENTRAL,
+        iglesiaId: '10000000-0000-4000-8000-000000000002',
+        esSecretaria: true,
+      },
       puertos,
       ENLACES,
     );
@@ -277,7 +329,11 @@ describe('invitarCargo', () => {
     const { puertos, estado } = crearPuertos({ cargosDelGestor: [PASTOR_DE_CENTRO] });
 
     const resultado = await invitarCargo(
-      { ...ENCARGADO_EN_CENTRAL, iglesiaId: 'iglesia-norte', esSecretaria: true },
+      {
+        ...ENCARGADO_EN_CENTRAL,
+        iglesiaId: '10000000-0000-4000-8000-000000000003',
+        esSecretaria: true,
+      },
       puertos,
       ENLACES,
     );
@@ -290,7 +346,11 @@ describe('invitarCargo', () => {
     const { puertos } = crearPuertos({ cargosDelGestor: [PASTOR_DE_CENTRO] });
 
     const resultado = await invitarCargo(
-      { nombre: 'Juan', correo: 'juan@example.com', distritoId: 'distrito-centro' },
+      {
+        nombre: 'Juan',
+        correo: 'juan@example.com',
+        distritoId: 'd0000000-0000-4000-8000-000000000001',
+      },
       puertos,
       ENLACES,
     );
@@ -302,7 +362,11 @@ describe('invitarCargo', () => {
     const { puertos, estado } = crearPuertos({ cargosDelGestor: [ADMIN] });
 
     const resultado = await invitarCargo(
-      { nombre: 'Juan', correo: 'juan@example.com', distritoId: 'distrito-norte' },
+      {
+        nombre: 'Juan',
+        correo: 'juan@example.com',
+        distritoId: 'd0000000-0000-4000-8000-000000000002',
+      },
       puertos,
       ENLACES,
     );
@@ -324,7 +388,7 @@ describe('invitarCargo', () => {
     const { puertos } = crearPuertos({ cargosDelGestor: [ADMIN] });
 
     const resultado = await invitarCargo(
-      { ...ENCARGADO_EN_CENTRAL, iglesiaId: 'no-existe' },
+      { ...ENCARGADO_EN_CENTRAL, iglesiaId: '10000000-0000-4000-8000-0000000000ff' },
       puertos,
       ENLACES,
     );
@@ -343,14 +407,18 @@ describe('invitarCargo', () => {
 
   it('a correo that already has an account only gets the cargo added, and the same correo', async () => {
     const otroCargo = {
-      usuarioId: 'usuario-ana',
-      lugar: { nivel: 'iglesia', iglesiaId: 'iglesia-norte', esSecretaria: false } as const,
+      usuarioId: 'b0000000-0000-4000-8000-000000000001',
+      lugar: {
+        nivel: 'iglesia',
+        iglesiaId: '10000000-0000-4000-8000-000000000003',
+        esSecretaria: false,
+      } as const,
       funcion: null,
       esSecretaria: false,
     };
     const { puertos, estado } = crearPuertos({
       cargosDelGestor: [SECRETARIA_DE_CENTRAL],
-      usuarios: { 'ana@example.com': 'usuario-ana' },
+      usuarios: { 'ana@example.com': 'b0000000-0000-4000-8000-000000000001' },
       cargos: [otroCargo],
     });
 
@@ -362,7 +430,10 @@ describe('invitarCargo', () => {
 
     expect(resultado).toEqual({ ok: true, usuarioNuevo: false });
     expect(Object.keys(estado.usuarios)).toEqual(['ana@example.com']);
-    expect(estado.cargos.map((cargo) => cargo.usuarioId)).toEqual(['usuario-ana', 'usuario-ana']);
+    expect(estado.cargos.map((cargo) => cargo.usuarioId)).toEqual([
+      'b0000000-0000-4000-8000-000000000001',
+      'b0000000-0000-4000-8000-000000000001',
+    ]);
     expect(estado.correos).toHaveLength(1);
     expect(estado.correos[0].texto).toContain('encargado de la iglesia Córdoba Central');
   });
@@ -386,11 +457,15 @@ describe('invitarCargo', () => {
   it('rejected: a secretaria cannot turn another secretaria into an encargado by inviting her again', async () => {
     const { puertos, estado } = crearPuertos({
       cargosDelGestor: [SECRETARIA_DE_CENTRAL],
-      usuarios: { 'ana@example.com': 'usuario-ana' },
+      usuarios: { 'ana@example.com': 'b0000000-0000-4000-8000-000000000001' },
       cargos: [
         {
-          usuarioId: 'usuario-ana',
-          lugar: { nivel: 'iglesia', iglesiaId: 'iglesia-central', esSecretaria: true },
+          usuarioId: 'b0000000-0000-4000-8000-000000000001',
+          lugar: {
+            nivel: 'iglesia',
+            iglesiaId: '10000000-0000-4000-8000-000000000001',
+            esSecretaria: true,
+          },
           funcion: null,
           esSecretaria: true,
         },

@@ -81,15 +81,41 @@ $$;
 revoke execute on function public.can_manage_cargo(uuid, uuid, uuid, boolean)
   from public, anon, authenticated;
 
+-- The limits of a nombre and a funcion ------------------------------------------------------
+-- The same as the app (src/features/gestion/dominio/invitacion.ts): 100
+-- characters for a nombre and 60 for a funcion, once trimmed. Checked here too,
+-- because editar_cargo() is called directly with any text.
+create function public.check_nombre_y_funcion(nombre text, funcion text)
+returns void
+language plpgsql
+immutable
+set search_path = ''
+as $$
+begin
+  if char_length(btrim(check_nombre_y_funcion.nombre)) > 100 then
+    raise exception 'The nombre has more than 100 characters' using errcode = '22023';
+  end if;
+  if char_length(btrim(check_nombre_y_funcion.funcion)) > 60 then
+    raise exception 'The funcion has more than 60 characters' using errcode = '22023';
+  end if;
+end;
+$$;
+
+revoke execute on function public.check_nombre_y_funcion(text, text) from public, anon, authenticated;
+grant execute on function public.check_nombre_y_funcion(text, text) to service_role;
+
 -- Editing a cargo ----------------------------------------------------------------------
--- Changes the nombre of whoever holds the cargo (their perfil, which is one per
--- usuario, so it changes wherever they appear) and the funcion of the cargo. A
--- blank funcion is no funcion. A blank nombre is rejected by the perfiles.
+-- Changes the funcion of the cargo and the nombre of whoever holds it. A blank
+-- funcion is no funcion. A blank nombre is rejected by the perfiles.
+--
+-- The nombre is their perfil: one per usuario, shown in every cargo they hold.
+-- So it changes only when the usuario who asks manages every one of those
+-- cargos. Otherwise the same nombre is accepted, and the funcion still changes.
 --
 -- Security definer: the app has no write privilege on cargos or perfiles. The
--- check of public.can_manage_cargo() is the whole permission. A cargo that does
--- not exist and one the usuario does not manage answer the same, so the error
--- reveals nothing.
+-- checks of public.can_manage_cargo() are the whole permission. A cargo that
+-- does not exist and one the usuario does not manage answer the same, so the
+-- error reveals nothing.
 create function public.editar_cargo(cargo_id uuid, nombre text, funcion text default null)
 returns void
 language plpgsql
@@ -109,11 +135,33 @@ begin
     raise exception 'The usuario does not manage this cargo' using errcode = '42501';
   end if;
 
+  perform public.check_nombre_y_funcion(editar_cargo.nombre, editar_cargo.funcion);
+
+  -- A usuario loaded by the developers may have no perfil yet: giving them one
+  -- is changing their nombre too.
+  if not exists (
+      select 1
+      from public.perfiles
+      where perfiles.usuario_id = cargo.usuario_id
+        and perfiles.nombre = btrim(editar_cargo.nombre)
+    )
+    and exists (
+      select 1
+      from public.cargos as otro
+      where otro.usuario_id = cargo.usuario_id
+        and not public.can_manage_cargo(
+          otro.iglesia_id, otro.distrito_id, otro.asociacion_id, otro.es_secretaria
+        )
+    )
+  then
+    raise exception 'The usuario holds cargos this one does not manage: their nombre cannot change'
+      using errcode = '42501';
+  end if;
+
   update public.cargos
   set funcion = nullif(btrim(editar_cargo.funcion), '')
   where cargos.id = cargo.id;
 
-  -- A usuario loaded by the developers may have no perfil yet.
   insert into public.perfiles (usuario_id, nombre)
   values (cargo.usuario_id, btrim(editar_cargo.nombre))
   on conflict on constraint perfiles_pkey do update set nombre = excluded.nombre;
@@ -177,7 +225,9 @@ revoke execute on function public.get_usuario_id_por_correo(text) from public, a
 grant execute on function public.get_usuario_id_por_correo(text) to service_role;
 
 -- Saves the perfil and the cargo of an invitado, at once. The perfil is created
--- or its nombre updated. The cargo is never duplicated: inviting the same
+-- only when the usuario has none: inviting someone who already has an account
+-- only adds the cargo, and never renames them, since the gestor may not manage
+-- their other cargos. The cargo is never duplicated: inviting the same
 -- usuario to the same iglesia or distrito again updates its funcion and its mark
 -- of secretaria de iglesia. Returns the id of the cargo.
 --
@@ -198,9 +248,11 @@ as $$
 declare
   guardado uuid;
 begin
+  perform public.check_nombre_y_funcion(guardar_cargo_invitado.nombre, guardar_cargo_invitado.funcion);
+
   insert into public.perfiles (usuario_id, nombre)
   values (guardar_cargo_invitado.usuario_id, btrim(guardar_cargo_invitado.nombre))
-  on conflict on constraint perfiles_pkey do update set nombre = excluded.nombre;
+  on conflict on constraint perfiles_pkey do nothing;
 
   -- Two invitations at once: the unique indexes of cargos keep one row, and
   -- both end up updating it.

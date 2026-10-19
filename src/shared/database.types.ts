@@ -304,6 +304,9 @@ isOneToOne: false
 "cargos_abarcan_duenio":
 { Args: { "duenio_asociacion_id": string,"duenio_distrito_id": string,"duenio_iglesia_id": string }; Returns: boolean
                            },
+"check_nombre_y_funcion":
+{ Args: { "funcion": string,"nombre": string }; Returns: undefined
+                           },
 "confirmar_consulta":
 { Args: { "costo_usd": number,"dia": string,"mes": string,"usuario_id": string }; Returns: {
               "consultas_del_dia": number,"gasto_del_mes": number

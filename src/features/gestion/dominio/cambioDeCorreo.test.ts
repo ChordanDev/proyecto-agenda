@@ -3,15 +3,15 @@ import { cambiarCorreo, type PuertosDeCambioDeCorreo } from './cambioDeCorreo';
 
 const ENCARGADO: CargoEnEstructura = {
   nivel: 'iglesia',
-  iglesiaId: 'iglesia-central',
-  distritoId: 'distrito-centro',
+  iglesiaId: '10000000-0000-4000-8000-000000000001',
+  distritoId: 'd0000000-0000-4000-8000-000000000001',
   asociacionId: 'asociacion',
   esSecretaria: false,
 };
 
 const PASTOR: CargoEnEstructura = {
   nivel: 'distrito',
-  distritoId: 'distrito-centro',
+  distritoId: 'd0000000-0000-4000-8000-000000000001',
   asociacionId: 'asociacion',
 };
 
@@ -19,12 +19,15 @@ const ADMIN: CargoEnEstructura = { nivel: 'asociacion', asociacionId: 'asociacio
 
 const OTRO_ADMIN: CargoEnEstructura = { nivel: 'asociacion', asociacionId: 'otra-asociacion' };
 
-const PEDIDO = { usuarioId: 'usuario-ana', correo: ' Ana.Nueva@Example.com ' };
+const PEDIDO = {
+  usuarioId: 'b0000000-0000-4000-8000-000000000001',
+  correo: ' Ana.Nueva@Example.com ',
+};
 
 function crearPuertos({
   cargosDelGestor,
   cargosDelUsuario = [ENCARGADO],
-  usuarios = { 'ana@example.com': 'usuario-ana' },
+  usuarios = { 'ana@example.com': 'b0000000-0000-4000-8000-000000000001' },
 }: {
   cargosDelGestor: CargoEnEstructura[];
   cargosDelUsuario?: CargoEnEstructura[];
@@ -51,7 +54,9 @@ describe('cambiarCorreo', () => {
     const { puertos, estado } = crearPuertos({ cargosDelGestor: [ADMIN] });
 
     expect(await cambiarCorreo(PEDIDO, puertos)).toEqual({ ok: true });
-    expect(estado.usuarios).toEqual({ 'ana.nueva@example.com': 'usuario-ana' });
+    expect(estado.usuarios).toEqual({
+      'ana.nueva@example.com': 'b0000000-0000-4000-8000-000000000001',
+    });
   });
 
   it.each([
@@ -62,7 +67,7 @@ describe('cambiarCorreo', () => {
     const { puertos, estado } = crearPuertos({ cargosDelGestor });
 
     expect(await cambiarCorreo(PEDIDO, puertos)).toEqual({ ok: false, falla: 'sin_permiso' });
-    expect(estado.usuarios).toEqual({ 'ana@example.com': 'usuario-ana' });
+    expect(estado.usuarios).toEqual({ 'ana@example.com': 'b0000000-0000-4000-8000-000000000001' });
   });
 
   it('rejected: the admin cannot change the correo of a usuario without cargos', async () => {
@@ -86,7 +91,7 @@ describe('cambiarCorreo', () => {
     });
 
     expect(await cambiarCorreo(PEDIDO, puertos)).toEqual({ ok: false, falla: 'sin_permiso' });
-    expect(estado.usuarios).toEqual({ 'ana@example.com': 'usuario-ana' });
+    expect(estado.usuarios).toEqual({ 'ana@example.com': 'b0000000-0000-4000-8000-000000000001' });
   });
 
   it('rejected: the admin cannot change the correo of a usuario with a cargo in another asociacion', async () => {
@@ -110,25 +115,35 @@ describe('cambiarCorreo', () => {
   it('rejects a correo that belongs to another usuario, without changing anything', async () => {
     const { puertos, estado } = crearPuertos({
       cargosDelGestor: [ADMIN],
-      usuarios: { 'ana@example.com': 'usuario-ana', 'ana.nueva@example.com': 'usuario-otro' },
+      usuarios: {
+        'ana@example.com': 'b0000000-0000-4000-8000-000000000001',
+        'ana.nueva@example.com': 'b0000000-0000-4000-8000-000000000002',
+      },
     });
 
     expect(await cambiarCorreo(PEDIDO, puertos)).toEqual({ ok: false, falla: 'correo_en_uso' });
-    expect(estado.usuarios['ana@example.com']).toBe('usuario-ana');
+    expect(estado.usuarios['ana@example.com']).toBe('b0000000-0000-4000-8000-000000000001');
   });
 
   it('accepts the correo the usuario already has', async () => {
     const { puertos } = crearPuertos({ cargosDelGestor: [ADMIN] });
 
     expect(
-      await cambiarCorreo({ usuarioId: 'usuario-ana', correo: 'ana@example.com' }, puertos),
+      await cambiarCorreo(
+        { usuarioId: 'b0000000-0000-4000-8000-000000000001', correo: 'ana@example.com' },
+        puertos,
+      ),
     ).toEqual({ ok: true });
   });
 
   it.each([
     ['no body', null],
     ['no usuario', { correo: 'ana@example.com' }],
-    ['a correo that is not one', { usuarioId: 'usuario-ana', correo: 'ana' }],
+    ['a usuario that is not a UUID', { usuarioId: 'x', correo: 'ana@example.com' }],
+    [
+      'a correo that is not one',
+      { usuarioId: 'b0000000-0000-4000-8000-000000000001', correo: 'ana' },
+    ],
   ])('rejects %s', async (_caso, body) => {
     const { puertos } = crearPuertos({ cargosDelGestor: [ADMIN] });
 

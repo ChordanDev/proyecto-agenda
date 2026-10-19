@@ -73,7 +73,10 @@ export type PuertosDeInvitacion = {
     usuarioId: string,
     lugar: LugarDeInvitacion,
   ): Promise<{ esSecretaria: boolean } | null>;
-  /** Creates or updates the perfil and the cargo, never duplicating it. */
+  /**
+   * Saves the cargo, never duplicating it, and creates the perfil when the
+   * usuario has none. A perfil that exists keeps its nombre.
+   */
   guardarCargo(datos: {
     usuarioId: string;
     nombre: string;
@@ -99,6 +102,14 @@ function leerTexto(valor: unknown, maximo: number): string | null {
 }
 
 /** A correo, trimmed and in lower case; null when it does not look like one. */
+/** Whether a value is a UUID, as the ids of the database are. */
+export function esUuid(valor: unknown): valor is string {
+  return (
+    typeof valor === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(valor)
+  );
+}
+
 export function leerCorreo(valor: unknown): string | null {
   const correo = leerTexto(valor, MAX_LARGO_DE_CORREO)?.toLowerCase() ?? null;
   return correo !== null && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo) ? correo : null;
@@ -126,11 +137,11 @@ export function leerPedidoDeInvitacion(body: unknown): PedidoDeInvitacion | null
   const iglesiaId = body.iglesiaId ?? null;
   const distritoId = body.distritoId ?? null;
 
-  if (typeof iglesiaId === 'string' && iglesiaId !== '' && distritoId === null) {
+  if (esUuid(iglesiaId) && distritoId === null) {
     return { nombre, correo, funcion, lugar: { nivel: 'iglesia', iglesiaId, esSecretaria } };
   }
   // A secretaria de iglesia is a cargo on an iglesia, never on a distrito.
-  if (typeof distritoId === 'string' && distritoId !== '' && iglesiaId === null && !esSecretaria) {
+  if (esUuid(distritoId) && iglesiaId === null && !esSecretaria) {
     return { nombre, correo, funcion, lugar: { nivel: 'distrito', distritoId } };
   }
   return null;

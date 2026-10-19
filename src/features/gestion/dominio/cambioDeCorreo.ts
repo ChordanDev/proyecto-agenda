@@ -9,7 +9,7 @@ import {
   puedeCambiarCorreo,
   type CargoEnEstructura,
 } from '../../sesion/dominio/puedeGestionarCargo.ts';
-import { leerCorreo } from './invitacion.ts';
+import { esUuid, leerCorreo } from './invitacion.ts';
 
 /**
  * Why a correo was not changed.
@@ -42,7 +42,7 @@ export async function cambiarCorreo(
   }
   const { usuarioId, correo: valor } = body as Record<string, unknown>;
   const correo = leerCorreo(valor);
-  if (typeof usuarioId !== 'string' || usuarioId === '' || correo === null) {
+  if (!esUuid(usuarioId) || correo === null) {
     return { ok: false, falla: 'pedido_invalido' };
   }
 
