@@ -67,6 +67,19 @@ describe('forgetSesion', () => {
     expect(queryClient.getQueryData(['chat', 'consentimiento'])).toBeUndefined();
   });
 
+  it('forgets the recordatorios read with the session, which show the iglesias of the usuario', () => {
+    const queryClient = newClient();
+    const registro = { modo: 'eligiendo', registro: { encendido: true, iglesiaIds: ['iglesia-1'] } };
+    queryClient.setQueryData(['recordatorios', 'registro', true], registro);
+    queryClient.setQueryData(['recordatorios', 'permiso'], 'concedido');
+
+    forgetSesion(queryClient);
+
+    expect(queryClient.getQueryData(['recordatorios', 'registro', true])).toBeUndefined();
+    // The permiso belongs to the phone.
+    expect(queryClient.getQueryData(['recordatorios', 'permiso'])).toBe('concedido');
+  });
+
   it('drops the calendario of the usuario from the copy saved on the phone', async () => {
     jest.useFakeTimers();
     const queryClient = newClient();

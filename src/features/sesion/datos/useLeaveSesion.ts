@@ -19,6 +19,9 @@ export function forgetSesion(queryClient: QueryClient) {
   queryClient.removeQueries({ queryKey: ['calendario', 'usuario'] });
   // Everything of the chat belongs to the usuario, such as their consentimiento.
   queryClient.removeQueries({ queryKey: ['chat'] });
+  // The registro of the recordatorios says which iglesias the cargos of the
+  // usuario cover, and which they chose. The permiso belongs to the phone.
+  queryClient.removeQueries({ queryKey: ['recordatorios', 'registro'] });
 }
 
 /**
