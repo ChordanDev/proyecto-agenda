@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 import type { EventoAGuardar } from '../dominio/formularioDeEvento';
+import { getFormularioPrecargado, precargarFormulario } from './formularioPrecargado';
 import { useBorrarFecha, useGuardarEvento, useGuardarExcepcion } from './useEscribirEvento';
 
 const mockRpc = jest.fn();
@@ -283,5 +284,43 @@ describe('useGuardarExcepcion and useBorrarFecha', () => {
       [['calendario'], undefined],
       [['evento', 'e1'], undefined],
     ]);
+  });
+});
+
+describe('useGuardarEvento with a form precargado', () => {
+  it('tells the chat the evento was saved even when the form was closed meanwhile', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    mockRpc.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    const onGuardado = jest.fn();
+    const clave = precargarFormulario({ formulario: {} as never, eventoId: 'p1', onGuardado });
+    const queryClient = new QueryClient({
+      defaultOptions: { mutations: { retry: false, gcTime: Infinity } },
+    });
+    const latest: { current: Guardar | null } = { current: null };
+
+    function Form() {
+      latest.current = useGuardarEvento(undefined, getFormularioPrecargado(clave));
+      return null;
+    }
+
+    let renderer: ReactTestRenderer | null = null;
+    act(() => {
+      renderer = create(
+        <QueryClientProvider client={queryClient}>
+          <Form />
+        </QueryClientProvider>,
+      );
+    });
+    act(() => latest.current!.mutate(EVENTO));
+    // The person closes the form before the answer arrives.
+    act(() => renderer!.unmount());
+    await act(async () => {
+      answer({ data: 'p1', error: null });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(getGuardarEventoArgs()[0]).toMatchObject({ nuevo_evento_id: 'p1' });
+    expect(onGuardado).toHaveBeenCalledWith('p1');
+    expect(getFormularioPrecargado(clave)).toBeUndefined();
   });
 });

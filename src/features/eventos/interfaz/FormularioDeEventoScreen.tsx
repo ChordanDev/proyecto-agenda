@@ -28,11 +28,7 @@ import {
 } from '@/shared/ui';
 
 import { useEvento } from '../datos/useEvento';
-import {
-  getFormularioPrecargado,
-  olvidarFormularioPrecargado,
-  type FormularioPrecargado,
-} from '../datos/formularioPrecargado';
+import { getFormularioPrecargado, type FormularioPrecargado } from '../datos/formularioPrecargado';
 import {
   getTipoDeError,
   hasConexion,
@@ -330,7 +326,7 @@ function Formulario({
   // Counts the times "Cambiar fecha" was tapped: each one moves the focus to the fecha.
   const [focusFechaRequests, setFocusFechaRequests] = useState(0);
   const fechaButton = useRef<View>(null);
-  const guardar = useGuardarEvento(id, precargado?.eventoId);
+  const guardar = useGuardarEvento(id, precargado);
   const guardarFecha = useGuardarExcepcion(id ?? '');
   const guardando = unaFecha === undefined ? guardar.isPending : guardarFecha.isPending;
   // What saving the whole series asks first when it loses dates with changes of their own.
@@ -464,16 +460,7 @@ function Formulario({
       return;
     }
 
-    guardar.mutate(result.evento, {
-      onSuccess: (savedId) => {
-        if (precargado !== undefined) {
-          olvidarFormularioPrecargado(precargado.eventoId);
-          precargado.onGuardado(savedId);
-        }
-        onClose();
-      },
-      onError: onSaveError,
-    });
+    guardar.mutate(result.evento, { onSuccess: onClose, onError: onSaveError });
   };
 
   return (
