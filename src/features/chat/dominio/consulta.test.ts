@@ -3,6 +3,7 @@ import {
   MAX_LARGO_DE_MENSAJE,
   MAX_LLAMADAS_POR_RONDA,
   MAX_MENSAJES_DEL_TRAMO,
+  getHerramientas,
   responderConsulta,
   type Busqueda,
   type EstadoDelChat,
@@ -12,6 +13,7 @@ import {
   type RespuestaDelProveedor,
   type ResultadoDeReserva,
 } from './consulta';
+import type { CargosDelUsuario } from './borrador';
 
 const USUARIO = 'usuario-1';
 const ZONA = 'America/Argentina/Buenos_Aires';
@@ -33,6 +35,24 @@ function evento(numero: number): EventoDeChat {
   };
 }
 
+const ESTRUCTURA: CargosDelUsuario['estructura'] = {
+  asociaciones: [{ id: 'a1', nombre: 'Asociación Central' }],
+  distritos: [{ id: 'd1', nombre: 'Centro', asociacionId: 'a1' }],
+  iglesias: [
+    { id: 'i1', nombre: 'Central', distritoId: 'd1' },
+    { id: 'i2', nombre: 'Norte', distritoId: 'd1' },
+  ],
+};
+
+const ENCARGADO: CargosDelUsuario = {
+  cargos: [{ nivel: 'iglesia', iglesiaId: 'i1' }],
+  estructura: ESTRUCTURA,
+};
+const PASTOR: CargosDelUsuario = {
+  cargos: [{ nivel: 'distrito', distritoId: 'd1' }],
+  estructura: ESTRUCTURA,
+};
+
 function texto(contenido: string, costoUsd = 0.001): RespuestaDelProveedor {
   return { tipo: 'texto', texto: contenido, costoUsd };
 }
@@ -40,6 +60,35 @@ function texto(contenido: string, costoUsd = 0.001): RespuestaDelProveedor {
 function busqueda(argumentos: unknown, costoUsd = 0.001, id = 'llamada-1'): RespuestaDelProveedor {
   return { tipo: 'busqueda', llamadas: [{ id, argumentos }], costoUsd };
 }
+
+/** A round in which the model proposes an evento with "proponer_evento". */
+function propuesta(argumentos: Record<string, unknown>, costoUsd = 0.001): RespuestaDelProveedor {
+  return {
+    tipo: 'busqueda',
+    llamadas: [
+      {
+        id: 'propuesta-1',
+        herramienta: 'proponer_evento',
+        argumentos: { ...PROPUESTA_VALIDA, ...argumentos },
+      },
+    ],
+    costoUsd,
+  };
+}
+
+/** "Cargame un culto joven el sábado 24 a las 19 h", as the model writes it. */
+const PROPUESTA_VALIDA = {
+  titulo: 'Culto joven',
+  fecha: '2026-10-24',
+  hora: '19:00',
+  fecha_fin: null,
+  lugar: null,
+  descripcion: null,
+  enfasis: 'nuevas_generaciones',
+  duenio: null,
+  repeticion: 'ninguna',
+  hasta: null,
+};
 
 const BUSQUEDA_VALIDA = { desde: '2026-10-24', hasta: '2026-10-24', texto: 'culto joven' };
 
@@ -58,7 +107,11 @@ function busquedas(cuantas: number, costoUsd = 0.001): RespuestaDelProveedor {
 type Fake = {
   puertos: PuertosDeConsulta;
   /** What the provider received on each call, and whether it could search. */
-  llamadasAlProveedor: { mensajes: readonly MensajeParaProveedor[]; conBusqueda: boolean }[];
+  llamadasAlProveedor: {
+    mensajes: readonly MensajeParaProveedor[];
+    conBusqueda: boolean;
+    conPropuesta: boolean;
+  }[];
   busquedas: Busqueda[];
   /** The consultas confirmed with their costo. */
   registros: { usuarioId: string; dia: string; mes: string; costoUsd: number }[];
@@ -84,6 +137,7 @@ function fake({
   registroFalla = false,
   consultasDelDia = 1,
   reservar = async () => 'reservada',
+  cargos = ENCARGADO,
 }: {
   respuestas?: RespuestaDelProveedor[];
   estado?: Partial<EstadoDelChat>;
@@ -96,6 +150,8 @@ function fake({
   consultasDelDia?: number;
   /** What the database answers to a reserva; it reserves every consulta unless told otherwise. */
   reservar?: () => Promise<ResultadoDeReserva>;
+  /** The cargos of the usuario and the structure; an encargado of one iglesia by default. */
+  cargos?: CargosDelUsuario;
 } = {}): Fake {
   const result: Fake = {
     llamadasAlProveedor: [],
@@ -116,6 +172,7 @@ function fake({
         zonaHoraria: ZONA,
         ...estado,
       }),
+      leerCargos: async () => cargos,
       buscarEventos: async (pedida) => {
         result.busquedas.push(pedida);
         if (busquedaFalla) {
@@ -141,9 +198,13 @@ function fake({
         result.liberaciones.push(liberacion);
       },
       proveedor: {
-        responder: async (mensajes, { conBusqueda }) => {
+        responder: async (mensajes, { conBusqueda, conPropuesta }) => {
           result.orden.push('proveedor');
-          result.llamadasAlProveedor.push({ mensajes: structuredClone(mensajes), conBusqueda });
+          result.llamadasAlProveedor.push({
+            mensajes: structuredClone(mensajes),
+            conBusqueda,
+            conPropuesta,
+          });
           if (proveedorFalla) {
             throw new Error('OpenAI answered 429');
           }
@@ -459,7 +520,13 @@ describe('responderConsulta', () => {
 
       expect(resultado).toEqual({
         ok: true,
-        respuesta: { tipo: 'respuesta', texto: 'Hay tres cultos jóvenes.', eventos, aviso: null },
+        respuesta: {
+          tipo: 'respuesta',
+          texto: 'Hay tres cultos jóvenes.',
+          eventos,
+          aviso: null,
+          borrador: null,
+        },
       });
       expect(resultadoDeBusqueda(f, 1)).toMatchObject({ total: 3, eventos });
     });
@@ -483,6 +550,7 @@ describe('responderConsulta', () => {
           texto: '¿De qué fecha o iglesia?',
           eventos: [],
           aviso: null,
+          borrador: null,
         },
       });
       // The model never sees the eventos it should not list.
@@ -499,7 +567,13 @@ describe('responderConsulta', () => {
 
       expect(resultado).toEqual({
         ok: true,
-        respuesta: { tipo: 'respuesta', texto: 'No encontré nada.', eventos: [], aviso: null },
+        respuesta: {
+          tipo: 'respuesta',
+          texto: 'No encontré nada.',
+          eventos: [],
+          aviso: null,
+          borrador: null,
+        },
       });
     });
 
@@ -740,6 +814,7 @@ describe('responderConsulta', () => {
           texto: 'Solo puedo ayudarte con el calendario.',
           eventos: [],
           aviso: null,
+          borrador: null,
         },
       });
       expect(f.registros).toHaveLength(1);
@@ -754,6 +829,230 @@ describe('responderConsulta', () => {
         ok: true,
         respuesta: { aviso: 'Te quedan 3 consultas por hoy' },
       });
+    });
+  });
+
+  describe('the propuesta of an evento', () => {
+    const CARGA = 'Cargame un culto joven el sábado 24 a las 19 h';
+
+    /** What the model read back from its last call to a herramienta. */
+    function resultadoDePropuesta(f: Fake, llamada: number) {
+      return resultadoDeBusqueda(f, llamada);
+    }
+
+    it('gives an encargado of one iglesia the borrador with that iglesia, without asking', async () => {
+      const f = fake({ respuestas: [propuesta({}), texto('Revisalo y confirmalo.')] });
+
+      const resultado = await responderConsulta(pedido(CARGA), USUARIO, f.puertos);
+
+      expect(resultado).toEqual({
+        ok: true,
+        respuesta: {
+          tipo: 'respuesta',
+          texto: 'Revisalo y confirmalo.',
+          eventos: [],
+          aviso: null,
+          borrador: {
+            titulo: 'Culto joven',
+            fecha: '2026-10-24',
+            hora: '19:00:00',
+            fechaFin: null,
+            lugar: null,
+            descripcion: null,
+            enfasis: 'nuevas_generaciones',
+            duenio: { alcance: 'iglesia', iglesiaId: 'i1' },
+            duenioNombre: 'Iglesia Central',
+            repeticion: 'ninguna',
+            finDeSerie: null,
+          },
+        },
+      });
+      // The model is told it is not saved yet.
+      expect(resultadoDePropuesta(f, 1).indicacion).toMatch(/Confirmar/);
+    });
+
+    it('asks a pastor with several iglesias whose evento it is when the mensaje does not say it', async () => {
+      const f = fake({
+        cargos: PASTOR,
+        respuestas: [propuesta({}), texto('¿Es de la Iglesia Central o de la Norte?')],
+      });
+
+      const resultado = await responderConsulta(pedido(CARGA), USUARIO, f.puertos);
+
+      expect(resultado).toMatchObject({
+        ok: true,
+        respuesta: { tipo: 'repregunta', borrador: null },
+      });
+      expect(resultadoDePropuesta(f, 1).error).toMatch(/de quién es el evento/);
+    });
+
+    it('gives a pastor the iglesia the mensaje names', async () => {
+      const f = fake({
+        cargos: PASTOR,
+        respuestas: [propuesta({ duenio: 'i2' }), texto('Listo.')],
+      });
+
+      const resultado = await responderConsulta(pedido(CARGA), USUARIO, f.puertos);
+
+      expect(resultado).toMatchObject({
+        ok: true,
+        respuesta: { borrador: { duenio: { alcance: 'iglesia', iglesiaId: 'i2' } } },
+      });
+    });
+
+    it('never gives a duenio the cargos of the usuario do not cover', async () => {
+      const f = fake({ respuestas: [propuesta({ duenio: 'i2' }), texto('No puedo.')] });
+
+      const resultado = await responderConsulta(pedido(CARGA), USUARIO, f.puertos);
+
+      expect(resultado).toMatchObject({ ok: true, respuesta: { borrador: null } });
+      expect(resultadoDePropuesta(f, 1).error).toMatch(/dueño/);
+    });
+
+    it('proposes nothing and asks for the enfasis when the mensaje does not say it', async () => {
+      const f = fake({
+        respuestas: [propuesta({ enfasis: null }), texto('¿De qué énfasis es?')],
+      });
+
+      const resultado = await responderConsulta(pedido(CARGA), USUARIO, f.puertos);
+
+      expect(resultado).toMatchObject({
+        ok: true,
+        respuesta: { tipo: 'repregunta', borrador: null },
+      });
+      expect(resultadoDePropuesta(f, 1).error).toMatch(/énfasis/);
+    });
+
+    it('rejects an evento of several days that repeats, with the rule of the form', async () => {
+      const f = fake({
+        respuestas: [
+          propuesta({ fecha_fin: '2026-10-25', repeticion: 'semanal' }),
+          texto('Un evento que se repite no puede durar varios días.'),
+        ],
+      });
+
+      const resultado = await responderConsulta(pedido(CARGA), USUARIO, f.puertos);
+
+      expect(resultado).toMatchObject({ ok: true, respuesta: { borrador: null } });
+      expect(resultadoDePropuesta(f, 1).error).toContain(
+        'Un evento que se repite no puede durar varios días.',
+      );
+    });
+
+    it('gives a series without "Hasta" the suggested one, and rejects one of more than a year', async () => {
+      const sinHasta = fake({
+        respuestas: [propuesta({ repeticion: 'semanal' }), texto('Listo.')],
+      });
+      const largo = fake({
+        respuestas: [
+          propuesta({ repeticion: 'semanal', hasta: '2027-10-25' }),
+          texto('Como mucho, un año.'),
+        ],
+      });
+
+      expect(await responderConsulta(pedido(CARGA), USUARIO, sinHasta.puertos)).toMatchObject({
+        respuesta: { borrador: { repeticion: 'semanal', finDeSerie: '2027-10-24' } },
+      });
+      expect(await responderConsulta(pedido(CARGA), USUARIO, largo.puertos)).toMatchObject({
+        respuesta: { borrador: null },
+      });
+      expect(resultadoDePropuesta(largo, 1).error).toMatch(/"Hasta" puede ser, como máximo/);
+    });
+
+    it('keeps the last valid propuesta after the model fixes one', async () => {
+      const f = fake({
+        respuestas: [
+          propuesta({ enfasis: null }),
+          propuesta({ enfasis: 'discipulado' }),
+          texto('Listo.'),
+        ],
+      });
+
+      const resultado = await responderConsulta(pedido(CARGA), USUARIO, f.puertos);
+
+      expect(resultado).toMatchObject({
+        respuesta: { tipo: 'respuesta', borrador: { enfasis: 'discipulado' } },
+      });
+    });
+
+    it('counts a mensaje de carga as one consulta and saves nothing', async () => {
+      const f = fake({ respuestas: [propuesta({}), texto('Listo.')] });
+
+      await responderConsulta(pedido(CARGA), USUARIO, f.puertos);
+
+      expect(f.registros).toHaveLength(1);
+      // Only the counters of the consulta reach the database.
+      expect(f.orden).toEqual(['reservar', 'proveedor', 'proveedor', 'confirmar']);
+    });
+
+    it('offers the propuesta only to a usuario whose cargos cover a duenio, and lists them', async () => {
+      const conCargos = fake({ cargos: PASTOR });
+      const sinCargos = fake({ cargos: { cargos: [], estructura: ESTRUCTURA } });
+
+      await responderConsulta(pedido('Hola'), USUARIO, conCargos.puertos);
+      await responderConsulta(pedido('Hola'), USUARIO, sinCargos.puertos);
+
+      expect(conCargos.llamadasAlProveedor[0].conPropuesta).toBe(true);
+      expect(sinCargos.llamadasAlProveedor[0].conPropuesta).toBe(false);
+      const [instrucciones] = conCargos.llamadasAlProveedor[0].mensajes;
+      expect(instrucciones).toHaveProperty('texto', expect.stringContaining('i2: Iglesia Norte'));
+      expect(instrucciones).toHaveProperty('texto', expect.stringContaining('d1: Distrito Centro'));
+    });
+
+    it(`stops offering the propuesta after ${MAX_BUSQUEDAS} rounds`, async () => {
+      const f = fake({
+        respuestas: [
+          ...Array.from({ length: MAX_BUSQUEDAS }, () => propuesta({ enfasis: null })),
+          texto('¿De qué énfasis es?'),
+        ],
+      });
+
+      await responderConsulta(pedido(CARGA), USUARIO, f.puertos);
+
+      expect(f.llamadasAlProveedor.map((llamada) => llamada.conPropuesta)).toEqual([
+        ...Array.from({ length: MAX_BUSQUEDAS }, () => true),
+        false,
+      ]);
+    });
+
+    it('tells the model it cannot propose when its cargos cover no duenio', async () => {
+      const f = fake({
+        cargos: { cargos: [], estructura: ESTRUCTURA },
+        respuestas: [propuesta({}), texto('No podés crear eventos.')],
+      });
+
+      const resultado = await responderConsulta(pedido(CARGA), USUARIO, f.puertos);
+
+      expect(resultado).toMatchObject({ ok: true, respuesta: { borrador: null } });
+      expect(resultadoDePropuesta(f, 1)).toHaveProperty('error');
+    });
+
+    it('fails as error_servidor and frees the reserva when the cargos cannot be read', async () => {
+      const f = fake();
+      f.puertos.leerCargos = async () => {
+        throw new Error('database down');
+      };
+
+      expect(await responderConsulta(pedido(CARGA), USUARIO, f.puertos)).toEqual({
+        ok: false,
+        falla: 'error_servidor',
+      });
+      expect(f.liberaciones).toHaveLength(1);
+    });
+  });
+
+  describe('the herramientas of the model', () => {
+    it('never include one that writes to the database', () => {
+      const nombres = getHerramientas({ conBusqueda: true, conPropuesta: true }).map(
+        (herramienta) => herramienta.nombre,
+      );
+
+      expect(nombres).toEqual(['buscar_eventos', 'proponer_evento']);
+    });
+
+    it('include only the ones allowed in the round', () => {
+      expect(getHerramientas({ conBusqueda: true, conPropuesta: false })).toHaveLength(1);
+      expect(getHerramientas({ conBusqueda: false, conPropuesta: false })).toEqual([]);
     });
   });
 });

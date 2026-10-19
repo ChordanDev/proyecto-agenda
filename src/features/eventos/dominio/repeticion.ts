@@ -1,12 +1,12 @@
-import { formatLongDate } from '@/features/calendario/dominio/calendarioTexts';
+import { formatLongDate } from '../../calendario/dominio/calendarioTexts.ts';
 import {
   addDays,
   getWeekday,
   parseLocalDate,
   toLocalDate,
-} from '@/features/calendario/dominio/localDate';
+} from '../../calendario/dominio/localDate.ts';
 
-import type { Repeticion } from './evento';
+import type { Repeticion } from './evento.ts';
 
 /** From Sunday, as `getWeekday` counts them, in plural: "todos los sábados". */
 const WEEKDAYS_PLURAL = [

@@ -1,9 +1,9 @@
-import type { Alcance, Duenio, Evento } from '@/features/eventos/dominio/evento';
+import type { Alcance, Duenio, Evento } from '../../eventos/dominio/evento.ts';
 
-import { seVePorAlcance, type FechaDeEvento, type IglesiaEnEstructura } from './armarCalendario';
-import type { DiaDelRango } from './diasDeEvento';
-import type { Month } from './getMonthRange';
-import { getWeekday, parseLocalDate } from './localDate';
+import { seVePorAlcance, type FechaDeEvento, type IglesiaEnEstructura } from './armarCalendario.ts';
+import type { DiaDelRango } from './diasDeEvento.ts';
+import type { Month } from './getMonthRange.ts';
+import { getWeekday, parseLocalDate } from './localDate.ts';
 
 const MONTH_NAMES = [
   'enero',

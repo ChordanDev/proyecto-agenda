@@ -1,5 +1,5 @@
-import type { Duenio } from '@/features/eventos/dominio/evento';
-import { getDuenioId } from '@/features/eventos/dominio/opcionesDeDuenio';
+import type { Duenio } from '../../eventos/dominio/evento.ts';
+import { getDuenioId } from '../../eventos/dominio/opcionesDeDuenio.ts';
 
 /** A lugar of the list of a duenio, where its eventos are held. */
 export type Lugar = {

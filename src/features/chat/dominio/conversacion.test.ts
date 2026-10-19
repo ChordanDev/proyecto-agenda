@@ -13,7 +13,7 @@ import {
 } from './conversacion';
 
 function respuesta(texto: string, extra: Partial<RespuestaDeConsulta> = {}): RespuestaDeConsulta {
-  return { tipo: 'respuesta', texto, eventos: [], aviso: null, ...extra };
+  return { tipo: 'respuesta', texto, eventos: [], aviso: null, borrador: null, ...extra };
 }
 
 function evento(extra: Partial<EventoDeChat> = {}): EventoDeChat {

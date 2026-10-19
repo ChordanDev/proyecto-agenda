@@ -1,4 +1,4 @@
-import type { Duenio } from './evento';
+import type { Duenio } from './evento.ts';
 
 /** What the rule needs to know of an iglesia. */
 export type IglesiaParaSumar = { id: string; distritoId: string };

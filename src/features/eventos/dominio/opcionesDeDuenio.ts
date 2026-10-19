@@ -1,8 +1,8 @@
-import type { Cargo } from '@/features/sesion/dominio/cargo';
-import { cargosAbarcanDuenio } from '@/features/sesion/dominio/cargosAbarcanDuenio';
+import type { Cargo } from '../../sesion/dominio/cargo.ts';
+import { cargosAbarcanDuenio } from '../../sesion/dominio/cargosAbarcanDuenio.ts';
 
-import { getDuenioDelDetalle } from './detalleDeEvento';
-import type { Duenio } from './evento';
+import { getDuenioDelDetalle } from './detalleDeEvento.ts';
+import type { Duenio } from './evento.ts';
 
 /** Every level of the structure with its nombre, as the form needs it. */
 export type EstructuraConNombres = {

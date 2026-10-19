@@ -1,12 +1,12 @@
-import { formatLongDate, formatTime } from '@/features/calendario/dominio/calendarioTexts';
-import { getWeekday, parseLocalDate } from '@/features/calendario/dominio/localDate';
-import { isSameDuenio, type LugarElegido } from '@/features/lugares/dominio/lugar';
+import { formatLongDate, formatTime } from '../../calendario/dominio/calendarioTexts.ts';
+import { getWeekday, parseLocalDate } from '../../calendario/dominio/localDate.ts';
+import { isSameDuenio, type LugarElegido } from '../../lugares/dominio/lugar.ts';
 
-import { getCategoria, type Categoria } from './categoria';
-import { isFechaPasada } from './fechaPasada';
-import type { Duenio, Enfasis, Evento, Repeticion } from './evento';
-import { getIglesiasParaSumar, type IglesiaParaSumar } from './iglesiasParaSumar';
-import { getFechasDeSerie, getTopeDeHasta } from './repeticion';
+import { getCategoria, type Categoria } from './categoria.ts';
+import { isFechaPasada } from './fechaPasada.ts';
+import type { Duenio, Enfasis, Evento, Repeticion } from './evento.ts';
+import { getIglesiasParaSumar, type IglesiaParaSumar } from './iglesiasParaSumar.ts';
+import { getFechasDeSerie, getTopeDeHasta } from './repeticion.ts';
 
 /**
  * What the form of an evento holds while it is filled in. Texts are kept as

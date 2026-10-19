@@ -2,6 +2,7 @@ import { FunctionsFetchError, FunctionsHttpError } from '@supabase/supabase-js';
 
 import { supabase } from '@/shared/supabase';
 
+import { isBorrador } from '../dominio/borrador';
 import type { RespuestaDeConsulta } from '../dominio/consulta';
 import type { PedidoDeConsulta } from '../dominio/conversacion';
 import { leerFalla, type Falla } from '../dominio/fallas';
@@ -18,17 +19,23 @@ const ESPERA_MAXIMA_MS = 60_000;
 export type ResultadoDeEnvio =
   { ok: true; respuesta: RespuestaDeConsulta } | { ok: false; falla: Falla };
 
-function isRespuesta(value: unknown): value is RespuestaDeConsulta {
+/**
+ * The respuesta of the server, or null when it is not one. A server without
+ * the borrador yet answers without it: that is no borrador.
+ */
+function leerRespuesta(value: unknown): RespuestaDeConsulta | null {
   if (typeof value !== 'object' || value === null) {
-    return false;
+    return null;
   }
-  const { tipo, texto, eventos, aviso } = value as Record<string, unknown>;
-  return (
+  const { tipo, texto, eventos, aviso, borrador = null } = value as Record<string, unknown>;
+  const valida =
     (tipo === 'respuesta' || tipo === 'repregunta') &&
     typeof texto === 'string' &&
     Array.isArray(eventos) &&
-    (aviso === null || typeof aviso === 'string')
-  );
+    (aviso === null || typeof aviso === 'string') &&
+    (borrador === null || isBorrador(borrador));
+
+  return valida ? ({ ...value, borrador } as RespuestaDeConsulta) : null;
 }
 
 async function leerBody(response: unknown): Promise<unknown> {
@@ -68,10 +75,8 @@ export async function enviarConsulta(pedido: PedidoDeConsulta): Promise<Resultad
       return { ok: false, falla: 'error_servidor' };
     }
 
-    const respuesta = (data as { respuesta?: unknown } | null)?.respuesta;
-    return isRespuesta(respuesta)
-      ? { ok: true, respuesta }
-      : { ok: false, falla: 'error_servidor' };
+    const respuesta = leerRespuesta((data as { respuesta?: unknown } | null)?.respuesta);
+    return respuesta === null ? { ok: false, falla: 'error_servidor' } : { ok: true, respuesta };
   } catch {
     return { ok: false, falla: 'error_servidor' };
   } finally {

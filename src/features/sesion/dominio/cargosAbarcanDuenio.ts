@@ -1,4 +1,4 @@
-import type { Cargo } from './cargo';
+import type { Cargo } from './cargo.ts';
 
 /**
  * A duenio together with the place it has in the structure right now: the

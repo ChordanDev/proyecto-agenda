@@ -1,5 +1,5 @@
-import type { FechaDeEvento } from './armarCalendario';
-import { daysBetween } from './localDate';
+import type { FechaDeEvento } from './armarCalendario.ts';
+import { daysBetween } from './localDate.ts';
 
 /** Which day of its range a day of an evento of several days is: "Día 2 de 3". */
 export type DiaDelRango = { numero: number; total: number };
