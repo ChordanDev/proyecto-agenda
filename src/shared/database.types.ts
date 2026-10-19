@@ -295,11 +295,17 @@ isOneToOne: false
               "alcance": Database["public"]['Enums']["alcance"],"descripcion": string,"duenio": string,"enfasis": Database["public"]['Enums']["enfasis"],"evento_id": string,"fecha": string,"fecha_fin": string,"hora": string,"lugar": string,"titulo": string,"total": number
             }[]
                            },
+"can_manage_cargo":
+{ Args: { "cargo_asociacion_id": string,"cargo_distrito_id": string,"cargo_es_secretaria": boolean,"cargo_iglesia_id": string }; Returns: boolean
+                           },
 "can_read_cargo":
 { Args: { "cargo_asociacion_id": string,"cargo_distrito_id": string,"cargo_iglesia_id": string }; Returns: boolean
                            },
 "cargos_abarcan_duenio":
 { Args: { "duenio_asociacion_id": string,"duenio_distrito_id": string,"duenio_iglesia_id": string }; Returns: boolean
+                           },
+"check_nombre_y_funcion":
+{ Args: { "funcion": string,"nombre": string }; Returns: undefined
                            },
 "confirmar_consulta":
 { Args: { "costo_usd": number,"dia": string,"mes": string,"usuario_id": string }; Returns: {
@@ -309,13 +315,22 @@ isOneToOne: false
 "delete_own_usuario":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
+"editar_cargo":
+{ Args: { "cargo_id": string,"funcion"?: string,"nombre": string }; Returns: undefined
+                           },
 "get_usuario_emails":
 { Args: Record<PropertyKey, never>; Returns: {
               "email": string,"usuario_id": string
             }[]
                            },
+"get_usuario_id_por_correo":
+{ Args: { "correo": string }; Returns: string
+                           },
 "get_zona_horaria_de_usuario":
 { Args: Record<PropertyKey, never>; Returns: string
+                           },
+"guardar_cargo_invitado":
+{ Args: { "distrito_id"?: string,"es_secretaria": boolean,"funcion"?: string,"iglesia_id"?: string,"nombre": string,"usuario_id": string }; Returns: string
                            },
 "guardar_evento":
 { Args: { "alcance": Database["public"]['Enums']["alcance"],"descripcion"?: string,"duenio_asociacion_id"?: string,"duenio_distrito_id"?: string,"duenio_iglesia_id"?: string,"enfasis"?: Database["public"]['Enums']["enfasis"],"evento_id"?: string,"fecha_fin"?: string,"fechas": (string)[],"fin_de_serie"?: string,"hora": string,"iglesias_sumadas"?: (string)[],"lugar"?: string,"lugar_id"?: string,"nuevo_evento_id"?: string,"repeticion": Database["public"]['Enums']["repeticion"],"titulo": string }; Returns: string
@@ -342,6 +357,9 @@ isOneToOne: false
                            },
 "lugar_nombre_key":
 { Args: { "nombre": string }; Returns: string
+                           },
+"quitar_cargo":
+{ Args: { "cargo_id": string }; Returns: undefined
                            },
 "quitar_evento_de_iglesia":
 { Args: { "evento_id": string,"iglesia_id": string }; Returns: undefined
