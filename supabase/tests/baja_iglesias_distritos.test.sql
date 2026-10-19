@@ -20,7 +20,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(43);
+select plan(45);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -243,6 +243,31 @@ select is(
   (select count(*)::int from public.cargos where iglesia_id = '11111111-0000-4000-8000-000000000001'),
   0,
   'reactivada, its cargos do not come back on their own'
+);
+
+-- A sumada made redundant while it was hidden goes when it is reactivada:
+-- here the evento it was sumada to moves to the asociacion.
+set local role authenticated;
+set local request.jwt.claims to '{"sub": "bbbbbbbb-0000-4000-8000-000000000001", "role": "authenticated"}';
+select public.dar_de_baja_iglesia('11111111-0000-4000-8000-000000000001');
+
+reset role;
+update public.eventos
+  set alcance = 'asociacion', duenio_iglesia_id = null, duenio_asociacion_id = 'aaaaaaaa-0000-4000-8000-000000000001'
+  where id = 'eeeeeeee-0000-4000-8000-000000000003';
+
+set local role authenticated;
+select lives_ok(
+  $$ select public.reactivar_iglesia('11111111-0000-4000-8000-000000000001') $$,
+  'the iglesia is reactivada after the evento moved to the asociacion'
+);
+
+reset role;
+select is_empty(
+  $$ select evento_id from public.iglesias_sumadas
+     where iglesia_id = '11111111-0000-4000-8000-000000000001'
+       and evento_id = 'eeeeeeee-0000-4000-8000-000000000003' $$,
+  'reactivada, it is no longer sumada to an evento it now sees by its alcance'
 );
 
 -- Dar de baja a distrito ----------------------------------------------------------------

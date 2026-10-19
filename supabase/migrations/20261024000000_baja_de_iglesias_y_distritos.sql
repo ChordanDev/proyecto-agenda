@@ -108,7 +108,9 @@ create trigger iglesias_en_distrito_activo
   before insert or update of distrito_id, de_baja on public.iglesias
   for each row execute function public.check_iglesia_en_distrito_activo();
 
--- Nobody gets a cargo on an iglesia or a distrito de baja.
+-- Nobody gets a cargo on an iglesia or a distrito de baja. Locked for share,
+-- like the distrito above, so a cargo cannot land on an iglesia or a distrito
+-- while it is being given de baja.
 create function public.check_cargo_en_estructura_activa()
 returns trigger
 language plpgsql
@@ -118,8 +120,10 @@ as $$
 begin
   if exists (
     select 1 from public.iglesias where iglesias.id = new.iglesia_id and iglesias.de_baja
+    for share
   ) or exists (
     select 1 from public.distritos where distritos.id = new.distrito_id and distritos.de_baja
+    for share
   ) then
     raise exception 'A cargo cannot be on an iglesia or a distrito de baja'
       using errcode = '23514';
@@ -194,6 +198,14 @@ begin
 
   -- In a distrito de baja, public.check_iglesia_en_distrito_activo rejects it.
   update public.iglesias set de_baja = false where iglesias.id = reactivar_iglesia.iglesia_id;
+
+  -- While it was de baja its rows of iglesias_sumadas were hidden, so a save
+  -- that made one of them redundant (the evento moved to its distrito or to
+  -- the asociacion) could not remove it, as public.guardar_evento does with
+  -- the ones it sees. Removed now, with the same rule.
+  delete from public.iglesias_sumadas
+  where iglesias_sumadas.iglesia_id = reactivar_iglesia.iglesia_id
+    and public.iglesia_ve_evento_por_alcance(iglesias_sumadas.evento_id, reactivar_iglesia.iglesia_id);
 end;
 $$;
 
