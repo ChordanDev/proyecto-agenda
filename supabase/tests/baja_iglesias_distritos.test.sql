@@ -130,7 +130,9 @@ select throws_ok(
 
 reset role;
 select is(
-  (select count(*)::int from public.iglesias where de_baja) + (select count(*)::int from public.distritos where de_baja),
+  -- Only the rows of this test: the seed has an iglesia de baja of its own.
+  (select count(*)::int from public.iglesias where de_baja and id::text like '11111111-%')
+    + (select count(*)::int from public.distritos where de_baja and id::text like 'dddddddd-%'),
   0,
   'nothing was given de baja by the rejected calls'
 );
