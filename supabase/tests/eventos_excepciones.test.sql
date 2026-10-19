@@ -12,7 +12,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(59);
+select plan(66);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -512,6 +512,93 @@ select is_empty(
   $$ select 1 from public.excepciones where evento_id = 'eeeeeeee-0000-4000-8000-000000000004' $$,
   'the moved date with the lugar of the old duenio loses its excepcion'
 );
+
+-- Findings of the Jorge review of #210 ------------------------------------------
+
+insert into public.eventos (id, titulo, alcance, duenio_iglesia_id, hora, repeticion, fin_de_serie) values
+  ('eeeeeeee-0000-4000-8000-000000000005', 'Serie sin fechas', 'iglesia', '11111111-0000-4000-8000-000000000001', '19:00', 'semanal', '2026-11-21');
+insert into public.eventos_fechas (evento_id, fecha) values
+  ('eeeeeeee-0000-4000-8000-000000000005', '2026-11-07'),
+  ('eeeeeeee-0000-4000-8000-000000000005', '2026-11-14'),
+  ('eeeeeeee-0000-4000-8000-000000000005', '2026-11-21');
+
+-- Two days in the series must not be the same day, for every writer.
+select index_is_unique(
+  'public', 'excepciones', 'excepciones_evento_fecha_nueva_key',
+  'two dates of a series cannot move to the same day'
+);
+
+set local role authenticated;
+set local request.jwt.claims to '{"sub": "bbbbbbbb-0000-4000-8000-000000000001", "role": "authenticated"}';
+
+select public.borrar_fecha('eeeeeeee-0000-4000-8000-000000000005', '2026-11-07');
+select public.borrar_fecha('eeeeeeee-0000-4000-8000-000000000005', '2026-11-14');
+
+-- "Hasta" back to the 14th: the dates left would be the two deleted ones.
+select throws_ok(
+  $$ select public.guardar_evento(
+    evento_id => 'eeeeeeee-0000-4000-8000-000000000005',
+    titulo => 'Serie sin fechas',
+    alcance => 'iglesia',
+    duenio_iglesia_id => '11111111-0000-4000-8000-000000000001',
+    hora => '19:00',
+    repeticion => 'semanal',
+    fin_de_serie => '2026-11-14',
+    fechas => array['2026-11-07', '2026-11-14']::date[]) $$,
+  '22023', null, 'a save that would leave the series without dates is rejected'
+);
+select results_eq(
+  $$ select fecha from public.eventos_fechas
+     where evento_id = 'eeeeeeee-0000-4000-8000-000000000005' $$,
+  $$ values ('2026-11-21'::date) $$,
+  'the series keeps the date it had'
+);
+
+-- A call that changes nothing still needs a date of a series.
+select throws_ok(
+  $$ select public.guardar_excepcion(
+    evento_id => 'eeeeeeee-0000-4000-8000-000000000005',
+    fecha => '2026-11-07') $$,
+  '23514', null, 'a deleted date cannot go back to the series either'
+);
+select throws_ok(
+  $$ select public.guardar_excepcion(
+    evento_id => 'eeeeeeee-0000-4000-8000-000000000002',
+    fecha => '2026-11-07') $$,
+  '23514', null, 'an evento that does not repeat has no date to take back'
+);
+
+-- A series has at most a year of weekly dates; a save with far more is not one.
+select throws_ok(
+  $$ select public.guardar_evento(
+    evento_id => 'eeeeeeee-0000-4000-8000-000000000005',
+    titulo => 'Serie sin fechas',
+    alcance => 'iglesia',
+    duenio_iglesia_id => '11111111-0000-4000-8000-000000000001',
+    hora => '19:00',
+    repeticion => 'semanal',
+    fin_de_serie => '2028-12-31',
+    fechas => (select array_agg(d::date) from generate_series('2026-11-21'::date, '2028-12-31'::date, interval '1 day') as d)) $$,
+  '22023', null, 'a save with too many dates is rejected'
+);
+
+-- A series renewed for years keeps saving: each date checks only its own day.
+select lives_ok(
+  $$ select public.guardar_evento(
+    evento_id => 'eeeeeeee-0000-4000-8000-000000000005',
+    titulo => 'Serie sin fechas',
+    alcance => 'iglesia',
+    duenio_iglesia_id => '11111111-0000-4000-8000-000000000001',
+    hora => '19:00',
+    repeticion => 'semanal',
+    fin_de_serie => '2032-11-20',
+    fechas => (select array_agg(d::date) from generate_series('2026-11-21'::date, '2032-11-20'::date, interval '1 week') as d)) $$,
+  'a series of six years of weekly dates is saved'
+);
+set constraints all immediate;
+set constraints all deferred;
+
+reset role;
 
 select * from finish();
 

@@ -117,9 +117,25 @@ export function puedeMoverFecha(
 }
 
 /**
+ * Whether all a date changes is a lugar of the list: a lugar belongs to one
+ * duenio, so another duenio takes it back to the one of the series.
+ */
+export function cambiaSoloUnLugarDeLista(excepcion: Excepcion): boolean {
+  const campos = Object.keys(excepcion.cambios).filter((campo) => campo !== 'lugar');
+
+  return (
+    excepcion.fechaNueva === null &&
+    excepcion.cambios.lugarId != null &&
+    campos.length === 1 &&
+    campos[0] === 'lugarId'
+  );
+}
+
+/**
  * The excepciones a new version of the series would lose, as saving it does
  * (`guardar_evento`): all of them when it stops repeating, those of a date
- * that is no longer in the series, and those of a date moved onto a day the
+ * that is no longer in the series, those whose only change is a lugar of the
+ * list when the duenio changes, and those of a date moved onto a day the
  * series now has. Losing one can bring back the own day of its date, which
  * may make another lose its move, so it repeats until nothing changes.
  *
@@ -129,6 +145,7 @@ export function getExcepcionesPerdidas(
   excepciones: readonly Excepcion[],
   nuevasFechas: readonly string[],
   repite: boolean,
+  { cambiaDuenio = false }: { cambiaDuenio?: boolean } = {},
 ): Excepcion[] {
   const cambios = excepciones.filter((excepcion) => !excepcion.borrada);
 
@@ -137,7 +154,12 @@ export function getExcepcionesPerdidas(
   }
 
   const enLaSerie = new Set(nuevasFechas);
-  const perdidas = new Set(cambios.filter((excepcion) => !enLaSerie.has(excepcion.fecha)));
+  const perdidas = new Set(
+    cambios.filter(
+      (excepcion) =>
+        !enLaSerie.has(excepcion.fecha) || (cambiaDuenio && cambiaSoloUnLugarDeLista(excepcion)),
+    ),
+  );
   const borradas = excepciones.filter((excepcion) => excepcion.borrada);
 
   for (;;) {

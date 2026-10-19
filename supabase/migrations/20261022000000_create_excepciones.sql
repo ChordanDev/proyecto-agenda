@@ -67,6 +67,11 @@ create index excepciones_fecha_nueva_idx on public.excepciones (fecha_nueva)
   where fecha_nueva is not null;
 create index excepciones_lugar_id_idx on public.excepciones (lugar_id);
 
+-- Two dates of a series never move to the same day, whatever the order of two
+-- writes at once.
+create unique index excepciones_evento_fecha_nueva_key on public.excepciones (evento_id, fecha_nueva)
+  where fecha_nueva is not null;
+
 -- What a foreign key cannot say: the excepcion belongs to a date of a series,
 -- the date moves to a day that is not another date of the same series, and the
 -- lugar is one of the duenio. A trigger and not a policy, so it holds for every
@@ -171,18 +176,42 @@ as $$
 declare
   -- NEW is null when a row is deleted.
   serie_id uuid := coalesce(new.evento_id, old.evento_id);
+  -- The days a write can fill twice: a date that comes to its own day (a new
+  -- date, a move undone, an excepcion deleted) or moves to a new one.
+  dias date[];
 begin
-  -- Every date that is not deleted keeps its row in eventos_fechas; it is seen
-  -- on the day it moved to, or on its own.
+  if tg_table_name = 'excepciones' then
+    dias := array_remove(array[new.fecha, new.fecha_nueva, old.fecha], null);
+  else
+    dias := array[new.fecha];
+  end if;
+
+  -- Each day is looked up by the keys of both tables, not by reading the
+  -- whole series: every date of a long series fires this once.
   if exists (
     select 1
-    from public.eventos_fechas
-    left join public.excepciones
-      on excepciones.evento_id = eventos_fechas.evento_id
-      and excepciones.fecha = eventos_fechas.fecha
-    where eventos_fechas.evento_id = serie_id
-    group by coalesce(excepciones.fecha_nueva, eventos_fechas.fecha)
-    having count(*) > 1
+    from unnest(dias) as dia
+    where (
+      select count(*)
+      from public.eventos_fechas
+      where eventos_fechas.evento_id = serie_id
+        and eventos_fechas.fecha = dia
+        and not exists (
+          select 1
+          from public.excepciones
+          where excepciones.evento_id = serie_id
+            and excepciones.fecha = dia
+            and excepciones.fecha_nueva is not null
+        )
+    ) + (
+      select count(*)
+      from public.excepciones
+      join public.eventos_fechas
+        on eventos_fechas.evento_id = excepciones.evento_id
+        and eventos_fechas.fecha = excepciones.fecha
+      where excepciones.evento_id = serie_id
+        and excepciones.fecha_nueva = dia
+    ) > 1
   ) then
     raise exception 'Two dates of the evento % fall on the same day', serie_id
       using errcode = '23514';
@@ -330,6 +359,40 @@ begin
       using errcode = 'P0002';
   end if;
 
+  -- One write of the dates of a series at a time: two at once could each find
+  -- a day free, or a date left, that the other one takes.
+  perform 1
+  from public.eventos
+  where eventos.id = guardar_excepcion.evento_id
+  for update;
+
+  -- Even taking a date back to the series needs a date of a series: a deleted
+  -- date no longer exists, and an evento that does not repeat has none.
+  if exists (
+    select 1
+    from public.excepciones
+    where excepciones.evento_id = guardar_excepcion.evento_id
+      and excepciones.fecha = guardar_excepcion.fecha
+      and excepciones.borrada
+  ) then
+    raise exception 'The fecha % of the evento % was deleted',
+      guardar_excepcion.fecha, guardar_excepcion.evento_id
+      using errcode = '23514';
+  end if;
+
+  if not exists (
+    select 1
+    from public.eventos
+    join public.eventos_fechas on eventos_fechas.evento_id = eventos.id
+    where eventos.id = guardar_excepcion.evento_id
+      and eventos.repeticion <> 'ninguna'
+      and eventos_fechas.fecha = guardar_excepcion.fecha
+  ) then
+    raise exception 'The fecha % is not a date of a series %',
+      guardar_excepcion.fecha, guardar_excepcion.evento_id
+      using errcode = '23514';
+  end if;
+
   -- A date that comes back to its own day finds it free, or the day would
   -- show two dates (checked again when the transaction ends).
   if movida is null and exists (
@@ -356,18 +419,6 @@ begin
       and not excepciones.borrada;
 
     return;
-  end if;
-
-  if exists (
-    select 1
-    from public.excepciones
-    where excepciones.evento_id = guardar_excepcion.evento_id
-      and excepciones.fecha = guardar_excepcion.fecha
-      and excepciones.borrada
-  ) then
-    raise exception 'The fecha % of the evento % was deleted',
-      guardar_excepcion.fecha, guardar_excepcion.evento_id
-      using errcode = '23514';
   end if;
 
   insert into public.excepciones (
@@ -418,6 +469,13 @@ begin
     raise exception 'There is no evento % the usuario can edit', borrar_fecha.evento_id
       using errcode = 'P0002';
   end if;
+
+  -- One write of the dates of a series at a time: two deletes at once could
+  -- each find another date left and leave the series without any.
+  perform 1
+  from public.eventos
+  where eventos.id = borrar_fecha.evento_id
+  for update;
 
   if not exists (
     select 1
@@ -550,6 +608,13 @@ begin
     raise exception 'An evento needs at least one fecha' using errcode = '22023';
   end if;
 
+  -- Renewing "Hasta" keeps the first date, so a weekly series grows by a year
+  -- of dates each time; nearly ten years of them is no longer a series, and
+  -- each date is checked when the transaction ends.
+  if cardinality(guardar_evento.fechas) > 500 then
+    raise exception 'An evento has at most 500 fechas' using errcode = '22023';
+  end if;
+
   if guardar_evento.evento_id is null then
     insert into public.eventos (
       id, titulo, lugar, lugar_id, descripcion, enfasis, alcance,
@@ -570,6 +635,8 @@ begin
   end if;
 
   if saved_id is null then
+    -- The update locks the evento: guardar_excepcion and borrar_fecha wait
+    -- for it, and it waits for them.
     update public.eventos
     set
       titulo = guardar_evento.titulo,
@@ -629,6 +696,17 @@ begin
         and excepciones.fecha = nueva.fecha
         and excepciones.borrada
     );
+
+  -- Every date it is given may be one deleted on its own: then nothing would
+  -- be left, and the evento would vanish from every calendario.
+  if not exists (
+    select 1
+    from public.eventos_fechas
+    where eventos_fechas.evento_id = saved_id
+  ) then
+    raise exception 'The evento % would be left without fechas', saved_id
+      using errcode = '22023';
+  end if;
 
   -- A lugar that is not one of the new duenio goes back to the one of the
   -- series, first: the trigger checks it on every update of the excepcion.

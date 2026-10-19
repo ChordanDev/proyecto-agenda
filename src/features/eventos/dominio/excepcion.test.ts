@@ -129,6 +129,19 @@ describe('getExcepcionesPerdidas', () => {
     expect(getExcepcionesPerdidas([hora, titulo], ['2026-11-14'], false)).toEqual([hora, titulo]);
   });
 
+  it('loses a date whose only change is a lugar of the list when the duenio changes', () => {
+    const lugar = excepcion('2026-11-14', { cambios: { lugar: 'Salón', lugarId: 'salon' } });
+    const escrito = excepcion('2026-11-21', { cambios: { lugar: 'Plaza', lugarId: null } });
+    const conHora = excepcion('2026-11-28', {
+      cambios: { lugar: 'Salón', lugarId: 'salon', hora: '20:00:00' },
+    });
+
+    expect(
+      getExcepcionesPerdidas([lugar, escrito, conHora], FECHAS, true, { cambiaDuenio: true }),
+    ).toEqual([lugar]);
+    expect(getExcepcionesPerdidas([lugar, escrito, conHora], FECHAS, true)).toEqual([]);
+  });
+
   it('loses a date moved onto a day the series now has', () => {
     const movida = excepcion('2026-11-07', { fechaNueva: '2026-11-10' });
 
