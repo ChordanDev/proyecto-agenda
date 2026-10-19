@@ -249,7 +249,12 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
   const [fechaOriginal] = useState(editando ? initial.fecha : null);
   const seRepite = formulario.repeticion !== 'ninguna';
 
-  const result = validarFormulario(formulario, { hoy, editando, iglesias: iglesias.data });
+  const result = validarFormulario(formulario, {
+    hoy,
+    editando,
+    iglesias: iglesias.data,
+    inicial: initial,
+  });
   const errores = triedToSave && !result.ok ? result.errores : {};
   const opcionDeDuenio = getOpcionDeDuenio(opciones, formulario.duenio);
   const severalDuenios = countOpciones(opciones) > 1;

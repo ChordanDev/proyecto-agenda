@@ -49,6 +49,12 @@ export type ContextoDelFormulario = {
    * that see the evento by its alcance are left out after the duenio changes.
    */
   iglesias?: readonly IglesiaParaSumar[];
+  /**
+   * The form as it was opened. While neither its duenio nor its sumadas
+   * change, the sumadas are not sent: the ones loaded can be old, and sending
+   * them would undo what was shared, or what an iglesia quito, meanwhile.
+   */
+  inicial?: FormularioDeEvento;
 };
 
 /** An evento ready to be saved, with every date it has. */
@@ -170,6 +176,21 @@ function getSumadasAGuardar(
   return sumadas.filter((id) => ofrecibles.has(id));
 }
 
+/** Whether the duenio and the sumadas are the ones the form was opened with. */
+function sumadasSinCambios(formulario: FormularioDeEvento, inicial: FormularioDeEvento): boolean {
+  const mismoDuenio =
+    formulario.duenio !== null &&
+    inicial.duenio !== null &&
+    isSameDuenio(formulario.duenio, inicial.duenio);
+  const { iglesiasSumadas } = formulario;
+
+  return (
+    mismoDuenio &&
+    iglesiasSumadas.length === inicial.iglesiasSumadas.length &&
+    iglesiasSumadas.every((id) => inicial.iglesiasSumadas.includes(id))
+  );
+}
+
 /** An optional text: trimmed, and missing when nothing is left. */
 function optionalText(text: string): string | null {
   const trimmed = text.trim();
@@ -262,12 +283,15 @@ export function validarFormulario(
       finDeSerie,
       // A series is saved with each of its dates, one row each.
       fechas: getFechasDeSerie(formulario.fecha, formulario.repeticion, finDeSerie),
-      // Sharing applies to the whole series.
-      iglesiasSumadas: getSumadasAGuardar(
-        formulario.duenio,
-        formulario.iglesiasSumadas,
-        contexto.iglesias,
-      ),
+      // Sharing applies to the whole series. Left out when untouched, the
+      // evento keeps the sumadas it has.
+      ...((contexto.inicial === undefined || !sumadasSinCambios(formulario, contexto.inicial)) && {
+        iglesiasSumadas: getSumadasAGuardar(
+          formulario.duenio,
+          formulario.iglesiasSumadas,
+          contexto.iglesias,
+        ),
+      }),
     },
   };
 }

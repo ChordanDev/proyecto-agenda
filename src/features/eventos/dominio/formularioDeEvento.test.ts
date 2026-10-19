@@ -297,6 +297,47 @@ describe('the iglesias sumadas', () => {
     expect(result.ok && result.evento.iglesiasSumadas).toEqual(['i3']);
   });
 
+  describe('when editing', () => {
+    const inicial = completo({ iglesiasSumadas: ['i3'] });
+
+    it('does not send the sumadas when they were not changed, so a quitar is not undone', () => {
+      const result = validarFormulario(
+        { ...inicial, titulo: 'Otro título' },
+        { hoy: HOY, editando: true, iglesias: IGLESIAS, inicial },
+      );
+
+      expect(result.ok && result.evento).not.toHaveProperty('iglesiasSumadas');
+    });
+
+    it('sends the sumadas when a chip was changed', () => {
+      const result = validarFormulario(
+        { ...inicial, iglesiasSumadas: ['i3', 'i2'] },
+        { hoy: HOY, editando: true, iglesias: IGLESIAS, inicial },
+      );
+
+      expect(result.ok && result.evento.iglesiasSumadas).toEqual(['i3', 'i2']);
+    });
+
+    it('sends the sumadas left after the duenio changes to the distrito of one of them', () => {
+      const conDosSumadas = completo({ iglesiasSumadas: ['i2', 'i3'] });
+
+      const result = validarFormulario(
+        { ...conDosSumadas, duenio: DISTRITO, lugar: null },
+        { hoy: HOY, editando: true, iglesias: IGLESIAS, inicial: conDosSumadas },
+      );
+
+      expect(result.ok && result.evento.iglesiasSumadas).toEqual(['i3']);
+    });
+
+    it('does not send the sumadas of a new evento shared with none', () => {
+      const nuevo = completo();
+
+      const result = validarFormulario(nuevo, { hoy: HOY, editando: false, inicial: nuevo });
+
+      expect(result.ok && result.evento).not.toHaveProperty('iglesiasSumadas');
+    });
+  });
+
   it('keeps the iglesias sumadas while the iglesias are not known yet', () => {
     const result = validar(completo({ duenio: DISTRITO, lugar: null, iglesiasSumadas: ['i3'] }));
 
