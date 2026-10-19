@@ -1,3 +1,6 @@
+import type { Evento } from '@/features/eventos/dominio/evento';
+
+import type { IglesiaEnEstructura } from './armarCalendario';
 import {
   formatActualizado,
   formatDayHeading,
@@ -8,6 +11,7 @@ import {
   formatTimeAndPlace,
   formatTimeAndPlaceDelDia,
   getAlcanceLabel,
+  getEtiquetaDelEvento,
 } from './calendarioTexts';
 
 describe('formatMonthTitle', () => {
@@ -188,5 +192,141 @@ describe('formatLongDate', () => {
   it('writes the day, the month and the year', () => {
     expect(formatLongDate('2027-10-17')).toBe('17 de octubre de 2027');
     expect(formatLongDate('2027-01-01')).toBe('1 de enero de 2027');
+  });
+});
+
+describe('getEtiquetaDelEvento', () => {
+  const central: IglesiaEnEstructura = {
+    id: 'iglesia-central',
+    distritoId: 'distrito-norte',
+    asociacionId: 'asociacion-central',
+  };
+  const norte: IglesiaEnEstructura = {
+    id: 'iglesia-norte',
+    distritoId: 'distrito-sur',
+    asociacionId: 'asociacion-central',
+  };
+  const nombres = {
+    iglesias: { 'iglesia-central': 'Central' },
+    distritos: { 'distrito-norte': 'Distrito Norte' },
+    sumadas: {},
+  };
+
+  function evento(overrides: Partial<Evento>): Evento {
+    return {
+      id: 'evento-1',
+      titulo: 'Sociedad de jóvenes',
+      lugar: null,
+      lugarId: null,
+      descripcion: null,
+      enfasis: null,
+      duenio: { alcance: 'iglesia', iglesiaId: central.id },
+      hora: '19:00:00',
+      fechaFin: null,
+      repeticion: 'ninguna',
+      finDeSerie: null,
+      iglesiasSumadas: [],
+      ...overrides,
+    };
+  }
+
+  it('gives no label to an evento of the iglesia that is not shared', () => {
+    expect(getEtiquetaDelEvento(evento({}), [central], nombres)).toBeNull();
+  });
+
+  it('tells the calendario of the duenio how many iglesias it is shared with', () => {
+    const compartido = evento({ iglesiasSumadas: [norte.id, 'iglesia-sur', 'iglesia-este'] });
+
+    expect(getEtiquetaDelEvento(compartido, [central], nombres)).toBe('Compartido con 3 iglesias');
+  });
+
+  it('says "1 iglesia" when it is shared with one', () => {
+    const compartido = evento({ iglesiasSumadas: [norte.id] });
+
+    expect(getEtiquetaDelEvento(compartido, [central], nombres)).toBe('Compartido con 1 iglesia');
+  });
+
+  it('tells the iglesia sumada who shares it with her', () => {
+    const compartido = evento({ iglesiasSumadas: [norte.id] });
+
+    expect(getEtiquetaDelEvento(compartido, [norte], nombres)).toBe(
+      'Compartido por Iglesia Central',
+    );
+  });
+
+  it('names the distrito that shares an evento of its own', () => {
+    const delDistrito = evento({
+      duenio: { alcance: 'distrito', distritoId: 'distrito-norte' },
+      iglesiasSumadas: [norte.id],
+    });
+
+    expect(getEtiquetaDelEvento(delDistrito, [norte], nombres)).toBe(
+      'Compartido por Distrito Norte',
+    );
+  });
+
+  it('keeps the distrito and adds how many iglesias it is shared with for its own iglesias', () => {
+    const delDistrito = evento({
+      duenio: { alcance: 'distrito', distritoId: 'distrito-norte' },
+      iglesiasSumadas: [norte.id],
+    });
+
+    expect(getEtiquetaDelEvento(delDistrito, [central], nombres)).toBe(
+      'Distrito Norte · Compartido con 1 iglesia',
+    );
+  });
+
+  it('gives no shared label when the iglesia sumada also sees the evento by its alcance', () => {
+    // Norte moved to the distrito that owns the evento.
+    const mudada = { ...norte, distritoId: 'distrito-norte' };
+    const delDistrito = evento({
+      duenio: { alcance: 'distrito', distritoId: 'distrito-norte' },
+      iglesiasSumadas: [norte.id],
+    });
+
+    expect(getEtiquetaDelEvento(delDistrito, [mudada], nombres)).toBe('Distrito Norte');
+  });
+
+  it('does not count an iglesia sumada outside the calendario that now sees it by its alcance', () => {
+    // Norte moved to the distrito that owns the evento; Central looks at it.
+    const delDistrito = evento({
+      duenio: { alcance: 'distrito', distritoId: 'distrito-norte' },
+      iglesiasSumadas: [norte.id, 'iglesia-sur'],
+    });
+    const conSumadas = {
+      ...nombres,
+      sumadas: {
+        [norte.id]: { ...norte, distritoId: 'distrito-norte' },
+        'iglesia-sur': {
+          id: 'iglesia-sur',
+          distritoId: 'distrito-sur',
+          asociacionId: 'asociacion-central',
+        },
+      },
+    };
+
+    expect(getEtiquetaDelEvento(delDistrito, [central], conSumadas)).toBe(
+      'Distrito Norte · Compartido con 1 iglesia',
+    );
+    expect(
+      getEtiquetaDelEvento({ ...delDistrito, iglesiasSumadas: [norte.id] }, [central], conSumadas),
+    ).toBe('Distrito Norte');
+  });
+
+  it('counts an iglesia sumada of the calendario of a pastor that also covers the duenio', () => {
+    const compartido = evento({ iglesiasSumadas: [norte.id] });
+
+    expect(getEtiquetaDelEvento(compartido, [central, norte], nombres)).toBe(
+      'Compartido con 1 iglesia',
+    );
+  });
+
+  it('says "Iglesia" when the nombre of the iglesia that shares it is not known', () => {
+    const compartido = evento({
+      duenio: { alcance: 'iglesia', iglesiaId: 'iglesia-oeste' },
+      iglesiasSumadas: [norte.id],
+    });
+
+    expect(getEtiquetaDelEvento(compartido, [norte], nombres)).toBe('Compartido por Iglesia');
   });
 });

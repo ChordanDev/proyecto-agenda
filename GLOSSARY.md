@@ -63,6 +63,14 @@ _Avoid_: Pastor distrital, líder de distrito
 Cargo sobre una asociación.
 _Avoid_: Administrador, superusuario
 
+**Invitar**:
+Dar un cargo a una persona por su correo, con su nombre y su función. Si el correo no tiene cuenta, se crea; si ya la tiene, solo se le suma el cargo. En los dos casos recibe el correo de bienvenida. No es lo mismo que sumar una iglesia a un evento.
+_Avoid_: Agregar usuario, dar de alta, registrar
+
+**Correo de bienvenida**:
+Aviso que recibe quien es invitado: nombra el cargo y la iglesia o el distrito, y le dice que descargue la app e ingrese con ese correo. No lleva contraseña ni enlace de invitación.
+_Avoid_: Invitación, correo de alta
+
 ### Eventos
 
 **Calendario**:

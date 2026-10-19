@@ -59,6 +59,7 @@ export const persistOptions: Omit<PersistQueryClientOptions, 'queryClient'> = {
   // Raise it when the shape of a saved query changes, so an old cache that the
   // new code cannot read is dropped instead of shown.
   // '2': eventos gained lugarId (#129).
-  buster: '2',
+  // '3': the calendario of a month gained the etiquetas of its eventos (#170).
+  buster: '3',
   dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
 };

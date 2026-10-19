@@ -2,6 +2,7 @@ import type { DuenioEnEstructura } from '@/features/sesion/dominio/cargosAbarcan
 import { supabase } from '@/shared/supabase';
 
 import type { Evento } from '../dominio/evento';
+import type { IglesiaSumada } from '../dominio/eventoCompartido';
 import { toEvento } from './eventoRow';
 
 /** An evento with what its detail shows besides its own columns. */
@@ -13,18 +14,21 @@ export type EventoDetallado = {
   duenioEnEstructura: DuenioEnEstructura;
   /** Its dates, in order: one, or one per occurrence of a series. */
   fechas: string[];
+  /** The iglesias it is shared with, with their nombres and their place in the structure. */
+  sumadas: IglesiaSumada[];
 };
 
 /**
- * Every column of the evento, its dates and the nombre of its duenio. The
- * duenio is named by its foreign key: iglesias also reach eventos through
- * iglesias_sumadas, and PostgREST cannot tell the two apart by itself.
+ * Every column of the evento, its dates, the nombre of its duenio and its
+ * iglesias sumadas with their own. The duenio is named by its foreign key:
+ * iglesias also reach eventos through iglesias_sumadas, and PostgREST cannot
+ * tell the two apart by itself.
  */
 const EVENTO_COLUMNS = `
   id, titulo, lugar, lugar_id, descripcion, enfasis, alcance,
   duenio_iglesia_id, duenio_distrito_id, duenio_asociacion_id,
   hora, fecha_fin, repeticion, fin_de_serie,
-  iglesias_sumadas (iglesia_id),
+  iglesias_sumadas (iglesia_id, iglesias (nombre, distrito_id, distritos (asociacion_id))),
   lugares (nombre),
   eventos_fechas (fecha),
   iglesias!eventos_duenio_iglesia_id_fkey (nombre, distrito_id, distritos (asociacion_id)),
@@ -92,5 +96,11 @@ export async function getEvento(id: string): Promise<EventoDetallado | null> {
     duenioEnEstructura: toDuenioEnEstructura(evento.duenio, data),
     // Local `YYYY-MM-DD` strings order as plain text.
     fechas: data.eventos_fechas.map(({ fecha }) => fecha).sort(),
+    sumadas: data.iglesias_sumadas.map(({ iglesia_id, iglesias }) => ({
+      id: iglesia_id,
+      nombre: iglesias.nombre,
+      distritoId: iglesias.distrito_id,
+      asociacionId: iglesias.distritos.asociacion_id,
+    })),
   };
 }

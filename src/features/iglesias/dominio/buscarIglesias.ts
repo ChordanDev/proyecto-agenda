@@ -1,4 +1,5 @@
 import type { Punto } from './distancia';
+import { ordenarPorDistancia } from './ordenarPorDistancia';
 
 export type Iglesia = {
   id: string;
@@ -25,12 +26,19 @@ export function normalize(text: string): string {
 /**
  * Search of "Elegir iglesia": matches by a part of the name, ignoring case and
  * accents. An empty text returns every church. Churches excluded from the
- * search are never returned. The order of the list is kept.
+ * search are never returned. Without a ubicación the order of the list is
+ * kept; with one, the results go from the nearest to the farthest.
  */
-export function buscarIglesias(iglesias: readonly Iglesia[], texto: string): Iglesia[] {
+export function buscarIglesias(
+  iglesias: readonly Iglesia[],
+  texto: string,
+  ubicacion?: Punto,
+): Iglesia[] {
   const query = normalize(texto);
 
-  return iglesias.filter(
+  const results = iglesias.filter(
     (iglesia) => !iglesia.excluidaDelBuscador && normalize(iglesia.nombre).includes(query),
   );
+
+  return ubicacion ? ordenarPorDistancia(results, ubicacion) : results;
 }

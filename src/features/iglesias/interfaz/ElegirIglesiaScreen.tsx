@@ -4,6 +4,7 @@ import {
   AccessibilityInfo,
   BackHandler,
   Keyboard,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -27,7 +28,9 @@ import {
 
 import { useElegirIglesia } from '../datos/useElegirIglesia';
 import { useIglesias } from '../datos/useIglesias';
+import { useUbicacion, type Ubicacion } from '../datos/useUbicacion';
 import { buscarIglesias, type Iglesia } from '../dominio/buscarIglesias';
+import { distanciaEnMetros, formatDistancia, type Punto } from '../dominio/distancia';
 import { estadoSinIglesias } from '../dominio/estadoSinIglesias';
 import { aceptaCambios, puedeConfirmar } from '../dominio/puedeConfirmar';
 
@@ -54,8 +57,34 @@ const RADIO_SIZE = 28; // lines 45 and 48
 const RADIO_BORDER_WIDTH = 2;
 const CHECK_SIZE = 16; // line 45
 const CHECK_STROKE_WIDTH = 3.2;
+// "Usar mi ubicación" (#164), lines 40-74 of the same mockup.
+const LOCATION_BUTTON_HEIGHT = 54; // line 40
+const LOCATION_BUTTON_BORDER_WIDTH = 2;
+const LOCATION_BUTTON_RADIUS = 14;
+const LOCATION_BUTTON_LABEL_SIZE = 17;
+const LOCATION_BUTTON_GAP = 10;
+const LOCATION_ICON_SIZE = 22;
+const LOCATION_ICON_STROKE_WIDTH = 2.2;
+const ORDER_LINE_HEIGHT = 44; // line 48
+const ORDER_LINE_GAP = 8;
+const ORDER_LINE_PADDING_HORIZONTAL = 6;
+const NOTICE_GAP = 12; // line 52
+const NOTICE_PADDING_VERTICAL = 14;
+const NOTICE_ICON_BOX_SIZE = 40; // line 53
+const NOTICE_TEXTS_GAP = 2; // line 54
+const NOTICE_DETAIL_SIZE = 15; // line 56
+const NOTICE_DETAIL_LINE_HEIGHT = 1.4;
+const NOTICE_BUTTON_MARGIN_TOP = 6; // line 58
+const ROW_DISTANCE_GAP = 4; // line 74
+const ROW_DISTANCE_ICON_SIZE = 16;
+// The mockup draws "Buscando tu ubicación…" at this opacity (line 44); pressed
+// is the one of Button, which the mockup does not draw.
+const BUSY_OPACITY = 0.6;
+const PRESSED_OPACITY = 0.85;
 
 const SAVE_ERROR = 'No se pudo guardar la iglesia. Probá de nuevo.';
+const LOCATION_ERROR = 'No pudimos usar tu ubicación.';
+const LOCATION_ERROR_DETAIL = 'Podés buscar tu iglesia por nombre.';
 
 /**
  * The hermano looks for their iglesia by its nombre, picks it and confirms it
@@ -70,8 +99,10 @@ export function ElegirIglesiaScreen() {
   const firstScreen = useFirstScreen();
   const [searchText, setSearchText] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { ubicacion, locate } = useUbicacion();
+  const punto = ubicacion.status === 'located' ? ubicacion.punto : undefined;
 
-  const results = buscarIglesias(iglesias ?? [], searchText);
+  const results = buscarIglesias(iglesias ?? [], searchText, punto);
   // What is confirmed is always on display: a search that hides the selected
   // iglesia leaves nothing to confirm until it shows again.
   const canConfirm = puedeConfirmar(selectedId, results);
@@ -147,6 +178,15 @@ export function ElegirIglesiaScreen() {
     }
   };
 
+  const startLocating = () => {
+    if (!acceptsChanges) {
+      return;
+    }
+    clearSaveError();
+    Keyboard.dismiss();
+    void locate();
+  };
+
   const select = (iglesiaId: string) => {
     if (!acceptsChanges) {
       return;
@@ -187,6 +227,7 @@ export function ElegirIglesiaScreen() {
             key={iglesia.id}
             iglesia={iglesia}
             checked={iglesia.id === selectedId}
+            desde={punto}
             onPress={() => select(iglesia.id)}
           />
         ))}
@@ -226,6 +267,8 @@ export function ElegirIglesiaScreen() {
           accessibilityLabel="Buscar por nombre"
         />
 
+        <UbicacionControls ubicacion={ubicacion} onLocate={startLocating} />
+
         {renderIglesias()}
       </ScrollView>
 
@@ -261,20 +304,149 @@ function Message({ children }: { children: string }) {
   );
 }
 
-type IglesiaRowProps = {
-  iglesia: Iglesia;
-  checked: boolean;
+/** The pin the mockup draws on everything about the ubicación. */
+function PinIcon({ size = LOCATION_ICON_SIZE }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"
+        stroke={colors.azulOscuro}
+        strokeWidth={LOCATION_ICON_STROKE_WIDTH}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M14.5 9.5a2.5 2.5 0 1 1-5 0a2.5 2.5 0 1 1 5 0z"
+        stroke={colors.azulOscuro}
+        strokeWidth={LOCATION_ICON_STROKE_WIDTH}
+      />
+    </Svg>
+  );
+}
+
+type UbicacionControlsProps = {
+  ubicacion: Ubicacion;
+  onLocate: () => void;
+};
+
+/**
+ * "Usar mi ubicación" under the search field. The permiso is asked only on a
+ * tap, never on opening the screen. Without the ubicación the search by nombre
+ * works as always.
+ */
+function UbicacionControls({ ubicacion, onLocate }: UbicacionControlsProps) {
+  switch (ubicacion.status) {
+    case 'idle':
+      return <LocationButton label="Usar mi ubicación" onPress={onLocate} />;
+    case 'locating':
+      return <LocationButton label="Buscando tu ubicación…" busy onPress={onLocate} />;
+    case 'located':
+      return (
+        <View style={styles.orderLine} accessible accessibilityRole="text">
+          <PinIcon />
+          <AppText variant="cuerpo" weight="bold" color="azulOscuro">
+            De la más cercana a la más lejana
+          </AppText>
+        </View>
+      );
+    case 'unavailable':
+      return (
+        <>
+          <LocationNotice />
+          <LocationButton label="Usar mi ubicación" onPress={onLocate} />
+        </>
+      );
+    case 'deniedForGood':
+      // Tapping "Usar mi ubicación" again would not ask: only the settings can.
+      return <LocationNotice withSettings />;
+  }
+}
+
+type LocationButtonProps = {
+  label: string;
+  busy?: boolean;
   onPress: () => void;
 };
 
-function IglesiaRow({ iglesia, checked, onPress }: IglesiaRowProps) {
-  const { nombre, distrito, localidad } = iglesia;
+function LocationButton({ label, busy = false, onPress }: LocationButtonProps) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled: busy, busy }}
+      disabled={busy}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.locationButton,
+        pressed && styles.pressed,
+        busy && styles.locationButtonBusy,
+      ]}
+    >
+      {!busy && <PinIcon />}
+      <AppText weight="bold" color="azulOscuro" style={styles.locationButtonLabel}>
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
+function LocationNotice({ withSettings = false }: { withSettings?: boolean }) {
+  return (
+    <View
+      style={styles.notice}
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
+      accessibilityLabel={`${LOCATION_ERROR} ${LOCATION_ERROR_DETAIL}`}
+    >
+      <View style={styles.noticeIconBox}>
+        <Svg width={LOCATION_ICON_SIZE} height={LOCATION_ICON_SIZE} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M12 3l9.5 17h-19L12 3zM12 10v4.5M12 17.5v.5"
+            stroke={colors.aviso}
+            strokeWidth={LOCATION_ICON_STROKE_WIDTH}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      </View>
+      <View style={styles.noticeTexts}>
+        <AppText weight="bold" style={styles.noticeTitle}>
+          {LOCATION_ERROR}
+        </AppText>
+        <AppText color="textoSecundario" style={styles.noticeDetail}>
+          {LOCATION_ERROR_DETAIL}
+        </AppText>
+        {withSettings && (
+          <Button
+            label="Abrir ajustes del teléfono"
+            variant="secondary"
+            onPress={() => void Linking.openSettings()}
+            style={styles.noticeButton}
+          />
+        )}
+      </View>
+    </View>
+  );
+}
+
+type IglesiaRowProps = {
+  iglesia: Iglesia;
+  checked: boolean;
+  /** The ubicación the list is ordered from, if any. */
+  desde: Punto | undefined;
+  onPress: () => void;
+};
+
+function IglesiaRow({ iglesia, checked, desde, onPress }: IglesiaRowProps) {
+  const { nombre, distrito, localidad, coordenadas } = iglesia;
+  // A church without coordenadas shows no distance.
+  const distancia =
+    desde && coordenadas ? formatDistancia(distanciaEnMetros(desde, coordenadas)) : undefined;
 
   return (
     <Pressable
       accessibilityRole="radio"
       accessibilityState={{ checked }}
-      accessibilityLabel={`${nombre}, ${distrito}, ${localidad}`}
+      accessibilityLabel={[nombre, distrito, localidad, distancia].filter(Boolean).join(', ')}
       onPress={onPress}
       style={styles.row}
     >
@@ -285,6 +457,14 @@ function IglesiaRow({ iglesia, checked, onPress }: IglesiaRowProps) {
         <AppText variant="secundario" style={styles.rowDetail}>
           {distrito} · {localidad}
         </AppText>
+        {distancia !== undefined && (
+          <View style={styles.rowDistance}>
+            <PinIcon size={ROW_DISTANCE_ICON_SIZE} />
+            <AppText variant="secundario" weight="bold" color="azulOscuro" style={styles.rowDetail}>
+              {distancia}
+            </AppText>
+          </View>
+        )}
       </View>
       {checked ? (
         <View style={[styles.radio, styles.radioChecked]}>
@@ -363,6 +543,72 @@ const styles = StyleSheet.create({
   },
   rowDetail: {
     lineHeight: ROW_DETAIL_LINE_HEIGHT,
+  },
+  rowDistance: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: ROW_DISTANCE_GAP,
+  },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: LOCATION_BUTTON_GAP,
+    minHeight: LOCATION_BUTTON_HEIGHT,
+    paddingHorizontal: spacing.tarjetaPadding,
+    borderRadius: LOCATION_BUTTON_RADIUS,
+    borderWidth: LOCATION_BUTTON_BORDER_WIDTH,
+    borderColor: colors.azulOscuro,
+    backgroundColor: colors.superficie,
+  },
+  locationButtonBusy: {
+    opacity: BUSY_OPACITY,
+  },
+  locationButtonLabel: {
+    fontSize: LOCATION_BUTTON_LABEL_SIZE,
+    textAlign: 'center',
+  },
+  pressed: {
+    opacity: PRESSED_OPACITY,
+  },
+  orderLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: ORDER_LINE_GAP,
+    minHeight: ORDER_LINE_HEIGHT,
+    paddingHorizontal: ORDER_LINE_PADDING_HORIZONTAL,
+  },
+  notice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: NOTICE_GAP,
+    paddingVertical: NOTICE_PADDING_VERTICAL,
+    paddingHorizontal: spacing.tarjetaPadding,
+    borderRadius: radius.tarjeta,
+    backgroundColor: colors.superficie,
+  },
+  noticeIconBox: {
+    width: NOTICE_ICON_BOX_SIZE,
+    height: NOTICE_ICON_BOX_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: NOTICE_ICON_BOX_SIZE / 2,
+    backgroundColor: colors.avisoSuave,
+  },
+  noticeTexts: {
+    flex: 1,
+    gap: NOTICE_TEXTS_GAP,
+  },
+  noticeTitle: {
+    fontSize: LOCATION_BUTTON_LABEL_SIZE,
+  },
+  noticeDetail: {
+    fontSize: NOTICE_DETAIL_SIZE,
+    lineHeight: NOTICE_DETAIL_SIZE * NOTICE_DETAIL_LINE_HEIGHT,
+  },
+  noticeButton: {
+    alignSelf: 'flex-start',
+    marginTop: NOTICE_BUTTON_MARGIN_TOP,
   },
   radio: {
     width: RADIO_SIZE,

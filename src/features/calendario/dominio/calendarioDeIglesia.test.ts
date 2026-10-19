@@ -2,6 +2,9 @@ import type { Evento } from '@/features/eventos/dominio/evento';
 
 import type { FechaDeEvento } from './armarCalendario';
 import { armarCalendarioDeIglesia, type IglesiaConNombres } from './calendarioDeIglesia';
+import { getEventosDelDia } from './dayOfCalendario';
+
+const SIN_NOMBRES = { distritos: {}, iglesias: {}, sumadas: {} };
 
 const cordobaCentral: IglesiaConNombres = {
   id: 'iglesia-cordoba-central',
@@ -37,11 +40,16 @@ describe('armarCalendarioDeIglesia', () => {
     const propio = fecha('2026-10-07', 'Culto de oración');
 
     expect(
-      armarCalendarioDeIglesia(cordobaCentral, [propio], { 'distrito-centro': 'Distrito Centro' }),
+      armarCalendarioDeIglesia(cordobaCentral, [propio], {
+        distritos: { 'distrito-centro': 'Distrito Centro' },
+        iglesias: {},
+        sumadas: {},
+      }),
     ).toEqual({
       iglesia: { nombre: 'Córdoba Central', distrito: 'Distrito Centro' },
       fechas: [propio],
       nombresDeDistritos: { 'distrito-centro': 'Distrito Centro' },
+      etiquetas: {},
     });
   });
 
@@ -50,14 +58,47 @@ describe('armarCalendarioDeIglesia', () => {
       duenio: { alcance: 'iglesia', iglesiaId: 'iglesia-nueva-cordoba' },
     });
 
-    expect(armarCalendarioDeIglesia(cordobaCentral, [ajeno], {}).fechas).toEqual([]);
+    expect(armarCalendarioDeIglesia(cordobaCentral, [ajeno], SIN_NOMBRES).fechas).toEqual([]);
   });
 
   it('signals an iglesia that does not exist with a null iglesia and an empty calendario', () => {
-    expect(armarCalendarioDeIglesia(null, [fecha('2026-10-07', 'Culto')], { a: 'b' })).toEqual({
-      iglesia: null,
-      fechas: [],
-      nombresDeDistritos: {},
+    expect(
+      armarCalendarioDeIglesia(null, [fecha('2026-10-07', 'Culto')], {
+        distritos: { a: 'b' },
+        iglesias: {},
+        sumadas: {},
+      }),
+    ).toEqual({ iglesia: null, fechas: [], nombresDeDistritos: {}, etiquetas: {} });
+  });
+
+  it('labels the eventos shared with the iglesia by who shares them', () => {
+    const sumado = fecha('2026-10-10', 'Sociedad de jóvenes', {
+      duenio: { alcance: 'iglesia', iglesiaId: 'iglesia-barrio-norte' },
+      iglesiasSumadas: [cordobaCentral.id],
     });
+
+    expect(
+      armarCalendarioDeIglesia(cordobaCentral, [sumado], {
+        distritos: {},
+        iglesias: { 'iglesia-barrio-norte': 'Barrio Norte' },
+        sumadas: {},
+      }).etiquetas,
+    ).toEqual({ [sumado.evento.id]: 'Compartido por Iglesia Barrio Norte' });
+  });
+
+  it('shows once, with no shared label, an evento sumado that the iglesia also sees by its alcance', () => {
+    // The iglesia was sumada to an evento of another distrito, then moved to it.
+    const delDistrito = fecha('2026-10-10', 'Escuela de líderes', {
+      duenio: { alcance: 'distrito', distritoId: 'distrito-centro' },
+      iglesiasSumadas: [cordobaCentral.id],
+    });
+    const calendario = armarCalendarioDeIglesia(cordobaCentral, [delDistrito, delDistrito], {
+      distritos: { 'distrito-centro': 'Distrito Centro' },
+      iglesias: {},
+      sumadas: {},
+    });
+
+    expect(getEventosDelDia(calendario.fechas, '2026-10-10')).toHaveLength(1);
+    expect(calendario.etiquetas).toEqual({ [delDistrito.evento.id]: 'Distrito Centro' });
   });
 });
