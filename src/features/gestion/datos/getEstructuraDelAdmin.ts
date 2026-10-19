@@ -67,14 +67,14 @@ export async function getEstructuraDelAdmin(): Promise<EstructuraDelAdmin | null
   }
 
   const distritoIds = distritos.data.map((distrito) => distrito.id);
-  const [todas, pastores, encargados, correos] = await Promise.all([
+  const [todas, pastores, correos] = await Promise.all([
+    // With how many cargos each one has, counted by the database: reading the
+    // cargos themselves would stop at the max_rows of a response.
     supabase
       .from('iglesias')
-      .select('id, nombre, direccion, localidad, distrito_id, de_baja')
+      .select('id, nombre, direccion, localidad, distrito_id, de_baja, cargos (count)')
       .in('distrito_id', distritoIds),
     supabase.from('cargos').select('usuario_id, distrito_id').in('distrito_id', distritoIds),
-    // Every cargo on an iglesia the admin reads: those of their asociacion.
-    supabase.from('cargos').select('iglesia_id').not('iglesia_id', 'is', null),
     supabase.rpc('get_usuario_emails'),
   ]);
 
@@ -83,9 +83,6 @@ export async function getEstructuraDelAdmin(): Promise<EstructuraDelAdmin | null
   }
   if (pastores.error) {
     throw new Error(`Could not read the pastores: ${pastores.error.message}`);
-  }
-  if (encargados.error) {
-    throw new Error(`Could not read the encargados: ${encargados.error.message}`);
   }
   if (correos.error) {
     throw new Error(`Could not read the correos: ${correos.error.message}`);
@@ -105,12 +102,6 @@ export async function getEstructuraDelAdmin(): Promise<EstructuraDelAdmin | null
   const correoDe = new Map(correos.data.map((fila) => [fila.usuario_id, fila.email]));
   const distritoDe = new Map(distritos.data.map((distrito) => [distrito.id, distrito]));
   const iglesias = todas.data.filter((iglesia) => !iglesia.de_baja);
-  const encargadosDe = new Map<string, number>();
-  for (const cargo of encargados.data) {
-    if (cargo.iglesia_id !== null) {
-      encargadosDe.set(cargo.iglesia_id, (encargadosDe.get(cargo.iglesia_id) ?? 0) + 1);
-    }
-  }
 
   return {
     asociacion: asociacion.data,
@@ -140,7 +131,7 @@ export async function getEstructuraDelAdmin(): Promise<EstructuraDelAdmin | null
         localidad: iglesia.localidad,
         distritoId: iglesia.distrito_id,
         distritoNombre: distritoDe.get(iglesia.distrito_id)?.nombre ?? '',
-        cantidadDeEncargados: encargadosDe.get(iglesia.id) ?? 0,
+        cantidadDeEncargados: iglesia.cargos[0]?.count ?? 0,
       })),
     ),
     distritosDeBaja: ordenarPorNombre(

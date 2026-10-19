@@ -16,9 +16,11 @@
 --
 -- The rows stay readable, with their mark: a phone whose iglesia elegida was
 -- given de baja reads it and goes back to "Elegir iglesia", and the admin lists
--- what is de baja to reactivar it. Which eventos are read is decided here, by
--- the read policies, so the calendario, the detalle and the chat
--- (public.buscar_eventos, security invoker) all follow the same rule.
+-- what is de baja to reactivar it. Which eventos, dates and excepciones are
+-- read is decided here, by the read policies, so the calendario, the detalle
+-- and the chat (public.buscar_eventos, security invoker) all follow the same
+-- rule. The recordatorios read with the service_role, which skips them, and
+-- apply the same rule on their own (enviar-recordatorios/puertos.ts).
 --
 -- The iglesias seguidas of the recordatorios are kept in step by #217.
 
@@ -26,10 +28,10 @@ alter table public.distritos add column de_baja boolean not null default false;
 alter table public.iglesias add column de_baja boolean not null default false;
 
 -- Reading the eventos ------------------------------------------------------------
--- Same names as in 20261008031111_create_eventos.sql, dropped and created again
--- with the rule. A duenio de baja hides the evento for everyone, the admin
--- included, until it is reactivado. Its dates and excepciones are read through
--- their evento (eventos!inner), so they go with it.
+-- Same names as in 20261008031111_create_eventos.sql and
+-- 20261022000000_create_excepciones.sql, dropped and created again with the
+-- rule. A duenio de baja hides the evento for everyone, the admin included,
+-- until it is reactivado, and its dates and excepciones with it.
 
 drop policy "Anyone can read eventos" on public.eventos;
 
@@ -50,6 +52,22 @@ create policy "Anyone can read eventos"
         and distritos.de_baja
     )
   );
+
+-- A date or an excepcion is read when its evento is: the subquery applies the
+-- policy above.
+drop policy "Anyone can read eventos_fechas" on public.eventos_fechas;
+
+create policy "Anyone can read eventos_fechas"
+  on public.eventos_fechas for select
+  to anon, authenticated
+  using (exists (select 1 from public.eventos where eventos.id = eventos_fechas.evento_id));
+
+drop policy "Anyone can read excepciones" on public.excepciones;
+
+create policy "Anyone can read excepciones"
+  on public.excepciones for select
+  to anon, authenticated
+  using (exists (select 1 from public.eventos where eventos.id = excepciones.evento_id));
 
 -- An iglesia de baja is sumada to nothing while it is de baja. Hiding the row
 -- (not deleting it) gives the evento back to it when it is reactivada, and a

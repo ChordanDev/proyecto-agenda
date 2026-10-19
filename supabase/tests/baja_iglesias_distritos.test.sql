@@ -20,7 +20,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(45);
+select plan(48);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -61,10 +61,19 @@ insert into public.eventos (id, titulo, alcance, duenio_iglesia_id, duenio_distr
   ('eeeeeeee-0000-4000-8000-000000000002', 'Congreso del Vacío', 'distrito', null, 'dddddddd-0000-4000-8000-000000000003', '10:00'),
   ('eeeeeeee-0000-4000-8000-000000000003', 'Retiro del Trapiche', 'iglesia', '11111111-0000-4000-8000-000000000002', null, '09:00');
 
+-- A weekly series of Las Rosas with one date changed.
+insert into public.eventos (id, titulo, alcance, duenio_iglesia_id, hora, repeticion, fin_de_serie) values
+  ('eeeeeeee-0000-4000-8000-000000000004', 'Culto de oración', 'iglesia', '11111111-0000-4000-8000-000000000001', '20:00', 'semanal', '2026-11-14');
+
 insert into public.eventos_fechas (evento_id, fecha) values
+  ('eeeeeeee-0000-4000-8000-000000000004', '2026-11-07'),
+  ('eeeeeeee-0000-4000-8000-000000000004', '2026-11-14'),
   ('eeeeeeee-0000-4000-8000-000000000001', '2026-11-07'),
   ('eeeeeeee-0000-4000-8000-000000000002', '2026-11-08'),
   ('eeeeeeee-0000-4000-8000-000000000003', '2026-11-09');
+
+insert into public.excepciones (evento_id, fecha, titulo) values
+  ('eeeeeeee-0000-4000-8000-000000000004', '2026-11-14', 'Culto especial');
 
 insert into public.iglesias_sumadas (evento_id, iglesia_id) values
   ('eeeeeeee-0000-4000-8000-000000000001', '11111111-0000-4000-8000-000000000002'),
@@ -167,6 +176,14 @@ select is_empty(
   'nor its dates, read through their evento'
 );
 select is_empty(
+  $$ select fecha from public.eventos_fechas where evento_id = 'eeeeeeee-0000-4000-8000-000000000001' $$,
+  'nor its dates, read on their own'
+);
+select is_empty(
+  $$ select fecha from public.excepciones where evento_id = 'eeeeeeee-0000-4000-8000-000000000004' $$,
+  'nor the excepciones of its series'
+);
+select is_empty(
   $$ select evento_id from public.iglesias_sumadas
      where iglesia_id = '11111111-0000-4000-8000-000000000002'
        and evento_id = 'eeeeeeee-0000-4000-8000-000000000001'
@@ -226,6 +243,10 @@ set local role anon;
 select isnt_empty(
   $$ select id from public.eventos where id = 'eeeeeeee-0000-4000-8000-000000000001' $$,
   'reactivada, its eventos come back'
+);
+select isnt_empty(
+  $$ select fecha from public.excepciones where evento_id = 'eeeeeeee-0000-4000-8000-000000000004' $$,
+  'with the excepciones of their series'
 );
 select isnt_empty(
   $$ select evento_id from public.iglesias_sumadas
