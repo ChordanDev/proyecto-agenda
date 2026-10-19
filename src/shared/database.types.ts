@@ -413,6 +413,11 @@ isOneToOne: false
 "editar_cargo":
 { Args: { "cargo_id": string,"es_secretaria"?: boolean,"funcion"?: string,"nombre": string }; Returns: undefined
                            },
+"fechas_de_recordatorio":
+{ Args: { "maniana": string }; Returns: {
+              "alcance": Database["public"]['Enums']["alcance"],"descripcion": string,"duenio_asociacion_id": string,"duenio_distrito_id": string,"duenio_iglesia_id": string,"enfasis": Database["public"]['Enums']["enfasis"],"evento_id": string,"fecha": string,"fecha_fin": string,"fin_de_serie": string,"hora": string,"iglesias_sumadas": (string)[],"lugar": string,"lugar_id": string,"repeticion": Database["public"]['Enums']["repeticion"],"titulo": string
+            }[]
+                           },
 "get_dispositivo":
 { Args: { "token": string }; Returns: {
               "con_usuario": boolean,"del_usuario": boolean,"encendido": boolean,"iglesia_ids": (string)[]

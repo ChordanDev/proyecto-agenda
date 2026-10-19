@@ -24,33 +24,6 @@ const PAGE_SIZE = 1000;
 /** Tokens per update: they travel in the URL of the request. */
 const TOKENS_POR_PEDIDO = 100;
 
-/** What `leerFechas` reads of an evento to tell whether something of it is de baja. */
-type EventoConBajas = {
-  iglesias: { de_baja: boolean } | null;
-  distritos: { de_baja: boolean } | null;
-  iglesias_sumadas: { iglesia_id: string; iglesias: { de_baja: boolean } }[];
-};
-
-/**
- * The rule of the read policies of eventos and iglesias_sumadas
- * (20261024000000_baja_de_iglesias_y_distritos.sql), which the service_role
- * skips: an evento whose duenio is de baja is left out, and an iglesia sumada
- * de baja stops being sumada.
- */
-export function quitarLoDeBaja<Fila extends { eventos: EventoConBajas }>(filas: Fila[]): Fila[] {
-  return filas
-    .filter(({ eventos: evento }) => !evento.iglesias?.de_baja && !evento.distritos?.de_baja)
-    .map((fila) => ({
-      ...fila,
-      eventos: {
-        ...fila.eventos,
-        iglesias_sumadas: fila.eventos.iglesias_sumadas.filter(
-          (sumada) => !sumada.iglesias.de_baja,
-        ),
-      },
-    }));
-}
-
 /** Reads every page of a query ordered by a unique key, until a page comes back short. */
 async function leerTodo<T>(
   leerPagina: (
@@ -149,45 +122,33 @@ export function crearPuertos({
     },
 
     async leerFechas(maniana) {
-      // An evento of several days has its first day as its date: the domain
-      // only warns before that one, so the dates of tomorrow are enough.
-      // Nobody is warned of an evento no calendario shows (quitarLoDeBaja).
+      // Each date with its excepcion, only those that warn: with an enfasis,
+      // and of an evento no calendario leaves out for being de baja
+      // (20261025200000_recordatorios_con_excepciones.sql).
       const filas = await leerTodo(
         (desde, hasta) =>
           servidor
-            .from('eventos_fechas')
-            .select(
-              `fecha,
-               eventos!inner (
-                 id, titulo, lugar, lugar_id, descripcion, enfasis, alcance,
-                 duenio_iglesia_id, duenio_distrito_id, duenio_asociacion_id,
-                 hora, fecha_fin, repeticion, fin_de_serie,
-                 iglesias!eventos_duenio_iglesia_id_fkey (de_baja),
-                 distritos (de_baja),
-                 iglesias_sumadas (iglesia_id, iglesias (de_baja))
-               )`,
-            )
-            .eq('fecha', maniana)
+            .rpc('fechas_de_recordatorio', { maniana })
             .order('evento_id')
             .range(desde, hasta),
         'eventos',
       );
 
-      return quitarLoDeBaja(filas).map(({ fecha, eventos: evento }): FechaDeEvento => ({
-        fecha,
+      return filas.map((fila): FechaDeEvento => ({
+        fecha: fila.fecha,
         evento: {
-          id: evento.id,
-          titulo: evento.titulo,
-          lugar: evento.lugar,
-          lugarId: evento.lugar_id,
-          descripcion: evento.descripcion,
-          enfasis: evento.enfasis,
-          duenio: toDuenio(evento),
-          hora: evento.hora,
-          fechaFin: evento.fecha_fin,
-          repeticion: evento.repeticion,
-          finDeSerie: evento.fin_de_serie,
-          iglesiasSumadas: evento.iglesias_sumadas.map((sumada) => sumada.iglesia_id),
+          id: fila.evento_id,
+          titulo: fila.titulo,
+          lugar: fila.lugar,
+          lugarId: fila.lugar_id,
+          descripcion: fila.descripcion,
+          enfasis: fila.enfasis,
+          duenio: toDuenio({ ...fila, id: fila.evento_id }),
+          hora: fila.hora,
+          fechaFin: fila.fecha_fin,
+          repeticion: fila.repeticion,
+          finDeSerie: fila.fin_de_serie,
+          iglesiasSumadas: fila.iglesias_sumadas,
         },
       }));
     },
