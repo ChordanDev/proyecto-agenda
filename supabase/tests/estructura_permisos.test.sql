@@ -9,8 +9,9 @@
 --      least one ALLOWED case and one REJECTED case.
 --   4. How a rejection looks depends on the command:
 --        - Where the role has no privilege on the table, any write (INSERT,
---          UPDATE or DELETE) raises error 42501. The API roles have no write
---          privilege on the structure, so this is what happens here.
+--          UPDATE or DELETE) raises error 42501. anon has no write privilege
+--          on the structure, and authenticated only on some columns of
+--          distritos and iglesias.
 --        - Where the role has the privilege but no policy covers the row,
 --          INSERT raises 42501, while UPDATE and DELETE raise nothing: they
 --          simply affect zero rows. The test asserts that `returning` gives
@@ -43,12 +44,21 @@ insert into public.iglesias (id, distrito_id, nombre, direccion, localidad) valu
 -- without updating this test.
 
 select policies_are('public', 'asociaciones', array['Anyone can read asociaciones']);
-select policies_are('public', 'distritos', array['Anyone can read distritos']);
-select policies_are('public', 'iglesias', array['Anyone can read iglesias']);
+-- The admin writes distritos and iglesias: distritos_iglesias_escritura.test.sql.
+select policies_are('public', 'distritos', array[
+  'Anyone can read distritos',
+  'Admins can insert distritos of their asociacion',
+  'Admins can update distritos of their asociacion'
+]);
+select policies_are('public', 'iglesias', array[
+  'Anyone can read iglesias',
+  'Admins can insert iglesias of their asociacion',
+  'Admins can update iglesias of their asociacion'
+]);
 
 select policy_cmd_is('public', 'asociaciones', 'Anyone can read asociaciones', 'select', 'asociaciones has a read-only policy');
-select policy_cmd_is('public', 'distritos', 'Anyone can read distritos', 'select', 'distritos has a read-only policy');
-select policy_cmd_is('public', 'iglesias', 'Anyone can read iglesias', 'select', 'iglesias has a read-only policy');
+select policy_cmd_is('public', 'distritos', 'Anyone can read distritos', 'select', 'distritos has a read policy');
+select policy_cmd_is('public', 'iglesias', 'Anyone can read iglesias', 'select', 'iglesias has a read policy');
 
 -- Without a session (anon): the hermano ---------------------------------------------
 
@@ -113,7 +123,9 @@ select throws_ok(
 reset role;
 
 -- With a session (authenticated) -----------------------------------------------
--- A session does not add any permission over the structure.
+-- A session without a cargo does not add any permission over the structure.
+-- The admin writes distritos and iglesias through the columns granted to
+-- authenticated: those writes are in distritos_iglesias_escritura.test.sql.
 
 set local role authenticated;
 

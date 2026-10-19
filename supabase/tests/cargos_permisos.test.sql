@@ -19,8 +19,9 @@
 --          on INSERT and on an UPDATE whose new row is not covered; zero rows
 --          on an UPDATE or DELETE whose current row is not covered, but only
 --          where the role has the privilege (eventos, eventos_fechas).
---        - a missing privilege (the structure, cargos, auth.users, updating
---          iglesias_sumadas): `permission denied for …`, whatever the command.
+--        - a missing privilege (the structure but the columns the admin
+--          writes, cargos, auth.users, updating iglesias_sumadas):
+--          `permission denied for …`, whatever the command.
 --
 -- The structure of the fixtures:
 --
@@ -115,10 +116,19 @@ select policies_are('public', 'cargos', array[
 select policy_cmd_is('public', 'cargos', 'Usuarios can read their own cargos', 'select', 'cargos has a read-only policy');
 select policy_roles_are('public', 'cargos', 'Usuarios can read their own cargos', array['authenticated'], 'the read policy of cargos needs a session');
 
--- No policy lets the app modify the structure either.
+-- No policy lets the app modify the asociaciones either. The admin writes
+-- distritos and iglesias: distritos_iglesias_escritura.test.sql.
 select policies_are('public', 'asociaciones', array['Anyone can read asociaciones']);
-select policies_are('public', 'distritos', array['Anyone can read distritos']);
-select policies_are('public', 'iglesias', array['Anyone can read iglesias']);
+select policies_are('public', 'distritos', array[
+  'Anyone can read distritos',
+  'Admins can insert distritos of their asociacion',
+  'Admins can update distritos of their asociacion'
+]);
+select policies_are('public', 'iglesias', array[
+  'Anyone can read iglesias',
+  'Admins can insert iglesias of their asociacion',
+  'Admins can update iglesias of their asociacion'
+]);
 
 -- The write policies of the eventos need a session.
 select policy_roles_are('public', 'eventos', 'Usuarios can insert eventos their cargos cover', array['authenticated']);
@@ -302,7 +312,10 @@ select is_empty(
 reset role;
 
 -- No usuario modifies the structure or the cargos ---------------------------------
--- The admin is the usuario with the widest cargo, and still only reads them.
+-- The admin is the usuario with the widest cargo, and still only reads the
+-- cargos and the asociaciones. They write the distritos and the iglesias of
+-- their asociacion (distritos_iglesias_escritura.test.sql), never those of
+-- another one, and never the columns the app does not write.
 
 set local role authenticated;
 set local request.jwt.claims to '{"sub": "bbbbbbbb-0000-4000-8000-000000000003", "role": "authenticated"}';
@@ -313,35 +326,35 @@ select isnt_empty(
   'the admin can read iglesias'
 );
 
--- Rejected: inserting into the structure raises 42501.
+-- Rejected: inserting into the structure outside their asociacion raises 42501.
 select throws_ok(
   $$ insert into public.asociaciones (nombre) values ('Rechazada') $$,
   '42501', null, 'the admin cannot insert asociaciones'
 );
 select throws_ok(
   $$ insert into public.distritos (asociacion_id, nombre)
-     values ('aaaaaaaa-0000-4000-8000-000000000001', 'Rechazado') $$,
-  '42501', null, 'the admin cannot insert distritos'
+     values ('aaaaaaaa-0000-4000-8000-000000000002', 'Rechazado') $$,
+  '42501', null, 'the admin cannot insert distritos of another asociacion'
 );
 select throws_ok(
   $$ insert into public.iglesias (distrito_id, nombre, direccion, localidad)
-     values ('dddddddd-0000-4000-8000-000000000001', 'Rechazada', 'Calle 9', 'Localidad') $$,
-  '42501', null, 'the admin cannot insert iglesias'
+     values ('dddddddd-0000-4000-8000-000000000003', 'Rechazada', 'Calle 9', 'Localidad') $$,
+  '42501', null, 'the admin cannot insert iglesias of another asociacion'
 );
 
--- Rejected: updating and deleting the structure raise 42501, there is no
--- privilege.
+-- Rejected: updating the asociaciones, the columns the app does not write, and
+-- deleting the structure raise 42501, there is no privilege.
 select throws_ok(
   $$ update public.asociaciones set nombre = 'Cambiada' returning id $$,
   '42501', 'permission denied for table asociaciones', 'the admin cannot update asociaciones'
 );
 select throws_ok(
-  $$ update public.distritos set nombre = 'Cambiado' returning id $$,
-  '42501', 'permission denied for table distritos', 'the admin cannot update distritos'
+  $$ update public.distritos set asociacion_id = 'aaaaaaaa-0000-4000-8000-000000000002' returning id $$,
+  '42501', 'permission denied for table distritos', 'the admin cannot move distritos to another asociacion'
 );
 select throws_ok(
-  $$ update public.iglesias set nombre = 'Cambiada' returning id $$,
-  '42501', 'permission denied for table iglesias', 'the admin cannot update iglesias'
+  $$ update public.iglesias set excluida_del_buscador = true returning id $$,
+  '42501', 'permission denied for table iglesias', 'the admin cannot hide iglesias from the buscador'
 );
 select throws_ok(
   $$ delete from public.iglesias returning id $$,

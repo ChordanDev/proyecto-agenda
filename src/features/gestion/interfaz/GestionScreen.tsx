@@ -1,6 +1,7 @@
 import { PlaceholderScreen } from '@/shared/ui/PlaceholderScreen';
 
 import { useGestor } from '../datos/useGestor';
+import { GestionAdminScreen } from './GestionAdminScreen';
 import { GestionSecretariaScreen } from './GestionSecretariaScreen';
 
 /**
@@ -21,7 +22,7 @@ export function GestionScreen() {
     case 'pastor':
       return <PlaceholderScreen title="Gestión del pastor" />;
     case 'admin':
-      return <PlaceholderScreen title="Gestión del admin" />;
+      return <GestionAdminScreen />;
     default:
       // While the cargos are read; the tab does not show without a vista.
       return null;
