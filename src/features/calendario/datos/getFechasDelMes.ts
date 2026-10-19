@@ -1,4 +1,5 @@
-import { toEvento } from '@/features/eventos/datos/eventoRow';
+import { toEvento, toExcepcion } from '@/features/eventos/datos/eventoRow';
+import { combinarConExcepcion } from '@/features/eventos/dominio/excepcion';
 import { supabase } from '@/shared/supabase';
 
 import type { FechaDeEvento, IglesiaEnEstructura } from '../dominio/armarCalendario';
@@ -37,23 +38,36 @@ export type FechasDelMes = {
 };
 
 /**
- * A date with its evento, the iglesias sumadas of that evento and the nombre
- * of the iglesia or distrito that owns it, if one does. The iglesia is named by
- * its foreign key: iglesias also reach eventos through iglesias_sumadas. It is a
- * single literal because the client infers the type of the rows from it.
+ * An evento with the iglesias sumadas of that evento and the nombre of the
+ * iglesia or distrito that owns it, if one does. The iglesia is named by its
+ * foreign key: iglesias also reach eventos through iglesias_sumadas.
  */
-const FECHA_COLUMNS = `
-  fecha,
-  eventos!inner (
-    id, titulo, lugar, lugar_id, descripcion, enfasis, alcance,
-    duenio_iglesia_id, duenio_distrito_id, duenio_asociacion_id,
-    hora, fecha_fin, repeticion, fin_de_serie,
-    iglesias_sumadas (iglesia_id, iglesias (distrito_id, distritos (asociacion_id))),
-    lugares (nombre),
-    iglesias!eventos_duenio_iglesia_id_fkey (nombre),
-    distritos (nombre)
-  )
+const EVENTO_COLUMNS = `
+  id, titulo, lugar, lugar_id, descripcion, enfasis, alcance,
+  duenio_iglesia_id, duenio_distrito_id, duenio_asociacion_id,
+  hora, fecha_fin, repeticion, fin_de_serie,
+  iglesias_sumadas (iglesia_id, iglesias (distrito_id, distritos (asociacion_id))),
+  lugares (nombre),
+  iglesias!eventos_duenio_iglesia_id_fkey (nombre),
+  distritos (nombre)
 ` as const;
+
+/** What a date of a series changed, with the nombre of the lugar it took. */
+const EXCEPCION_COLUMNS = `
+  fecha, fecha_nueva, titulo, hora, cambia_lugar, lugar, lugar_id,
+  cambia_descripcion, descripcion, cambia_enfasis, enfasis, borrada,
+  lugares (nombre)
+` as const;
+
+/**
+ * A date with its evento and the excepciones of that evento. Literals the
+ * client infers the type of the rows from.
+ */
+const FECHA_COLUMNS =
+  `fecha, eventos!inner (${EVENTO_COLUMNS}, excepciones (${EXCEPCION_COLUMNS}))` as const;
+
+/** A date moved into the month, with its evento. */
+const MOVIDA_COLUMNS = `${EXCEPCION_COLUMNS}, eventos!inner (${EVENTO_COLUMNS})` as const;
 
 /**
  * Reads the dates of eventos that can belong to the calendario, with a filter
@@ -69,6 +83,13 @@ function selectFechas(ownedOrSumada: string | null) {
   return ownedOrSumada === null ? query : query.or(ownedOrSumada, { referencedTable: 'eventos' });
 }
 
+/** Reads the dates moved by an excepcion, as `selectFechas` reads the others. */
+function selectMovidas(ownedOrSumada: string | null) {
+  const query = supabase.from('excepciones').select(MOVIDA_COLUMNS);
+
+  return ownedOrSumada === null ? query : query.or(ownedOrSumada, { referencedTable: 'eventos' });
+}
+
 type FechasQuery = ReturnType<typeof selectFechas>;
 
 /**
@@ -79,35 +100,38 @@ type FechasQuery = ReturnType<typeof selectFechas>;
  */
 const PAGE_SIZE = 1000;
 
+type Page<Row> = PromiseLike<{ data: Row[] | null; error: { message: string } | null }>;
+
 /**
- * Reads every date that `filter` keeps, page by page, until a page comes back
- * short. The order by the primary key keeps the pages from overlapping or
- * skipping rows while the dates do not change between pages; a save in between
- * (which deletes and inserts the dates of its evento) can leave a date out
- * until the next read.
+ * Reads every row of a request, page by page, until a page comes back short.
+ * The order by the primary key keeps the pages from overlapping or skipping
+ * rows while the dates do not change between pages; a save in between (which
+ * deletes and inserts dates of its evento) can leave a date out until the next
+ * read.
  */
-async function readAllFechas(
-  ownedOrSumada: string | null,
-  filter: (query: FechasQuery) => FechasQuery,
-) {
-  const rows = [];
+async function readAll<Row>(readPage: (from: number, to: number) => Page<Row>): Promise<Row[]> {
+  const rows: Row[] = [];
 
   for (let from = 0; ; from += PAGE_SIZE) {
-    const { data, error } = await filter(selectFechas(ownedOrSumada))
-      .order('evento_id')
-      .order('fecha')
-      .range(from, from + PAGE_SIZE - 1);
+    const { data, error } = await readPage(from, from + PAGE_SIZE - 1);
 
     if (error) {
       throw new Error(`Could not read the calendario: ${error.message}`);
     }
 
-    rows.push(...data);
+    rows.push(...(data ?? []));
 
-    if (data.length < PAGE_SIZE) {
+    if (!data || data.length < PAGE_SIZE) {
       return rows;
     }
   }
+}
+
+/** Reads every date that `filter` keeps (`readAll`). */
+function readAllFechas(ownedOrSumada: string | null, filter: (query: FechasQuery) => FechasQuery) {
+  return readAll((from, to) =>
+    filter(selectFechas(ownedOrSumada)).order('evento_id').order('fecha').range(from, to),
+  );
 }
 
 /**
@@ -126,34 +150,69 @@ export async function getFechasDelMes(
 
   // PostgREST cannot combine in one `or` a column of eventos_fechas (fecha)
   // with a column of the embedded eventos (fecha_fin), hence the two requests.
-  const [insideTheMonth, startedBefore] = await Promise.all([
+  // The dates an excepcion moved into the month are read by their new day.
+  const [insideTheMonth, startedBefore, movedIn] = await Promise.all([
     readAllFechas(ownedOrSumada, (query) => query.gte('fecha', firstDay).lte('fecha', lastDay)),
     readAllFechas(ownedOrSumada, (query) =>
       query.lt('fecha', firstDay).gte('eventos.fecha_fin', firstDay),
     ),
+    readAll((from, to) =>
+      selectMovidas(ownedOrSumada)
+        .gte('fecha_nueva', firstDay)
+        .lte('fecha_nueva', lastDay)
+        .order('evento_id')
+        .order('fecha')
+        .range(from, to),
+    ),
   ]);
 
   const rows = [...insideTheMonth, ...startedBefore];
-  const fechas = rows.map((row): FechaDeEvento => {
-    return { fecha: row.fecha, evento: toEvento(row.eventos) };
-  });
+  const fechas: FechaDeEvento[] = [];
+
+  for (const row of rows) {
+    const excepcion = row.eventos.excepciones
+      .map(toExcepcion)
+      .find((excepcion) => excepcion.fecha === row.fecha);
+
+    // A deleted date has no row left. A moved one is read on its new day, by
+    // the request of the dates moved into the month.
+    if (excepcion?.borrada || excepcion?.fechaNueva) {
+      continue;
+    }
+
+    fechas.push({
+      fecha: row.fecha,
+      evento: combinarConExcepcion(toEvento(row.eventos), excepcion),
+    });
+  }
+
+  for (const movida of movedIn) {
+    if (movida.fecha_nueva !== null) {
+      fechas.push({
+        fecha: movida.fecha_nueva,
+        evento: combinarConExcepcion(toEvento(movida.eventos), toExcepcion(movida)),
+      });
+    }
+  }
+
+  const eventos = [...rows.map((row) => row.eventos), ...movedIn.map((movida) => movida.eventos)];
 
   const nombresDeDistritos = armarNombresDeDistritos(
-    rows.map((row) => ({
-      duenioDistritoId: row.eventos.duenio_distrito_id,
-      nombreDeDistrito: row.eventos.distritos?.nombre ?? null,
+    eventos.map((evento) => ({
+      duenioDistritoId: evento.duenio_distrito_id,
+      nombreDeDistrito: evento.distritos?.nombre ?? null,
     })),
   );
 
   const nombresDeIglesias: Record<string, string> = {};
   const sumadas: Record<string, IglesiaEnEstructura> = {};
 
-  for (const { eventos } of rows) {
-    if (eventos.duenio_iglesia_id && eventos.iglesias) {
-      nombresDeIglesias[eventos.duenio_iglesia_id] = eventos.iglesias.nombre;
+  for (const evento of eventos) {
+    if (evento.duenio_iglesia_id && evento.iglesias) {
+      nombresDeIglesias[evento.duenio_iglesia_id] = evento.iglesias.nombre;
     }
 
-    for (const { iglesia_id, iglesias } of eventos.iglesias_sumadas) {
+    for (const { iglesia_id, iglesias } of evento.iglesias_sumadas) {
       sumadas[iglesia_id] = {
         id: iglesia_id,
         distritoId: iglesias.distrito_id,

@@ -1,6 +1,7 @@
 import type { Database } from '@/shared/database.types';
 
 import type { Duenio, Evento } from '../dominio/evento';
+import type { Excepcion } from '../dominio/excepcion';
 
 type EventoRow = Database['public']['Tables']['eventos']['Row'];
 
@@ -70,4 +71,47 @@ export function toEvento(row: EventoColumns): Evento {
     finDeSerie: row.fin_de_serie,
     iglesiasSumadas: row.iglesias_sumadas.map((sumada) => sumada.iglesia_id),
   };
+}
+
+type ExcepcionRow = Database['public']['Tables']['excepciones']['Row'];
+
+/** The columns of an excepcion every read of it selects, with the nombre of its lugar. */
+type ExcepcionColumns = Pick<
+  ExcepcionRow,
+  | 'fecha'
+  | 'fecha_nueva'
+  | 'titulo'
+  | 'hora'
+  | 'cambia_lugar'
+  | 'lugar'
+  | 'lugar_id'
+  | 'cambia_descripcion'
+  | 'descripcion'
+  | 'cambia_enfasis'
+  | 'enfasis'
+  | 'borrada'
+> & {
+  /** The lugar of the list; null when the date has none or keeps the one of the series. */
+  lugares: { nombre: string } | null;
+};
+
+/**
+ * An excepcion as read from the database, in the shape of the domain: only
+ * what the date changed. A null titulo or hora is one it did not change; the
+ * lugar, the descripcion and the enfasis say so with a flag, because they can
+ * be emptied.
+ */
+export function toExcepcion(row: ExcepcionColumns): Excepcion {
+  const cambios: Excepcion['cambios'] = {};
+
+  if (row.titulo !== null) cambios.titulo = row.titulo;
+  if (row.hora !== null) cambios.hora = row.hora;
+  if (row.cambia_lugar) {
+    cambios.lugar = row.lugares?.nombre ?? row.lugar;
+    cambios.lugarId = row.lugar_id;
+  }
+  if (row.cambia_descripcion) cambios.descripcion = row.descripcion;
+  if (row.cambia_enfasis) cambios.enfasis = row.enfasis;
+
+  return { fecha: row.fecha, fechaNueva: row.fecha_nueva, borrada: row.borrada, cambios };
 }

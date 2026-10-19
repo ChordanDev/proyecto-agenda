@@ -85,6 +85,14 @@ _Avoid_: Agenda, cronograma
 Actividad con fecha que pertenece a un nivel y, salvo que sea una actividad regular, a un énfasis. Su dueño es ese nivel, no la persona que lo cargó.
 _Avoid_: Actividad, reunión, cita
 
+**Serie**:
+Evento que se repite, con todas sus fechas. Se edita y se borra como una sola unidad, salvo una excepción.
+_Avoid_: Evento recurrente, repetición
+
+**Excepción**:
+El cambio o el borrado de una sola fecha de una serie. Guarda solo lo que cambió (título, hora, lugar, descripción, énfasis o el día al que se movió); lo demás lo toma de la serie. Desaparece si su fecha deja de ser de la serie.
+_Avoid_: Ocurrencia editada, fecha suspendida
+
 **Énfasis**:
 Cada una de las cuatro líneas de trabajo de la iglesia con las que se clasifica un evento: Identidad, Liderazgo, Nuevas Generaciones y Discipulado. Un evento tiene un solo énfasis o ninguno.
 _Avoid_: Categoría, tipo de evento, área

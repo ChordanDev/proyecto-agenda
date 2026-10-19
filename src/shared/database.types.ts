@@ -229,6 +229,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"excepciones": {
+                  Row: {
+                    "borrada": boolean,"cambia_descripcion": boolean,"cambia_enfasis": boolean,"cambia_lugar": boolean,"descripcion": string | null,"enfasis": Database["public"]['Enums']["enfasis"] | null,"evento_id": string,"fecha": string,"fecha_nueva": string | null,"hora": string | null,"lugar": string | null,"lugar_id": string | null,"titulo": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "borrada"?: boolean,"cambia_descripcion"?: boolean,"cambia_enfasis"?: boolean,"cambia_lugar"?: boolean,"descripcion"?: string | null,"enfasis"?: Database["public"]['Enums']["enfasis"] | null,"evento_id": string,"fecha": string,"fecha_nueva"?: string | null,"hora"?: string | null,"lugar"?: string | null,"lugar_id"?: string | null,"titulo"?: string | null
+                  }
+                  Update: {
+                    "borrada"?: boolean,"cambia_descripcion"?: boolean,"cambia_enfasis"?: boolean,"cambia_lugar"?: boolean,"descripcion"?: string | null,"enfasis"?: Database["public"]['Enums']["enfasis"] | null,"evento_id"?: string,"fecha"?: string,"fecha_nueva"?: string | null,"hora"?: string | null,"lugar"?: string | null,"lugar_id"?: string | null,"titulo"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "excepciones_evento_id_fkey"
+      columns: ["evento_id"]
+isOneToOne: false
+      referencedRelation: "eventos"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "excepciones_lugar_id_fkey"
+      columns: ["lugar_id"]
+isOneToOne: false
+      referencedRelation: "lugares"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"iglesias": {
                   Row: {
                     "direccion": string,"distrito_id": string,"excluida_del_buscador": boolean,"id": string,"latitud": number | null,"localidad": string,"longitud": number | null,"nombre": string
@@ -330,6 +356,9 @@ isOneToOne: false
             "borrar_evento":
 { Args: { "evento_id": string }; Returns: undefined
                            },
+"borrar_fecha":
+{ Args: { "evento_id": string,"fecha": string }; Returns: undefined
+                           },
 "buscar_eventos":
 { Args: { "desde": string,"hasta": string,"maximo"?: number,"texto"?: string }; Returns: {
               "alcance": Database["public"]['Enums']["alcance"],"descripcion": string,"duenio": string,"enfasis": Database["public"]['Enums']["enfasis"],"evento_id": string,"fecha": string,"fecha_fin": string,"hora": string,"lugar": string,"titulo": string,"total": number
@@ -383,6 +412,9 @@ isOneToOne: false
 "guardar_evento":
 { Args: { "alcance": Database["public"]['Enums']["alcance"],"descripcion"?: string,"duenio_asociacion_id"?: string,"duenio_distrito_id"?: string,"duenio_iglesia_id"?: string,"enfasis"?: Database["public"]['Enums']["enfasis"],"evento_id"?: string,"fecha_fin"?: string,"fechas": (string)[],"fin_de_serie"?: string,"hora": string,"iglesias_sumadas"?: (string)[],"lugar"?: string,"lugar_id"?: string,"nuevo_evento_id"?: string,"repeticion": Database["public"]['Enums']["repeticion"],"titulo": string }; Returns: string
                            },
+"guardar_excepcion":
+{ Args: { "cambia_descripcion"?: boolean,"cambia_enfasis"?: boolean,"cambia_lugar"?: boolean,"descripcion"?: string,"enfasis"?: Database["public"]['Enums']["enfasis"],"evento_id": string,"fecha": string,"fecha_nueva"?: string,"hora"?: string,"lugar"?: string,"lugar_id"?: string,"titulo"?: string }; Returns: undefined
+                           },
 "guardar_lugar":
 { Args: { "duenio_asociacion_id"?: string,"duenio_distrito_id"?: string,"duenio_iglesia_id"?: string,"nombre": string }; Returns: {
               "duenio_asociacion_id": string | null,
@@ -405,6 +437,9 @@ isOneToOne: false
                            },
 "lugar_nombre_key":
 { Args: { "nombre": string }; Returns: string
+                           },
+"puede_editar_evento":
+{ Args: { "evento_id": string }; Returns: boolean
                            },
 "quitar_cargo":
 { Args: { "cargo_id": string }; Returns: undefined
