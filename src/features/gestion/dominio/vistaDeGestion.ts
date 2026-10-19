@@ -8,11 +8,14 @@ export type CargoDelGestor =
   | { nivel: 'asociacion'; asociacionId: string };
 
 /**
- * What the tab Gestión shows: the vista of the admin, of the pastor, or of the
- * secretaria de iglesia with the iglesias she is secretaria of.
+ * What the tab Gestión shows: the vista of the admin, of the pastor with their
+ * distritos, or of the secretaria de iglesia with the iglesias she is
+ * secretaria of.
  */
 export type VistaDeGestion =
-  { tipo: 'admin' } | { tipo: 'pastor' } | { tipo: 'secretaria'; iglesiaIds: string[] };
+  | { tipo: 'admin' }
+  | { tipo: 'pastor'; distritoIds: string[] }
+  | { tipo: 'secretaria'; iglesiaIds: string[] };
 
 /**
  * The vista of the gestion for a usuario with these cargos, or null when they
@@ -26,8 +29,11 @@ export function getVistaDeGestion(cargos: readonly CargoDelGestor[]): VistaDeGes
     return { tipo: 'admin' };
   }
 
-  if (cargos.some((cargo) => cargo.nivel === 'distrito')) {
-    return { tipo: 'pastor' };
+  const distritoIds = [
+    ...new Set(cargos.flatMap((cargo) => (cargo.nivel === 'distrito' ? [cargo.distritoId] : []))),
+  ];
+  if (distritoIds.length > 0) {
+    return { tipo: 'pastor', distritoIds };
   }
 
   const iglesiaIds = [

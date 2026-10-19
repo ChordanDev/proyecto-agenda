@@ -11,23 +11,27 @@ export type ResultadoDeEdicion = { ok: true } | { ok: false; falla: 'nombre_comp
 
 /**
  * Changes the nombre of whoever holds a cargo and the funcion of the cargo. A
- * null funcion removes it. The database rejects it when the usuario signed in
- * does not manage the cargo (public.editar_cargo); that, and anything else that
- * fails, throws.
+ * null funcion removes it. A mark of secretaria de iglesia names or removes
+ * one; without it the mark stays. The database rejects it when the usuario
+ * signed in does not manage the cargo, or cannot give that mark
+ * (public.editar_cargo); that, and anything else that fails, throws.
  */
 export async function editarCargo({
   cargoId,
   nombre,
   funcion,
+  esSecretaria,
 }: {
   cargoId: string;
   nombre: string;
   funcion: string | null;
+  esSecretaria?: boolean;
 }): Promise<ResultadoDeEdicion> {
   const { error } = await supabase.rpc('editar_cargo', {
     cargo_id: cargoId,
     nombre,
     funcion: funcion ?? undefined,
+    es_secretaria: esSecretaria,
   });
 
   if (error) {

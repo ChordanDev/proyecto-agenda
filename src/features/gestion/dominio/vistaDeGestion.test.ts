@@ -38,7 +38,14 @@ describe('getVistaDeGestion', () => {
   });
 
   it('gives the pastor the vista of the pastor', () => {
-    expect(getVistaDeGestion([PASTOR])).toEqual({ tipo: 'pastor' });
+    expect(getVistaDeGestion([PASTOR])).toEqual({ tipo: 'pastor', distritoIds: ['norte'] });
+  });
+
+  it('gives a pastor of two distritos both', () => {
+    expect(getVistaDeGestion([PASTOR, { nivel: 'distrito', distritoId: 'sur' }, PASTOR])).toEqual({
+      tipo: 'pastor',
+      distritoIds: ['norte', 'sur'],
+    });
   });
 
   it('gives the admin the vista of the admin', () => {
@@ -46,7 +53,10 @@ describe('getVistaDeGestion', () => {
   });
 
   it('gives a pastor who is also a secretaria the vista of the pastor', () => {
-    expect(getVistaDeGestion([SECRETARIA, PASTOR])).toEqual({ tipo: 'pastor' });
+    expect(getVistaDeGestion([SECRETARIA, PASTOR])).toEqual({
+      tipo: 'pastor',
+      distritoIds: ['norte'],
+    });
   });
 
   it('gives an admin who is also a pastor and a secretaria the vista of the admin', () => {

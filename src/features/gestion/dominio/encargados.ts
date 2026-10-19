@@ -24,6 +24,12 @@ export type Encargado = {
 /** Adding an encargado or editing one. */
 export type ModoDelFormulario = 'agregar' | 'editar';
 
+/**
+ * Who uses the gestion of the encargados: the secretaria de iglesia, on her
+ * iglesia, or the pastor, on the iglesias of their distritos.
+ */
+export type QuienGestiona = 'secretaria' | 'pastor';
+
 /** What can fail in the gestion of an encargado, for its message. */
 export type FallaDeGestion =
   | 'sin_sesion'
@@ -70,12 +76,21 @@ export function ordenarEncargados(
 }
 
 /**
- * Whether the secretaria can open an encargado to edit it or remove its cargo:
- * never a secretaria de iglesia, herself included. Only the pastor or the admin
- * names or removes them (puedeGestionarCargo).
+ * Whether the gestor can open an encargado to edit it or remove its cargo. The
+ * pastor, every one of their iglesias. The secretaria, never a secretaria de
+ * iglesia, herself included: only the pastor or the admin names or removes them
+ * (puedeGestionarCargo).
  */
-export function puedeEditarEncargado(encargado: Encargado): boolean {
-  return !encargado.esSecretaria;
+export function puedeEditarEncargado(
+  encargado: Encargado,
+  quien: QuienGestiona = 'secretaria',
+): boolean {
+  return quien === 'pastor' || !encargado.esSecretaria;
+}
+
+/** The message of the iglesia the pastor must choose when adding an encargado. */
+export function validarIglesia(iglesiaId: string | null): string | undefined {
+  return iglesiaId === null ? 'Elegí la iglesia.' : undefined;
 }
 
 /** "Iglesia Central · 4 encargados", under the title of the gestion. */
