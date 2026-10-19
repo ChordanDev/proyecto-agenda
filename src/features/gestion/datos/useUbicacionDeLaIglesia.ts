@@ -6,11 +6,9 @@ import {
   getClaveDeUbicacion,
   getDireccionABuscar,
   type ClaveDeUbicacion,
-  type DatosDeLaIglesia,
+  type TextosDeUbicacion,
 } from '../dominio/estructuraDelAdmin';
 import { useUbicacionEstimada, type UbicacionEstimada } from './useUbicacionEstimada';
-
-type TextosDeUbicacion = Pick<DatosDeLaIglesia, 'direccion' | 'ciudad' | 'provincia'>;
 
 /**
  * The marker of the map of "Nueva iglesia" and "Editar iglesia":

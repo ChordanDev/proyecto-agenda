@@ -5,6 +5,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import type { Punto } from '@/features/iglesias/dominio/distancia';
 
 import { useUbicacionDeLaIglesia } from './useUbicacionDeLaIglesia';
+import { ESPERA_MS, TIMEOUT_MS } from './useUbicacionEstimada';
 
 // The geocoder of the phone, answered by each test when it wants.
 const mockGeocode = jest.fn();
@@ -18,7 +19,6 @@ const COMPLETA: Textos = { direccion: 'Pringles 820', ciudad: 'San Luis', provin
 const GUARDADO: Punto = { latitud: -33.2955, longitud: -66.3356 };
 const ESTIMADO = { latitude: -33.3, longitude: -66.34 };
 const A_MANO: Punto = { latitud: -33.29, longitud: -66.33 };
-const ESPERA_MS = 800;
 
 let renderer: ReactTestRenderer | undefined;
 
@@ -148,5 +148,31 @@ describe('useUbicacionDeLaIglesia', () => {
 
     expect(hook().coordenadas).toEqual(GUARDADO);
     expect(hook().estimada.status).toBe('noEncontrada');
+  });
+
+  it('asks for the marker by hand after the geocoder of the phone fails', async () => {
+    mockGeocode.mockRejectedValueOnce(new Error('Service not available'));
+    const { hook, escribir } = render(COMPLETA, GUARDADO);
+
+    escribir({ ...COMPLETA, direccion: 'Pringles 900' });
+    await act(async () => jest.advanceTimersByTime(ESPERA_MS));
+    expect(hook().estimada.status).toBe('noEncontrada');
+    expect(hook().marcadorAlDia).toBe(false);
+
+    act(() => hook().moverMarcador(A_MANO));
+    expect(hook().marcadorAlDia).toBe(true);
+  });
+
+  it('asks for the marker by hand after the geocoder takes longer than the timeout', async () => {
+    mockGeocode.mockReturnValueOnce(new Promise(() => {}));
+    const { hook, escribir } = render(COMPLETA, GUARDADO);
+
+    escribir({ ...COMPLETA, direccion: 'Pringles 900' });
+    await act(async () => jest.advanceTimersByTime(ESPERA_MS + TIMEOUT_MS));
+    expect(hook().estimada.status).toBe('noEncontrada');
+    expect(hook().marcadorAlDia).toBe(false);
+
+    act(() => hook().moverMarcador(A_MANO));
+    expect(hook().marcadorAlDia).toBe(true);
   });
 });

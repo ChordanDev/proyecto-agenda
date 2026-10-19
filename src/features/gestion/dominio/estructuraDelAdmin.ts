@@ -235,7 +235,8 @@ export function getDireccionParaElMapa(
 /** What the marker of the map stands for: the texts it was placed for, compared loosely. */
 export type ClaveDeUbicacion = { direccion: string; ciudad: string; provincia: string };
 
-type TextosDeUbicacion = Pick<DatosDeLaIglesia, 'direccion' | 'ciudad' | 'provincia'>;
+/** The texts of an iglesia the map looks for. */
+export type TextosDeUbicacion = Pick<DatosDeLaIglesia, 'direccion' | 'ciudad' | 'provincia'>;
 
 /** Ignoring case, accents and repeated spaces: retyping a word does not move the marker. */
 export function getClaveDeUbicacion(textos: TextosDeUbicacion): ClaveDeUbicacion {
@@ -295,7 +296,10 @@ export function puedeGuardarIglesia({
   return conConexion && !guardando && marcadorAlDia;
 }
 
-/** Where the map stands with the direccion it looks for (useUbicacionEstimada). */
+/**
+ * Where the map stands with the direccion it looks for (useUbicacionEstimada,
+ * whose status is this type, so a new one has to be handled here too).
+ */
 export type EstadoDelMapa = 'idle' | 'buscando' | 'encontrada' | 'noEncontrada';
 
 /** What the admin reads under the map; null when there is no marker to talk about. */
@@ -307,7 +311,8 @@ export function getAyudaDelMapa(estado: EstadoDelMapa, conMarcador: boolean): st
       return conMarcador
         ? 'No encontramos la dirección nueva. Arrastrá el marcador hasta la iglesia para poder guardar.'
         : 'No encontramos la dirección. Tocá el mapa donde está la iglesia.';
-    default:
+    case 'idle':
+    case 'encontrada':
       return conMarcador ? 'Mantené apretado el marcador y arrastralo hasta la iglesia.' : null;
   }
 }
