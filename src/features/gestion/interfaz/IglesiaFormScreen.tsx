@@ -8,12 +8,14 @@ import { AppText, Button, Card, TextField } from '@/shared/ui';
 import { useOnlineStatus } from '@/shared/useOnlineStatus';
 
 import { useEstructuraDelAdmin, useGuardarIglesia } from '../datos/useGestionAdmin';
-import { useUbicacionEstimada, type UbicacionEstimada } from '../datos/useUbicacionEstimada';
+import { useUbicacionDeLaIglesia } from '../datos/useUbicacionDeLaIglesia';
+import type { UbicacionEstimada } from '../datos/useUbicacionEstimada';
 import { getConfirmacionDeBajaDeIglesia } from '../dominio/bajaDeEstructura';
 import type { DistritoDelAdmin } from '../dominio/distritosSinPastor';
 import {
   getAvisoDeCambioDeDistrito,
   getDireccionParaElMapa,
+  puedeGuardarIglesia,
   validarIglesia,
   type DatosDeLaIglesia,
   type ErroresDeLaIglesia,
@@ -98,29 +100,19 @@ function Formulario({ iglesia, distritoInicial, distritos, onClose }: Formulario
   // A new iglesia gets its id here, once: every try sends the same one.
   const [nuevoId] = useState(newId);
   const guardar = useGuardarIglesia(iglesia === null ? { crear: nuevoId } : { editar: iglesia.id });
-  const [datos, setDatos] = useState<DatosDeLaIglesia>(() => ({
+  const [datos, setDatos] = useState<Omit<DatosDeLaIglesia, 'coordenadas'>>(() => ({
     nombre: iglesia?.nombre ?? '',
     direccion: iglesia?.direccion ?? '',
     ciudad: iglesia?.ciudad ?? '',
     // An iglesia whose localidad could not be split has none: the admin writes it.
     provincia: iglesia?.provincia ?? '',
     distritoId: distritoInicial ?? iglesia?.distritoId ?? null,
-    coordenadas: iglesia?.coordenadas ?? null,
   }));
-  // The direccion the marker stands for: a saved point is kept until the
-  // direccion, the ciudad or the provincia change, and then the map looks for
-  // the new one.
-  const [ubicadaPara, setUbicadaPara] = useState(() =>
-    iglesia?.coordenadas ? getDireccionParaElMapa(datos) : null,
+  const { coordenadas, estimada, moverMarcador } = useUbicacionDeLaIglesia(
+    datos,
+    iglesia?.coordenadas ?? null,
   );
   const direccionParaElMapa = getDireccionParaElMapa(datos);
-  const estimada = useUbicacionEstimada(
-    direccionParaElMapa === ubicadaPara ? null : direccionParaElMapa,
-    (coordenadas, direccion) => {
-      setDatos((anteriores) => ({ ...anteriores, coordenadas }));
-      setUbicadaPara(direccion);
-    },
-  );
   // The fields only show what is wrong after a first attempt to save.
   const [errores, setErrores] = useState<ErroresDeLaIglesia>({});
   const [fallo, setFallo] = useState(false);
@@ -136,7 +128,7 @@ function Formulario({ iglesia, distritoInicial, distritos, onClose }: Formulario
     setDatos((anteriores) => ({ ...anteriores, [campo]: valor }));
 
   const onGuardar = () => {
-    const validado = validarIglesia(datos);
+    const validado = validarIglesia({ ...datos, coordenadas });
     if (!validado.ok) {
       setErrores(validado.errores);
       return;
@@ -200,22 +192,17 @@ function Formulario({ iglesia, distritoInicial, distritos, onClose }: Formulario
         <Campo error={errores.coordenadas}>
           <View style={styles.select}>
             <AppText variant="label">Ubicación</AppText>
-            {direccionParaElMapa === null && datos.coordenadas === null ? (
+            {direccionParaElMapa === null && coordenadas === null ? (
               <View style={styles.sinMapa}>
                 <AppText variant="secundario" color="textoSecundario">
                   Completá la dirección, la ciudad y la provincia para ver el mapa.
                 </AppText>
               </View>
             ) : (
-              <MapaDeLaIglesia
-                coordenadas={datos.coordenadas}
-                onCambiar={(coordenadas) =>
-                  setDatos((anteriores) => ({ ...anteriores, coordenadas }))
-                }
-              />
+              <MapaDeLaIglesia coordenadas={coordenadas} onCambiar={moverMarcador} />
             )}
             <AppText variant="secundario" color="textoSecundario" accessibilityLiveRegion="polite">
-              {getAyudaDelMapa(estimada, datos.coordenadas !== null)}
+              {getAyudaDelMapa(estimada, coordenadas !== null)}
             </AppText>
           </View>
         </Campo>
@@ -264,7 +251,17 @@ function Formulario({ iglesia, distritoInicial, distritos, onClose }: Formulario
 
       {fallo && <ErrorAlGuardar />}
 
-      <Button label={boton} disabled={!conConexion || guardar.isPending} onPress={onGuardar} />
+      <Button
+        label={boton}
+        disabled={
+          !puedeGuardarIglesia({
+            conConexion,
+            guardando: guardar.isPending,
+            buscandoUbicacion: estimada.status === 'buscando',
+          })
+        }
+        onPress={onGuardar}
+      />
 
       {iglesia !== null && (
         <DarDeBaja

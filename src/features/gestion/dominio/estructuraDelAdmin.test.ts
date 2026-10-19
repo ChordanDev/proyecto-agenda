@@ -1,6 +1,9 @@
 import {
   buscarIglesiasDelAdmin,
+  getClaveDeUbicacion,
+  getDireccionABuscar,
   getDireccionParaElMapa,
+  puedeGuardarIglesia,
   getAvisoDeCambioDeDistrito,
   getEtiquetaDePastores,
   getSubtituloDeAsociacion,
@@ -247,4 +250,66 @@ describe('getDireccionParaElMapa', () => {
       ).toBeNull();
     },
   );
+});
+
+describe('getDireccionABuscar', () => {
+  const textos = { direccion: 'Pringles 820', ciudad: 'San Luis', provincia: 'San Luis' };
+  const direccion = 'Pringles 820, San Luis, San Luis, Argentina';
+
+  it('looks for a direccion the marker does not stand for yet', () => {
+    expect(getDireccionABuscar(textos, null)).toEqual({
+      direccion,
+      para: getClaveDeUbicacion(textos),
+    });
+  });
+
+  it('has nothing to look for while a text is missing', () => {
+    expect(getDireccionABuscar({ ...textos, provincia: ' ' }, null)).toBeNull();
+  });
+
+  it('keeps the marker while the direccion is the one it stands for', () => {
+    expect(getDireccionABuscar(textos, getClaveDeUbicacion(textos))).toBeNull();
+  });
+
+  it('ignores case, accents and spaces', () => {
+    expect(
+      getDireccionABuscar(
+        { direccion: ' PRINGLES 820 ', ciudad: 'san luís', provincia: 'San  Luis' },
+        getClaveDeUbicacion(textos),
+      ),
+    ).toBeNull();
+  });
+
+  it.each(['direccion', 'ciudad', 'provincia'] as const)(
+    'looks again when the %s changes',
+    (campo) => {
+      expect(
+        getDireccionABuscar({ ...textos, [campo]: 'Otra' }, getClaveDeUbicacion(textos)),
+      ).not.toBeNull();
+    },
+  );
+
+  it('keeps the saved point when the provincia of an iglesia without one is written', () => {
+    const sinProvincia = getClaveDeUbicacion({ ...textos, provincia: '' });
+
+    expect(getDireccionABuscar(textos, sinProvincia)).toBeNull();
+    expect(getDireccionABuscar({ ...textos, ciudad: 'Juana Koslay' }, sinProvincia)).not.toBeNull();
+  });
+});
+
+describe('puedeGuardarIglesia', () => {
+  const listo = { conConexion: true, guardando: false, buscandoUbicacion: false };
+
+  it('saves with a connection, when nothing is pending', () => {
+    expect(puedeGuardarIglesia(listo)).toBe(true);
+  });
+
+  it('waits while the map looks for the direccion', () => {
+    expect(puedeGuardarIglesia({ ...listo, buscandoUbicacion: true })).toBe(false);
+  });
+
+  it('does not save without a connection or while saving', () => {
+    expect(puedeGuardarIglesia({ ...listo, conConexion: false })).toBe(false);
+    expect(puedeGuardarIglesia({ ...listo, guardando: true })).toBe(false);
+  });
 });

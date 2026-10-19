@@ -231,3 +231,65 @@ export function getDireccionParaElMapa(
 
   return partes.some((parte) => parte.length === 0) ? null : [...partes, PAIS].join(', ');
 }
+
+/** What the marker of the map stands for: the texts it was placed for, compared loosely. */
+export type ClaveDeUbicacion = { direccion: string; ciudad: string; provincia: string };
+
+type TextosDeUbicacion = Pick<DatosDeLaIglesia, 'direccion' | 'ciudad' | 'provincia'>;
+
+/** Ignoring case, accents and repeated spaces: retyping a word does not move the marker. */
+export function getClaveDeUbicacion(textos: TextosDeUbicacion): ClaveDeUbicacion {
+  const clave = (texto: string) => normalize(texto).replace(/\s+/g, ' ');
+
+  return {
+    direccion: clave(textos.direccion),
+    ciudad: clave(textos.ciudad),
+    provincia: clave(textos.provincia),
+  };
+}
+
+/**
+ * The direccion the map has to look for, with the clave the marker will stand
+ * for once it is found; null when there is nothing to look for:
+ * - while the direccion, the ciudad or the provincia is missing;
+ * - while they are the ones the marker stands for (`ubicadaPara`), placed by
+ *   the map or by the admin. Null `ubicadaPara`: the marker stands for nothing.
+ *
+ * Writing the provincia of an iglesia that had none (its localidad could not
+ * be split) does not move its saved point: only the direccion or the ciudad do.
+ */
+export function getDireccionABuscar(
+  textos: TextosDeUbicacion,
+  ubicadaPara: ClaveDeUbicacion | null,
+): { direccion: string; para: ClaveDeUbicacion } | null {
+  const direccion = getDireccionParaElMapa(textos);
+  if (direccion === null) {
+    return null;
+  }
+
+  const para = getClaveDeUbicacion(textos);
+  const cambio =
+    ubicadaPara === null ||
+    para.direccion !== ubicadaPara.direccion ||
+    para.ciudad !== ubicadaPara.ciudad ||
+    (ubicadaPara.provincia !== '' && para.provincia !== ubicadaPara.provincia);
+
+  return cambio ? { direccion, para } : null;
+}
+
+/**
+ * Whether "Crear iglesia" or "Guardar cambios" can be tapped. Not while the map
+ * looks for a new direccion: the iglesia would be saved with the point of the
+ * old one.
+ */
+export function puedeGuardarIglesia({
+  conConexion,
+  guardando,
+  buscandoUbicacion,
+}: {
+  conConexion: boolean;
+  guardando: boolean;
+  buscandoUbicacion: boolean;
+}): boolean {
+  return conConexion && !guardando && !buscandoUbicacion;
+}
