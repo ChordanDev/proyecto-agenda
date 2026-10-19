@@ -91,6 +91,14 @@ describe('iglesiasQuePuedeSeguir', () => {
     expect(iglesiasQuePuedeSeguir(pastor, movida)).toEqual(['i1']);
   });
 
+  it('does not offer an iglesia dada de baja', () => {
+    const conBaja = iglesias.map((iglesia) =>
+      iglesia.id === 'i2' ? { ...iglesia, deBaja: true } : iglesia,
+    );
+
+    expect(iglesiasQuePuedeSeguir(admin, conBaja)).toEqual(['i1', 'i3']);
+  });
+
   it('offers an admin every iglesia of their asociacion', () => {
     expect(iglesiasQuePuedeSeguir(admin, iglesias)).toEqual(['i1', 'i2', 'i3']);
   });
@@ -156,6 +164,19 @@ describe('registroDeseado', () => {
         iglesias,
       }),
     ).toEqual({ encendido: true, iglesiaIds: ['i2'] });
+  });
+
+  it('drops an iglesia dada de baja a pastor had chosen', () => {
+    expect(
+      registroDeseado({
+        cargos: pastor,
+        iglesiaElegidaId: 'i1',
+        guardado: guardado({ iglesiaIds: ['i1', 'i2'], conUsuario: true, delUsuario: true }),
+        iglesias: iglesias.map((iglesia) =>
+          iglesia.id === 'i2' ? { ...iglesia, deBaja: true } : iglesia,
+        ),
+      }),
+    ).toEqual({ encendido: true, iglesiaIds: ['i1'] });
   });
 
   it('turns a pastor off when none of their chosen iglesias is left', () => {
