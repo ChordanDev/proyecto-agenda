@@ -15,6 +15,7 @@ import { buscarIglesiasDelAdmin, type IglesiaDelAdmin } from '../dominio/estruct
 import {
   getMensajeDeAlta,
   OPCIONES_DE_CARGO,
+  prepararOtroCargo,
   validarAlta,
   type ErroresDeAlta,
   type TipoDeCargo,
@@ -103,11 +104,13 @@ type FormularioProps = {
 function Formulario({ usuario, distritos, iglesias, onClose }: FormularioProps) {
   const conConexion = useOnlineStatus();
   const dar = useDarCargo();
-  const [datos, setDatos] = useState<DatosDelEncargado>({
-    nombre: usuario?.nombreDelPerfil ?? '',
-    correo: usuario?.correo ?? '',
-    funcion: '',
-  });
+  // Someone who already has an account keeps their correo; without a perfil, their nombre is asked.
+  const [preparado] = useState(() => (usuario === null ? null : prepararOtroCargo(usuario)));
+  const [datos, setDatos] = useState<DatosDelEncargado>(() =>
+    preparado?.ok ? preparado.datos : { nombre: '', correo: '', funcion: '' },
+  );
+  const pideNombre = preparado === null || (preparado.ok && preparado.pideNombre);
+  const sinCorreo = preparado !== null && !preparado.ok ? preparado.error : undefined;
   const [tipo, setTipo] = useState<TipoDeCargo | null>(null);
   const [lugarId, setLugarId] = useState<string | null>(null);
   const [eligiendo, setEligiendo] = useState(false);
@@ -182,14 +185,29 @@ function Formulario({ usuario, distritos, iglesias, onClose }: FormularioProps) 
           </>
         ) : (
           <>
-            <View style={styles.fixedField}>
-              <AppText variant="label">Nombre</AppText>
-              <AppText variant="cuerpoGrande">{usuario.nombre}</AppText>
-            </View>
-            <View style={styles.fixedField}>
-              <AppText variant="label">Correo</AppText>
-              <AppText variant="cuerpoGrande">{usuario.correo ?? '—'}</AppText>
-            </View>
+            {pideNombre ? (
+              <Campo error={errores.nombre}>
+                <TextField
+                  label="Nombre"
+                  value={datos.nombre}
+                  onChangeText={cambiar('nombre')}
+                  autoCapitalize="words"
+                  autoComplete="name"
+                  textContentType="name"
+                />
+              </Campo>
+            ) : (
+              <View style={styles.fixedField}>
+                <AppText variant="label">Nombre</AppText>
+                <AppText variant="cuerpoGrande">{usuario.nombre}</AppText>
+              </View>
+            )}
+            <Campo error={sinCorreo}>
+              <View style={styles.fixedField}>
+                <AppText variant="label">Correo</AppText>
+                <AppText variant="cuerpoGrande">{usuario.correo ?? '—'}</AppText>
+              </View>
+            </Campo>
           </>
         )}
 
@@ -260,7 +278,7 @@ function Formulario({ usuario, distritos, iglesias, onClose }: FormularioProps) 
 
       <Button
         label={mensaje === null ? 'Agregar usuario' : 'Probar de nuevo'}
-        disabled={!conConexion || dar.isPending}
+        disabled={!conConexion || dar.isPending || sinCorreo !== undefined}
         onPress={onAgregar}
       />
 

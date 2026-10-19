@@ -7,6 +7,7 @@ import {
   getMensajeDeAlta,
   getMensajeDeCambioDeCorreo,
   getResumenDeCargos,
+  prepararOtroCargo,
   OPCIONES_DE_CARGO,
   validarAlta,
   validarCorreoNuevo,
@@ -369,6 +370,42 @@ describe('getMensajeDeEdicion', () => {
     expect(getMensajeDeEdicion('error_servidor')).toEqual({
       titulo: 'No se pudieron guardar los cambios.',
       texto: 'Lo que escribiste sigue acá. Probá de nuevo en un rato.',
+    });
+  });
+});
+
+describe('prepararOtroCargo', () => {
+  const usuario: UsuarioDelAdmin = {
+    usuarioId: 'luis',
+    nombre: 'Luis Acosta',
+    nombreDelPerfil: 'Luis Acosta',
+    correo: 'luis@gmail.com',
+    cargos: [PASTOR],
+  };
+
+  it('starts from their nombre and correo, which stay fixed', () => {
+    expect(prepararOtroCargo(usuario)).toEqual({
+      ok: true,
+      datos: { nombre: 'Luis Acosta', correo: 'luis@gmail.com', funcion: '' },
+      pideNombre: false,
+    });
+  });
+
+  it('asks for a nombre when they have no perfil, never using the correo as one', () => {
+    expect(
+      prepararOtroCargo({ ...usuario, nombre: 'luis@gmail.com', nombreDelPerfil: null }),
+    ).toEqual({
+      ok: true,
+      datos: { nombre: '', correo: 'luis@gmail.com', funcion: '' },
+      pideNombre: true,
+    });
+  });
+
+  it('says why another cargo cannot be given when their correo cannot be read', () => {
+    expect(prepararOtroCargo({ ...usuario, correo: null })).toEqual({
+      ok: false,
+      error:
+        'No se pudo leer el correo de esta persona, y hace falta para darle otro cargo. Probá de nuevo en un rato.',
     });
   });
 });

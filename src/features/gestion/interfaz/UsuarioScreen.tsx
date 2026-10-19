@@ -219,13 +219,14 @@ function VistaUsuario({
           <AppText variant="cuerpoGrande">{usuario.correo ?? '—'}</AppText>
           <Pressable
             accessibilityRole="button"
-            accessibilityState={{ disabled: usuario.correo === null }}
-            disabled={usuario.correo === null}
+            accessibilityState={{ disabled: usuario.correo === null || ocupado }}
+            // Leaving the view while saving would hide what the save answers.
+            disabled={usuario.correo === null || ocupado}
             onPress={onCambiarCorreo}
             style={({ pressed }) => [
               styles.link,
               pressed && styles.pressed,
-              usuario.correo === null && styles.disabled,
+              (usuario.correo === null || ocupado) && styles.disabled,
             ]}
           >
             <AppText weight="bold" color="azulOscuro" style={styles.linkLabel}>
@@ -249,8 +250,14 @@ function VistaUsuario({
               <Pressable
                 accessibilityRole="button"
                 accessibilityHint="Abre la función de este cargo para editarla"
+                accessibilityState={{ disabled: ocupado }}
+                disabled={ocupado}
                 onPress={() => onEditarFuncion(cargo.cargoId)}
-                style={({ pressed }) => [styles.rowTexts, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.rowTexts,
+                  pressed && styles.pressed,
+                  ocupado && styles.disabled,
+                ]}
               >
                 <AppText weight="bold" style={styles.rowTitle}>
                   {titulo}

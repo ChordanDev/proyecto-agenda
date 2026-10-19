@@ -312,3 +312,26 @@ export function getMensajeDeEdicion(falla: 'nombre_compartido' | 'error_servidor
         texto: 'Lo que escribiste sigue acá. Probá de nuevo en un rato.',
       };
 }
+
+/**
+ * What "Darle otro cargo" starts from: the nombre of their perfil and their
+ * correo, which do not change. Without a perfil the nombre is asked, and is
+ * never their correo: `invitar` saves it as the nombre of the new perfil.
+ * Without a correo there is nobody to invite, so it says why.
+ */
+export function prepararOtroCargo(
+  usuario: UsuarioDelAdmin,
+): { ok: true; datos: DatosDelEncargado; pideNombre: boolean } | { ok: false; error: string } {
+  if (usuario.correo === null) {
+    return {
+      ok: false,
+      error:
+        'No se pudo leer el correo de esta persona, y hace falta para darle otro cargo. Probá de nuevo en un rato.',
+    };
+  }
+  return {
+    ok: true,
+    datos: { nombre: usuario.nombreDelPerfil ?? '', correo: usuario.correo, funcion: '' },
+    pideNombre: usuario.nombreDelPerfil === null,
+  };
+}
