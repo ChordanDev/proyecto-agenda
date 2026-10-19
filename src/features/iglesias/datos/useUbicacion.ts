@@ -1,5 +1,6 @@
 import * as Location from 'expo-location';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 
 import type { Punto } from '../dominio/distancia';
 
@@ -40,20 +41,41 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-async function readUbicacion(): Promise<Ubicacion> {
-  const permiso = await Location.requestForegroundPermissionsAsync();
-  if (!permiso.granted) {
-    return { status: permiso.canAskAgain ? 'unavailable' : 'deniedForGood' };
-  }
-  if (!(await Location.hasServicesEnabledAsync())) {
+/** Asks for the permiso and reads the position once. It never rejects. */
+export async function readUbicacion(): Promise<Ubicacion> {
+  try {
+    const permiso = await Location.requestForegroundPermissionsAsync();
+    if (!permiso.granted) {
+      return { status: permiso.canAskAgain ? 'unavailable' : 'deniedForGood' };
+    }
+    if (!(await Location.hasServicesEnabledAsync())) {
+      return { status: 'unavailable' };
+    }
+    const { coords } = await withTimeout(
+      // A church a few hundred metres away is precise enough.
+      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+      POSITION_TIMEOUT_MS,
+    );
+    return { status: 'located', punto: { latitud: coords.latitude, longitud: coords.longitude } };
+  } catch {
     return { status: 'unavailable' };
   }
-  const { coords } = await withTimeout(
-    // A church a few hundred metres away is precise enough.
-    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
-    POSITION_TIMEOUT_MS,
-  );
-  return { status: 'located', punto: { latitud: coords.latitude, longitud: coords.longitude } };
+}
+
+/**
+ * A permiso denied for good can only be granted in the settings of the phone:
+ * once it is, "Usar mi ubicación" is offered again. Any other state is kept.
+ */
+export async function recheckUbicacion(ubicacion: Ubicacion): Promise<Ubicacion> {
+  if (ubicacion.status !== 'deniedForGood') {
+    return ubicacion;
+  }
+  try {
+    const permiso = await Location.getForegroundPermissionsAsync();
+    return permiso.granted ? { status: 'idle' } : ubicacion;
+  } catch {
+    return ubicacion;
+  }
 }
 
 /**
@@ -65,12 +87,25 @@ export function useUbicacion() {
 
   const locate = async () => {
     setUbicacion({ status: 'locating' });
-    try {
-      setUbicacion(await readUbicacion());
-    } catch {
-      setUbicacion({ status: 'unavailable' });
-    }
+    setUbicacion(await readUbicacion());
   };
+
+  // Coming back from the settings of the phone, the permiso may be granted.
+  const deniedForGood = ubicacion.status === 'deniedForGood';
+  useEffect(() => {
+    if (!deniedForGood) {
+      return;
+    }
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void recheckUbicacion({ status: 'deniedForGood' }).then((next) =>
+          // A tap may have changed the state while the permiso was read.
+          setUbicacion((current) => (current.status === 'deniedForGood' ? next : current)),
+        );
+      }
+    });
+    return () => subscription.remove();
+  }, [deniedForGood]);
 
   return { ubicacion, locate };
 }
