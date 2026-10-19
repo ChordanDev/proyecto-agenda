@@ -23,7 +23,7 @@ Objective: change or delete a single date of a series, in the database, the cale
 - T1 S1-S3,S7 migration + pgTAP — inline — done (pgTAP eventos_excepciones 48/48, eventos_guardar 44/44)
 - T2 S5 domain rules `excepcion.ts` — inline — done (RED: module missing; GREEN 19/19)
 - T3 S4,S6 reads, types, glossary — inline — done (Jest 972/972; types equal to `supabase gen types`; PostgREST selects probed live)
-- T4 S8-S13 one-date flow — inline — pending
+- T4 S8-S13 one-date flow — inline — done (RED: edicionDeFecha module missing, 7 data tests failing; GREEN Jest 1007/1007; screens not verified on a device, see the manual-check issue)
 
 Route: inline (no Writer trigger: sequential units sharing files).
 

@@ -1,4 +1,9 @@
-import { clasificarError, getMensajeDeError, necesitaReleerElEvento } from './errorDeEscritura';
+import {
+  clasificarError,
+  clasificarErrorDeFecha,
+  getMensajeDeError,
+  necesitaReleerElEvento,
+} from './errorDeEscritura';
 
 describe('clasificarError', () => {
   it('tells a request that never reached the server', () => {
@@ -52,5 +57,28 @@ describe('getMensajeDeError', () => {
 
   it('asks to try again otherwise', () => {
     expect(getMensajeDeError('otro')).toBe('No se pudo guardar. Probá de nuevo en un momento.');
+  });
+});
+
+describe('clasificarErrorDeFecha', () => {
+  it('tells a date of a series that changed meanwhile', () => {
+    // A date deleted or no longer of the series, or a day another date took.
+    expect(
+      clasificarErrorDeFecha('23514', 'The fecha 2026-10-17 of the evento e1 was deleted'),
+    ).toBe('fecha-cambiada');
+    expect(getMensajeDeError('fecha-cambiada')).toBe(
+      'Esta fecha de la serie cambió mientras la tenías abierta. Volvé al evento y probá de nuevo.',
+    );
+  });
+
+  it('classifies any other error as every write does', () => {
+    expect(clasificarErrorDeFecha('42501', 'rls')).toBe('sin-permiso');
+    expect(clasificarErrorDeFecha('P0002', 'gone', { eventoExiste: false })).toBe('no-existe');
+  });
+});
+
+describe('clasificarError', () => {
+  it('keeps a check of another write, such as a lugar, as any other error', () => {
+    expect(clasificarError('23514', 'new row violates check constraint')).toBe('otro');
   });
 });

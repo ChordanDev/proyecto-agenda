@@ -2,15 +2,17 @@ import { supabase } from '@/shared/supabase';
 
 import {
   clasificarError,
+  clasificarErrorDeFecha,
   necesitaReleerElEvento,
-  type TipoDeError,
+  type TipoDeErrorDeFecha,
 } from '../dominio/errorDeEscritura';
+import type { ExcepcionAGuardar } from '../dominio/edicionDeFecha';
 import type { EventoAGuardar } from '../dominio/formularioDeEvento';
 
 /** A write of an evento that failed, with what the person can do about it. */
 export class ErrorDeEscritura extends Error {
   constructor(
-    readonly tipo: TipoDeError,
+    readonly tipo: TipoDeErrorDeFecha,
     message: string,
   ) {
     super(message);
@@ -31,12 +33,16 @@ async function getEventoExiste(id: string): Promise<boolean | undefined> {
  * The failure of a write of the evento `id`. When the error does not say whether
  * the evento still exists, it reads it again to tell.
  */
-async function toErrorDeEscritura(error: ApiError, id?: string): Promise<ErrorDeEscritura> {
+async function toErrorDeEscritura(
+  error: ApiError,
+  id?: string,
+  clasificar: typeof clasificarErrorDeFecha = clasificarError,
+): Promise<ErrorDeEscritura> {
   const eventoExiste =
     id !== undefined && necesitaReleerElEvento(error.code) ? await getEventoExiste(id) : undefined;
 
   return new ErrorDeEscritura(
-    clasificarError(error.code, error.message, { eventoExiste }),
+    clasificar(error.code, error.message, { eventoExiste }),
     error.message,
   );
 }
@@ -123,5 +129,59 @@ export async function quitarEventoDeIglesia(eventoId: string, iglesiaId: string)
 
   if (error) {
     throw await toErrorDeEscritura(error, eventoId);
+  }
+}
+
+/**
+ * Saves what a single date of a series has of its own
+ * (public.guardar_excepcion), replacing what it had. Only the fields that
+ * changed are sent: the others are read from the series. A field emptied goes
+ * with its flag, as null is a value of its own.
+ */
+export async function guardarExcepcion(
+  eventoId: string,
+  { fecha, fechaNueva, cambios }: ExcepcionAGuardar,
+): Promise<void> {
+  const cambiaLugar = 'lugar' in cambios || 'lugarId' in cambios;
+  const lugarId = cambios.lugarId ?? null;
+  const { error } = await supabase.rpc('guardar_excepcion', {
+    evento_id: eventoId,
+    fecha,
+    ...(fechaNueva !== null && { fecha_nueva: fechaNueva }),
+    ...(cambios.titulo !== undefined && { titulo: cambios.titulo }),
+    ...(cambios.hora !== undefined && { hora: cambios.hora }),
+    ...(cambiaLugar && {
+      cambia_lugar: true,
+      // A lugar of the list goes by its id; only a lugar written by hand goes as text.
+      ...(lugarId === null ? { lugar: orOmitted(cambios.lugar ?? null) } : { lugar_id: lugarId }),
+    }),
+    ...('descripcion' in cambios && {
+      cambia_descripcion: true,
+      descripcion: orOmitted(cambios.descripcion ?? null),
+    }),
+    ...('enfasis' in cambios && {
+      cambia_enfasis: true,
+      enfasis: orOmitted(cambios.enfasis ?? null),
+    }),
+  });
+
+  if (error) {
+    throw await toErrorDeEscritura(error, eventoId, clasificarErrorDeFecha);
+  }
+}
+
+/**
+ * Deletes a single date of a series (public.borrar_fecha); the others stay. A
+ * series deleted meanwhile is already what was asked for.
+ */
+export async function borrarFecha(eventoId: string, fecha: string): Promise<void> {
+  const { error } = await supabase.rpc('borrar_fecha', { evento_id: eventoId, fecha });
+
+  if (error) {
+    const failure = await toErrorDeEscritura(error, eventoId, clasificarErrorDeFecha);
+
+    if (failure.tipo !== 'no-existe') {
+      throw failure;
+    }
   }
 }

@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 import type { EventoAGuardar } from '../dominio/formularioDeEvento';
-import { useGuardarEvento } from './useEscribirEvento';
+import { useBorrarFecha, useGuardarEvento, useGuardarExcepcion } from './useEscribirEvento';
 
 const mockRpc = jest.fn();
 
@@ -105,5 +105,64 @@ describe('useGuardarEvento', () => {
     expect(getGuardarEventoArgs()).toEqual([
       expect.objectContaining({ evento_id: 'e1', nuevo_evento_id: undefined }),
     ]);
+  });
+});
+
+describe('useGuardarExcepcion and useBorrarFecha', () => {
+  /** Renders a hook of a date and returns it with the keys its client read again. */
+  function renderDeFecha<T>(useHook: () => T) {
+    const queryClient = new QueryClient({
+      defaultOptions: { mutations: { retry: false, gcTime: Infinity } },
+    });
+    const invalidated: unknown[] = [];
+    jest
+      .spyOn(queryClient, 'invalidateQueries')
+      .mockImplementation(async (filters) => void invalidated.push(filters?.queryKey));
+    const latest: { current: T | null } = { current: null };
+
+    function Detail() {
+      latest.current = useHook();
+      return null;
+    }
+
+    act(() => {
+      renderers.push(
+        create(
+          <QueryClientProvider client={queryClient}>
+            <Detail />
+          </QueryClientProvider>,
+        ),
+      );
+    });
+
+    return { get: () => latest.current!, invalidated };
+  }
+
+  it('saves the excepcion of a date and reads the evento and the calendarios again', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: null });
+    const { get, invalidated } = renderDeFecha(() => useGuardarExcepcion('e1'));
+
+    await act(async () => {
+      await get().mutateAsync({ fecha: '2026-10-17', fechaNueva: null, cambios: { titulo: 'X' } });
+    });
+
+    expect(mockRpc).toHaveBeenCalledWith('guardar_excepcion', {
+      evento_id: 'e1',
+      fecha: '2026-10-17',
+      titulo: 'X',
+    });
+    expect(invalidated).toEqual([['calendario'], ['evento', 'e1']]);
+  });
+
+  it('deletes a date and reads the evento and the calendarios again', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: null });
+    const { get, invalidated } = renderDeFecha(() => useBorrarFecha('e1'));
+
+    await act(async () => {
+      await get().mutateAsync('2026-10-17');
+    });
+
+    expect(mockRpc).toHaveBeenCalledWith('borrar_fecha', { evento_id: 'e1', fecha: '2026-10-17' });
+    expect(invalidated).toEqual([['calendario'], ['evento', 'e1']]);
   });
 });
