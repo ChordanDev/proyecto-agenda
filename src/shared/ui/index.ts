@@ -9,5 +9,5 @@ export { FormaDeEnfasis, type Categoria } from './FormaDeEnfasis';
 export { Logo } from './Logo';
 export { ScreenBackground } from './ScreenBackground';
 export { SearchField } from './SearchField';
-export { AjustesIcon, CalendarioIcon, ChatIcon } from './TabIcons';
+export { AjustesIcon, CalendarioIcon, ChatIcon, GestionIcon } from './TabIcons';
 export { TextField } from './TextField';
