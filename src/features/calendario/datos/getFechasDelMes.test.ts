@@ -70,7 +70,10 @@ const ROW = {
     fecha_fin: null,
     repeticion: 'ninguna',
     fin_de_serie: null,
-    iglesias_sumadas: [{ iglesia_id: 'i9' }],
+    iglesias_sumadas: [
+      { iglesia_id: 'i9', iglesias: { distrito_id: 'd2', distritos: { asociacion_id: 'a1' } } },
+    ],
+    iglesias: null,
     distritos: { nombre: 'Centro' },
   },
 };
@@ -112,6 +115,31 @@ describe('getFechasDelMes', () => {
         },
       ],
       nombresDeDistritos: { d1: 'Centro' },
+      nombresDeIglesias: {},
+      sumadas: { i9: { id: 'i9', distritoId: 'd2', asociacionId: 'a1' } },
+    });
+  });
+
+  it('names the iglesia that owns an evento', async () => {
+    const deIglesia = {
+      ...ROW,
+      eventos: {
+        ...ROW.eventos,
+        alcance: 'iglesia',
+        duenio_iglesia_id: 'i1',
+        duenio_distrito_id: null,
+        iglesias: { nombre: 'Central' },
+        distritos: null,
+      },
+    };
+    mockPages = {
+      insideTheMonth: [{ data: [deIglesia], error: null }],
+      startedBefore: [{ data: [], error: null }],
+    };
+
+    expect(await getFechasDelMes(null, OCTOBER)).toMatchObject({
+      nombresDeDistritos: {},
+      nombresDeIglesias: { i1: 'Central' },
     });
   });
 

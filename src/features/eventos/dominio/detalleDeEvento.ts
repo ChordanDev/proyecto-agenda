@@ -1,4 +1,8 @@
-import { formatDayHeading, formatTime } from '@/features/calendario/dominio/calendarioTexts';
+import {
+  formatDayHeading,
+  formatTime,
+  nombrarConNivel,
+} from '@/features/calendario/dominio/calendarioTexts';
 import { daysBetween } from '@/features/calendario/dominio/localDate';
 import { categorias } from '@/shared/theme';
 
@@ -41,13 +45,6 @@ const SE_VE: Record<Duenio['alcance'], string> = {
   asociacion: 'Se ve en todas las iglesias de la asociación',
 };
 
-/** The word that names each level before a bare nombre; an asociacion needs none. */
-const LEVELS: Record<Duenio['alcance'], string | null> = {
-  iglesia: 'Iglesia',
-  distrito: 'Distrito',
-  asociacion: null,
-};
-
 /**
  * The row "Evento de": who the evento belongs to and, from its alcance, where
  * it is seen. The nombres of the iglesias and distritos are bare ("Córdoba
@@ -57,14 +54,7 @@ export function getDuenioDelDetalle(
   duenio: Duenio,
   nombreDelDuenio: string,
 ): { nombre: string; seVe: string } {
-  const level = LEVELS[duenio.alcance];
-  // Some nombres already say what they are ("Iglesia de prueba").
-  const nombre =
-    level === null || nombreDelDuenio.toLowerCase().startsWith(`${level.toLowerCase()} `)
-      ? nombreDelDuenio
-      : `${level} ${nombreDelDuenio}`;
-
-  return { nombre, seVe: SE_VE[duenio.alcance] };
+  return { nombre: nombrarConNivel(duenio.alcance, nombreDelDuenio), seVe: SE_VE[duenio.alcance] };
 }
 
 /** Whether an optional field has something to show: the detail hides empty ones. */

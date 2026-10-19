@@ -57,7 +57,11 @@ function readMonth(
  * The calendario of an iglesia elegida that was deleted: it has no months to
  * read. Module level, so it keeps its identity between renders.
  */
-const SIN_IGLESIA = armarCalendarioDeIglesia(null, [], {});
+const SIN_IGLESIA = armarCalendarioDeIglesia(null, [], {
+  distritos: {},
+  iglesias: {},
+  sumadas: {},
+});
 
 /**
  * The calendario of the source for a month. The iglesia (its distrito, its

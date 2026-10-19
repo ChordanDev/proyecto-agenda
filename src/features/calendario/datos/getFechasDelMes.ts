@@ -1,7 +1,7 @@
 import { toEvento } from '@/features/eventos/datos/eventoRow';
 import { supabase } from '@/shared/supabase';
 
-import type { FechaDeEvento } from '../dominio/armarCalendario';
+import type { FechaDeEvento, IglesiaEnEstructura } from '../dominio/armarCalendario';
 import { getMonthRange, type Month } from '../dominio/getMonthRange';
 import { armarNombresDeDistritos } from '../dominio/nombresDeDistritos';
 
@@ -15,12 +15,32 @@ export type Calendario = {
    * comes from.
    */
   nombresDeDistritos: Record<string, string>;
+  /** The label of each evento in the list of a day, by its id (`armarEtiquetas`). */
+  etiquetas: Record<string, string>;
+};
+
+/**
+ * The dates read for a month, before the rule of `armarCalendario` keeps the
+ * ones of the calendario, with the nombres of the iglesias and distritos that
+ * own them, by id.
+ */
+export type FechasDelMes = {
+  fechas: FechaDeEvento[];
+  nombresDeDistritos: Record<string, string>;
+  /** Nombre of each iglesia that owns one of the eventos read: an iglesia sumada says who shares it. */
+  nombresDeIglesias: Record<string, string>;
+  /**
+   * The place in the structure, now, of each iglesia sumada of the eventos read:
+   * one that moved under the duenio sees the evento by its alcance.
+   */
+  sumadas: Record<string, IglesiaEnEstructura>;
 };
 
 /**
  * A date with its evento, the iglesias sumadas of that evento and the nombre
- * of the distrito that owns it, if one does. It is a single literal because
- * the client infers the type of the rows from it.
+ * of the iglesia or distrito that owns it, if one does. The iglesia is named by
+ * its foreign key: iglesias also reach eventos through iglesias_sumadas. It is a
+ * single literal because the client infers the type of the rows from it.
  */
 const FECHA_COLUMNS = `
   fecha,
@@ -28,8 +48,9 @@ const FECHA_COLUMNS = `
     id, titulo, lugar, lugar_id, descripcion, enfasis, alcance,
     duenio_iglesia_id, duenio_distrito_id, duenio_asociacion_id,
     hora, fecha_fin, repeticion, fin_de_serie,
-    iglesias_sumadas (iglesia_id),
+    iglesias_sumadas (iglesia_id, iglesias (distrito_id, distritos (asociacion_id))),
     lugares (nombre),
+    iglesias!eventos_duenio_iglesia_id_fkey (nombre),
     distritos (nombre)
   )
 ` as const;
@@ -100,7 +121,7 @@ async function readAllFechas(
 export async function getFechasDelMes(
   ownedOrSumada: string | null,
   month: Month,
-): Promise<Calendario> {
+): Promise<FechasDelMes> {
   const { firstDay, lastDay } = getMonthRange(month);
 
   // PostgREST cannot combine in one `or` a column of eventos_fechas (fecha)
@@ -124,5 +145,22 @@ export async function getFechasDelMes(
     })),
   );
 
-  return { fechas, nombresDeDistritos };
+  const nombresDeIglesias: Record<string, string> = {};
+  const sumadas: Record<string, IglesiaEnEstructura> = {};
+
+  for (const { eventos } of rows) {
+    if (eventos.duenio_iglesia_id && eventos.iglesias) {
+      nombresDeIglesias[eventos.duenio_iglesia_id] = eventos.iglesias.nombre;
+    }
+
+    for (const { iglesia_id, iglesias } of eventos.iglesias_sumadas) {
+      sumadas[iglesia_id] = {
+        id: iglesia_id,
+        distritoId: iglesias.distrito_id,
+        asociacionId: iglesias.distritos.asociacion_id,
+      };
+    }
+  }
+
+  return { fechas, nombresDeDistritos, nombresDeIglesias, sumadas };
 }

@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router';
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
+import { nombrarConNivel } from '@/features/calendario/dominio/calendarioTexts';
 import { categorias, colors, fontSize, radius, spacing } from '@/shared/theme';
 import { AppText, BackButton, Button, Card, FormaDeEnfasis, ScreenBackground } from '@/shared/ui';
 
@@ -10,6 +11,8 @@ import type { EventoDetallado } from '../datos/getEvento';
 import { getTipoDeError, useBorrarEvento } from '../datos/useEscribirEvento';
 import { useEvento } from '../datos/useEvento';
 import { usePuedeEditar } from '../datos/usePuedeEditar';
+import { useQuienMira } from '../datos/useQuienMira';
+import { useQuitarEventoDeIglesia } from '../datos/useQuitarEventoDeIglesia';
 import { getCategoria } from '../dominio/categoria';
 import { getMensajeDeError } from '../dominio/errorDeEscritura';
 import {
@@ -20,6 +23,14 @@ import {
   getEnfasisDelDetalle,
   hasText,
 } from '../dominio/detalleDeEvento';
+import {
+  getAvisoDeQuitar,
+  getCompartidoDelDetalle,
+  getConfirmacionDeQuitar,
+  getIglesiasParaQuitar,
+  getAvisoDeQuitado,
+  type IglesiaSumada,
+} from '../dominio/eventoCompartido';
 import { formatHasta, formatRepeticionDelDetalle } from '../dominio/repeticion';
 import { avisarSinConexion } from './avisarSinConexion';
 import { REPEAT_PATHS } from './SelectorDeRepeticion';
@@ -46,6 +57,18 @@ const ROW_TEXTS_GAP = 2; // line 45
 const DESCRIPTION_PADDING = 18; // line 69
 const DESCRIPTION_GAP = 8;
 const DESCRIPTION_LINE_HEIGHT = 1.5; // line 71
+const SHARED_PADDING = 18; // line 81
+const SHARED_GAP = 10;
+const CHIPS_GAP = 8; // line 83
+const CHIP_PADDING_VERTICAL = 7; // line 84
+const CHIP_PADDING_HORIZONTAL = 12;
+const CHIP_SIZE = 15;
+const SHARED_BY_SIZE = 15; // line 87
+const SHARED_BY_LINE_HEIGHT = 1.45;
+const SHARED_BY_MARGIN_TOP = 2;
+const QUITADO_PADDING = 16; // line 95
+const QUITADO_RADIUS = 16;
+const QUITAR_HINT_SIZE = 14; // line 100
 const ACTIONS_GAP = 8; // line 104
 const DELETE_HEIGHT = 56; // line 109
 // The mockups draw no pressed state; the same value as `Button`.
@@ -137,14 +160,49 @@ type DetalleProps = {
 };
 
 function Detalle({ detallado, fecha, onDeleted }: DetalleProps) {
-  const { evento, nombreDelDuenio, fechas } = detallado;
+  const { evento, nombreDelDuenio, fechas, duenioEnEstructura, sumadas } = detallado;
   const router = useRouter();
-  const puedeEditar = usePuedeEditar(detallado.duenioEnEstructura);
+  const puedeEditar = usePuedeEditar(duenioEnEstructura);
+  const quienMira = useQuienMira();
   const borrar = useBorrarEvento(evento.id);
+  const quitar = useQuitarEventoDeIglesia(evento.id);
+  // The iglesia the evento was just quitado from. The detail stays and says
+  // so once the evento read again confirms it (`getAvisoDeQuitado`).
+  const [quitada, setQuitada] = useState<IglesiaSumada | null>(null);
   const categoria = getCategoria(evento.enfasis);
   const enfasis = getEnfasisDelDetalle(evento.enfasis);
   const duenio = getDuenioDelDetalle(evento.duenio, nombreDelDuenio);
   const fechaShown = fecha !== undefined && fechas.includes(fecha) ? fecha : fechas[0];
+  const compartido =
+    quienMira === undefined
+      ? null
+      : getCompartidoDelDetalle(quienMira, duenioEnEstructura, duenio.nombre, sumadas);
+  const paraQuitar =
+    quienMira === undefined ? [] : getIglesiasParaQuitar(quienMira, duenioEnEstructura, sumadas);
+  const avisoDeQuitado =
+    quitada === null ? null : getAvisoDeQuitado(quitada, duenioEnEstructura, sumadas);
+  const hasActions = puedeEditar || paraQuitar.length > 0 || avisoDeQuitado !== null;
+
+  const askQuitar = (iglesia: IglesiaSumada, nombreDeIglesia: string) => {
+    if (!avisarSinConexion()) {
+      return;
+    }
+    const { titulo, mensaje } = getConfirmacionDeQuitar(nombreDeIglesia, duenio.nombre);
+    Alert.alert(titulo, mensaje, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Quitar',
+        style: 'destructive',
+        onPress: () =>
+          quitar.mutate(iglesia.id, {
+            // The evento was already read again (`useQuitarEventoDeIglesia`).
+            onSuccess: () => setQuitada(iglesia),
+            onError: (error) =>
+              Alert.alert('No se pudo quitar', getMensajeDeError(getTipoDeError(error))),
+          }),
+      },
+    ]);
+  };
 
   const rows: { key: string; icon: ReactNode; label: string; value: string; detail?: string }[] = [
     ...(fechaShown === undefined
@@ -237,10 +295,75 @@ function Detalle({ detallado, fecha, onDeleted }: DetalleProps) {
         </View>
       )}
 
+      {compartido !== null && (
+        <View style={styles.shared}>
+          <AppText variant="label" color="textoTenue" accessibilityRole="header">
+            Compartido con
+          </AppText>
+          <View style={styles.chips}>
+            {compartido.iglesias.map((iglesia) => (
+              <View key={iglesia.id} style={[styles.chip, iglesia.esMia && styles.chipMia]}>
+                <AppText
+                  weight={iglesia.esMia ? 'bold' : 'regular'}
+                  color={iglesia.esMia ? 'textoSobreOscuro' : 'texto'}
+                  style={styles.chipText}
+                >
+                  {iglesia.esMia ? `${iglesia.nombre} (tu iglesia)` : iglesia.nombre}
+                </AppText>
+              </View>
+            ))}
+          </View>
+          {compartido.compartidoPor !== null && (
+            <AppText color="textoSecundario" style={styles.sharedBy}>
+              Compartido por{' '}
+              <AppText weight="bold" color="texto" style={styles.sharedBy}>
+                {compartido.compartidoPor}
+              </AppText>
+              .
+            </AppText>
+          )}
+        </View>
+      )}
+
+      {/* The actions stay at the bottom of the screen, as in capture 5b. */}
+      {hasActions && <View style={styles.spacer} />}
+
+      {avisoDeQuitado !== null && (
+        <View accessibilityRole="alert" style={styles.quitado}>
+          <AppText weight="bold" style={styles.quitadoText}>
+            {avisoDeQuitado}
+          </AppText>
+        </View>
+      )}
+
+      {paraQuitar.map((iglesia) => {
+        const nombreDeIglesia = nombrarConNivel('iglesia', iglesia.nombre);
+
+        return (
+          <View key={iglesia.id} style={styles.actions}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={quitar.isPending}
+              onPress={() => askQuitar(iglesia, nombreDeIglesia)}
+              style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}
+            >
+              <AppText variant="cuerpoGrande" weight="bold" color="peligro">
+                {quitar.isPending
+                  ? 'Quitando…'
+                  : paraQuitar.length === 1
+                    ? 'Quitar de mi calendario'
+                    : `Quitar de ${nombreDeIglesia}`}
+              </AppText>
+            </Pressable>
+            <AppText color="textoSecundario" style={styles.quitarHint}>
+              {getAvisoDeQuitar(nombreDeIglesia)}
+            </AppText>
+          </View>
+        );
+      })}
+
       {puedeEditar && (
         <>
-          {/* The actions stay at the bottom of the screen, as in capture 5b. */}
-          <View style={styles.spacer} />
           <View style={styles.actions}>
             <Button
               label="Editar"
@@ -365,6 +488,46 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: ACTIONS_GAP,
+  },
+  shared: {
+    gap: SHARED_GAP,
+    padding: SHARED_PADDING,
+    borderRadius: radius.tarjeta,
+    backgroundColor: colors.superficie,
+  },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: CHIPS_GAP,
+  },
+  chip: {
+    paddingVertical: CHIP_PADDING_VERTICAL,
+    paddingHorizontal: CHIP_PADDING_HORIZONTAL,
+    borderRadius: radius.pastilla,
+    backgroundColor: colors.campo,
+  },
+  chipMia: {
+    backgroundColor: colors.azulOscuro,
+  },
+  chipText: {
+    fontSize: CHIP_SIZE,
+  },
+  sharedBy: {
+    marginTop: SHARED_BY_MARGIN_TOP,
+    fontSize: SHARED_BY_SIZE,
+    lineHeight: SHARED_BY_SIZE * SHARED_BY_LINE_HEIGHT,
+  },
+  quitado: {
+    padding: QUITADO_PADDING,
+    borderRadius: QUITADO_RADIUS,
+    backgroundColor: colors.superficie,
+  },
+  quitadoText: {
+    textAlign: 'center',
+  },
+  quitarHint: {
+    fontSize: QUITAR_HINT_SIZE,
+    textAlign: 'center',
   },
   deleteButton: {
     alignItems: 'center',

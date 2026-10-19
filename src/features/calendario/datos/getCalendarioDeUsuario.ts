@@ -3,6 +3,7 @@ import { supabase } from '@/shared/supabase';
 
 import { armarCalendarioDeUsuario, getIglesiasDeCargos } from '../dominio/armarCalendarioDeUsuario';
 import type { IglesiaEnEstructura } from '../dominio/armarCalendario';
+import { armarEtiquetas } from '../dominio/calendarioTexts';
 import type { Month } from '../dominio/getMonthRange';
 import { getFechasDelMes, type Calendario } from './getFechasDelMes';
 
@@ -65,10 +66,24 @@ export async function getCalendarioDeUsuario(
   const covered = getIglesiasDeCargos(cargos, iglesias);
 
   if (covered.length === 0) {
-    return { fechas: [], nombresDeDistritos: {} };
+    return { fechas: [], nombresDeDistritos: {}, etiquetas: {} };
   }
 
-  const { fechas, nombresDeDistritos } = await getFechasDelMes(ownedOrSumada, month);
+  const { fechas, nombresDeDistritos, nombresDeIglesias, sumadas } = await getFechasDelMes(
+    ownedOrSumada,
+    month,
+  );
+  const calendario = armarCalendarioDeUsuario(cargos, covered, fechas);
 
-  return { fechas: armarCalendarioDeUsuario(cargos, covered, fechas), nombresDeDistritos };
+  return {
+    fechas: calendario,
+    nombresDeDistritos,
+    // The labels are those of the calendario of all the iglesias together: an
+    // evento shared between two of them is not "compartido por" for the usuario.
+    etiquetas: armarEtiquetas(covered, calendario, {
+      distritos: nombresDeDistritos,
+      iglesias: nombresDeIglesias,
+      sumadas,
+    }),
+  };
 }

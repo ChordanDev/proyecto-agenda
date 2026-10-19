@@ -86,7 +86,14 @@ export async function getCalendarioDeIglesia(
   { iglesia, ownedOrSumada }: LecturaDeIglesia,
   month: Month,
 ): Promise<CalendarioDeIglesia> {
-  const { fechas, nombresDeDistritos } = await getFechasDelMes(ownedOrSumada, month);
+  const { fechas, nombresDeDistritos, nombresDeIglesias, sumadas } = await getFechasDelMes(
+    ownedOrSumada,
+    month,
+  );
 
-  return armarCalendarioDeIglesia(iglesia, fechas, nombresDeDistritos);
+  return armarCalendarioDeIglesia(iglesia, fechas, {
+    distritos: nombresDeDistritos,
+    iglesias: nombresDeIglesias,
+    sumadas,
+  });
 }

@@ -12,7 +12,6 @@ import {
   formatDayHeading,
   formatEventosCount,
   formatTimeAndPlaceDelDia,
-  getAlcanceLabel,
 } from '../dominio/calendarioTexts';
 import { getEventosDelDia } from '../dominio/dayOfCalendario';
 import type { DiaDelRango } from '../dominio/diasDeEvento';
@@ -96,7 +95,7 @@ export function EventosOfDay({ date, calendario, failed, onRetry }: EventosOfDay
             key={evento.id}
             evento={evento}
             diaDelRango={diaDelRango}
-            alcanceLabel={getAlcanceLabel(evento.duenio, calendario.nombresDeDistritos)}
+            etiqueta={calendario.etiquetas[evento.id] ?? null}
             // The date goes along: a series has several, and the detail shows this one.
             onPress={() =>
               router.push({ pathname: '/evento/[id]', params: { id: evento.id, fecha: date } })
@@ -134,14 +133,17 @@ type EventoRowProps = {
   evento: Evento;
   /** The day of its range, for an evento of several days. */
   diaDelRango: DiaDelRango | null;
-  /** Where the evento comes from when it is not of the iglesia, or null. */
-  alcanceLabel: string | null;
+  /**
+   * Where the evento comes from when it is not of the iglesia, and whether it
+   * is shared (`getEtiquetaDelEvento`), or null.
+   */
+  etiqueta: string | null;
   /** Opens the detail of the evento. */
   onPress: () => void;
 };
 
 /** An evento of the list, which opens its detail. */
-function EventoRow({ evento, diaDelRango, alcanceLabel, onPress }: EventoRowProps) {
+function EventoRow({ evento, diaDelRango, etiqueta, onPress }: EventoRowProps) {
   const timeAndPlace = formatTimeAndPlaceDelDia(evento, diaDelRango);
   const lema = getLema(evento.enfasis);
 
@@ -149,7 +151,7 @@ function EventoRow({ evento, diaDelRango, alcanceLabel, onPress }: EventoRowProp
     <Pressable
       accessibilityRole="button"
       // One stop of the screen reader for the whole evento, in reading order.
-      accessibilityLabel={[evento.titulo, timeAndPlace, lema, alcanceLabel]
+      accessibilityLabel={[evento.titulo, timeAndPlace, lema, etiqueta]
         .filter((text) => text !== null)
         .join(', ')}
       onPress={onPress}
@@ -167,10 +169,10 @@ function EventoRow({ evento, diaDelRango, alcanceLabel, onPress }: EventoRowProp
         </AppText>
         <AppText variant="chico" color="textoTenue">
           {lema}
-          {alcanceLabel !== null && (
+          {etiqueta !== null && (
             <AppText variant="chico" weight="semibold" color="azulMarca">
               {' · '}
-              {alcanceLabel}
+              {etiqueta}
             </AppText>
           )}
         </AppText>
