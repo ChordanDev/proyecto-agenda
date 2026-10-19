@@ -24,7 +24,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(29);
+select plan(38);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -78,6 +78,34 @@ insert into public.eventos_fechas (evento_id, fecha) values
 -- The Iglesia de otro distrito shares one evento with the Iglesia del encargado.
 insert into public.iglesias_sumadas (evento_id, iglesia_id) values
   ('eeeeeeee-0000-4000-8000-000000000005', '11111111-0000-4000-8000-000000000001');
+
+-- A weekly series of the Iglesia del encargado with an excepcion on each of its
+-- dates but 2026-11-28: one with a lugar of the list, one with its lugar
+-- emptied, a changed one, one moved inside December, one moved to January and
+-- a deleted one, which lost its row in eventos_fechas.
+insert into public.lugares (id, nombre, duenio_iglesia_id) values
+  ('cccccccc-0000-4000-8000-000000000001', 'Salón de jóvenes', '11111111-0000-4000-8000-000000000001');
+
+insert into public.eventos (id, titulo, lugar, descripcion, enfasis, alcance, duenio_iglesia_id, hora, repeticion, fin_de_serie) values
+  ('eeeeeeee-0000-4000-8000-000000000008', 'Estudio bíblico', 'Templo', 'Para todos', 'discipulado', 'iglesia', '11111111-0000-4000-8000-000000000001', '19:00', 'semanal', '2026-12-31');
+
+insert into public.eventos_fechas (evento_id, fecha) values
+  ('eeeeeeee-0000-4000-8000-000000000008', '2026-11-07'),
+  ('eeeeeeee-0000-4000-8000-000000000008', '2026-11-21'),
+  ('eeeeeeee-0000-4000-8000-000000000008', '2026-11-28'),
+  ('eeeeeeee-0000-4000-8000-000000000008', '2026-12-05'),
+  ('eeeeeeee-0000-4000-8000-000000000008', '2026-12-12'),
+  ('eeeeeeee-0000-4000-8000-000000000008', '2026-12-19');
+
+insert into public.excepciones (evento_id, fecha, cambia_lugar, lugar, lugar_id) values
+  ('eeeeeeee-0000-4000-8000-000000000008', '2026-11-07', true, null, 'cccccccc-0000-4000-8000-000000000001'),
+  ('eeeeeeee-0000-4000-8000-000000000008', '2026-11-21', true, null, null);
+
+insert into public.excepciones (evento_id, fecha, fecha_nueva, titulo, hora, cambia_lugar, lugar, cambia_descripcion, descripcion, cambia_enfasis, enfasis, borrada) values
+  ('eeeeeeee-0000-4000-8000-000000000008', '2026-12-05', null, 'Estudio especial', '10:00', true, 'Salón', true, null, true, null, false),
+  ('eeeeeeee-0000-4000-8000-000000000008', '2026-12-12', '2026-12-14', null, null, false, null, false, null, false, null, false),
+  ('eeeeeeee-0000-4000-8000-000000000008', '2026-12-19', '2027-01-04', null, null, false, null, false, null, false, null, false),
+  ('eeeeeeee-0000-4000-8000-000000000008', '2026-12-26', null, null, null, false, null, false, null, false, null, true);
 
 -- The functions themselves -----------------------------------------------------------
 
@@ -193,6 +221,55 @@ select throws_ok(
   $$ select * from public.buscar_eventos('2026-11-14', '2026-11-14', null, 21) $$,
   '22023', 'A busqueda returns from 1 to 20 eventos',
   'a busqueda cannot return more than 20 eventos'
+);
+select results_eq(
+  $$ select titulo, hora, lugar, descripcion, enfasis::text
+     from public.buscar_eventos('2026-11-28', '2026-11-28', 'estudio') $$,
+  $$ values ('Estudio bíblico', '19:00'::time, 'Templo', 'Para todos', 'discipulado') $$,
+  'a date of a series without an excepcion shows the fields of the series'
+);
+select results_eq(
+  $$ select lugar from public.buscar_eventos('2026-11-07', '2026-11-07', 'estudio') $$,
+  $$ values ('Salón de jóvenes') $$,
+  'a date whose excepcion picks a lugar of the list shows its nombre'
+);
+select results_eq(
+  $$ select lugar from public.buscar_eventos('2026-11-21', '2026-11-21', 'estudio') $$,
+  $$ values (null::text) $$,
+  'a date whose excepcion empties the lugar shows none, not the one of the series'
+);
+select results_eq(
+  $$ select fecha, titulo, hora, lugar, descripcion, enfasis::text
+     from public.buscar_eventos('2026-12-05', '2026-12-05', null, 20)
+     where evento_id = 'eeeeeeee-0000-4000-8000-000000000008' $$,
+  $$ values ('2026-12-05'::date, 'Estudio especial', '10:00'::time, 'Salón', null::text, null::text) $$,
+  'a date with an excepcion shows its own titulo, hora, lugar, descripcion and enfasis'
+);
+select results_eq(
+  $$ select evento_id::text from public.buscar_eventos('2026-12-01', '2026-12-31', 'especial salon') $$,
+  $$ values ('eeeeeeee-0000-4000-8000-000000000008') $$,
+  'texto looks in the fields of the date itself'
+);
+select results_eq(
+  $$ select fecha, hora from public.buscar_eventos('2026-12-14', '2026-12-14', null, 20)
+     where evento_id = 'eeeeeeee-0000-4000-8000-000000000008' $$,
+  $$ values ('2026-12-14'::date, '19:00'::time) $$,
+  'a date moved inside the range is found on the day it moved to'
+);
+select is_empty(
+  $$ select 1 from public.buscar_eventos('2026-12-12', '2026-12-12', null, 20)
+     where evento_id = 'eeeeeeee-0000-4000-8000-000000000008' $$,
+  'a moved date is not found on its original day'
+);
+select results_eq(
+  $$ select fecha, total::integer from public.buscar_eventos('2026-12-01', '2026-12-31', 'estudio', 20) $$,
+  $$ values ('2026-12-05'::date, 2), ('2026-12-14'::date, 2) $$,
+  'a date moved outside the range and a deleted date are not found in it'
+);
+select results_eq(
+  $$ select fecha from public.buscar_eventos('2027-01-01', '2027-01-31', 'estudio') $$,
+  $$ values ('2027-01-04'::date) $$,
+  'a date moved outside the range of the series is found on the day it moved to'
 );
 select is(
   public.get_zona_horaria_de_usuario(), 'America/Argentina/Buenos_Aires',
