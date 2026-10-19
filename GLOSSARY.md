@@ -135,6 +135,16 @@ _Avoid_: Límite de gasto, crédito
 La hora oficial de una asociación, con la que se cuentan el día del límite diario y el mes del presupuesto.
 _Avoid_: Huso horario, hora local
 
+### Distancias
+
+**Ubicación**:
+Posición del teléfono de quien usa la app. No es un lugar ni la dirección de una iglesia.
+_Avoid_: Lugar, dirección, posición
+
+**Distancia**:
+Separación en línea recta entre la ubicación, o una iglesia, y otra iglesia. Se calcula en el teléfono, con las coordenadas que los desarrolladores cargan para cada iglesia.
+_Avoid_: Recorrido, trayecto
+
 ### Entregas
 
 **v1**:

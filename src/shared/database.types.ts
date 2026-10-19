@@ -191,14 +191,14 @@ isOneToOne: false
                   ]
                 },"iglesias": {
                   Row: {
-                    "direccion": string,"distrito_id": string,"excluida_del_buscador": boolean,"id": string,"localidad": string,"nombre": string
+                    "direccion": string,"distrito_id": string,"excluida_del_buscador": boolean,"id": string,"latitud": number | null,"localidad": string,"longitud": number | null,"nombre": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "direccion": string,"distrito_id": string,"excluida_del_buscador"?: boolean,"id"?: string,"localidad": string,"nombre": string
+                    "direccion": string,"distrito_id": string,"excluida_del_buscador"?: boolean,"id"?: string,"latitud"?: number | null,"localidad": string,"longitud"?: number | null,"nombre": string
                   }
                   Update: {
-                    "direccion"?: string,"distrito_id"?: string,"excluida_del_buscador"?: boolean,"id"?: string,"localidad"?: string,"nombre"?: string
+                    "direccion"?: string,"distrito_id"?: string,"excluida_del_buscador"?: boolean,"id"?: string,"latitud"?: number | null,"localidad"?: string,"longitud"?: number | null,"nombre"?: string
                   }
                   Relationships: [
                     {

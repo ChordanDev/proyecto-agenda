@@ -1,3 +1,5 @@
+import type { Punto } from './distancia';
+
 export type Iglesia = {
   id: string;
   nombre: string;
@@ -7,6 +9,8 @@ export type Iglesia = {
   distrito: string;
   /** When true, the church never appears in the "Elegir iglesia" search. */
   excluidaDelBuscador: boolean;
+  /** Where the church is; missing until the developers load it. */
+  coordenadas?: Punto;
 };
 
 /** Lower case, without accents or diaeresis, so "CÓRDOBA" and "cordoba" are equal. */
