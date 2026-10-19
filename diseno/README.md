@@ -16,6 +16,12 @@ Diseño aprobado de "Agenda de iglesia". Es la referencia visual para implementa
     - `nueva` (`7k`): confirmación de "Nueva conversación", porque la conversación no se guarda.
     - Tarjetas: `serie` (`7l`, repetición con palabras y "Hasta"), `variosDias` (`7m`), `guardado` (`7n`, "Guardado" y "Ver evento") y `errorGuardar` (`7o`, el mensaje del formulario con "Editar" y "Reintentar"). Muestran el dueño y el alcance con las mismas palabras que el detalle del evento.
     - El micrófono es de la v2 #9: queda en el HTML, apagado con `conVoz`, y en su lugar está el botón de enviar.
+  - Recordatorios (#161), en `10-ajustes.html`. Son de la v2: la sección está apagada en la v1 y la prende la variable `recordatorios`. El recordatorio se ata al teléfono, no a la persona.
+    - `encendido` (captura `10f`): hermano, encargado y secretaria reciben los de su iglesia, encendidos por defecto, con un ejemplo del aviso.
+    - `inicio` (`10g`): pastor y admin empiezan sin iglesias y apagados, con "Elegir iglesias". `elegidas` (`10i`): las iglesias elegidas y "Cambiar".
+    - `hoja` abre la elección de iglesias: `pastor` (`10h`, las de su distrito) o `admin` (`10j`, todas, con buscador y las elegidas arriba). `rol` (`encargado`, `pastor` o `admin`) cambia la tarjeta Cuenta.
+    - `sinPermiso` (`10k`): el teléfono no dio permiso; el interruptor queda gris y se explica cómo darlo, con "Abrir la configuración".
+    - `10b-notificacion.html` (`10l`): cómo se ve el aviso. Título "Mañana: Congreso de Jóvenes" o "Mañana: Culto joven y 2 eventos más"; segunda línea con la iglesia y la hora (un evento) o "Tocá para verlos en el calendario" (varios). La pantalla bloqueada de alrededor es solo contexto.
   - Gestión (#155). La pestaña Gestión la ven la secretaria de iglesia, el pastor y el admin; cada uno entra a su vista. Agregar, editar, quitar y dar de baja exigen conexión.
     - `08-gestion-pastor.html`: además de "Sin encargado", un aviso que agrupa las iglesias sin secretaria y la etiqueta "Sin secretaria" (una iglesia sin encargado muestra solo "Sin encargado"). Tocar un encargado abre Editar encargado.
     - `08b-gestion-secretaria.html` (captura `8b`): los encargados de su iglesia. Las filas de las secretarias no tienen flecha: solo el pastor o el admin las nombran o las quitan.
