@@ -382,4 +382,20 @@ describe('useConversacion: Reportar respuesta', () => {
     expect(segundo.id).toBe(primero.id);
     expect(getReporteDe(chat, id)).toMatchObject({ estado: 'enviado', error: null });
   });
+
+  it('when the save fails and another motivo is chosen, sends that motivo with a new id', async () => {
+    const { chat, id } = await renderRespondida();
+    mockSaveReporte.mockRejectedValueOnce(new Error('lost')).mockResolvedValueOnce(undefined);
+
+    act(() => chat().reportar(id, 'ofensiva'));
+    await settle();
+    act(() => chat().reportar(id, 'incorrecta'));
+    await settle();
+
+    const [primero, segundo] = mockSaveReporte.mock.calls.map(([reporte]) => reporte);
+    expect(primero.motivo).toBe('ofensiva');
+    expect(segundo.motivo).toBe('incorrecta');
+    expect(segundo.id).not.toBe(primero.id);
+    expect(getReporteDe(chat, id)).toMatchObject({ estado: 'enviado', motivo: 'incorrecta' });
+  });
 });

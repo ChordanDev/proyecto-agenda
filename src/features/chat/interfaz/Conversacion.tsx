@@ -5,6 +5,7 @@ import { useOnlineStatus } from '@/shared/useOnlineStatus';
 
 import type { ConversacionEnCurso } from '../datos/useConversacion';
 import { puedeEnviar } from '../dominio/conversacion';
+import { getMotivoDeLaHoja, getReporte, REPORTE_INICIAL } from '../dominio/reporte';
 import { CuadroDeTexto } from './CuadroDeTexto';
 import { AvisoDeLimite, AvisoSinConexion } from './EstadoDeFalla';
 import { HojaDeReporte } from './HojaDeReporte';
@@ -85,10 +86,12 @@ export function Conversacion({
       )}
 
       {reportando !== null && (
-        // Keyed by the respuesta: each one opens on the first motivo.
+        // Keyed by the respuesta: each one opens on its own motivo.
         <HojaDeReporte
           key={reportando}
           visible
+          // After a failed try it opens on its motivo, so sending it again saves it once.
+          motivoInicial={getMotivoDeLaHoja(getReporte(conversacion, reportando) ?? REPORTE_INICIAL)}
           onEnviar={(motivo) => {
             setReportando(null);
             reportar(reportando, motivo);

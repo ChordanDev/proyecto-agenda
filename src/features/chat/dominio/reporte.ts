@@ -34,14 +34,39 @@ export type Reporte = {
    * reporte sent again after a lost answer is saved once.
    */
   id: string | null;
+  /** The motivo of the last try: the hoja opens on it again after a failure. */
+  motivo: MotivoDeReporte | null;
   /** Why the last try failed. */
   error: string | null;
 };
 
-export const REPORTE_INICIAL: Reporte = { estado: 'sin-reportar', id: null, error: null };
+export const REPORTE_INICIAL: Reporte = {
+  estado: 'sin-reportar',
+  id: null,
+  motivo: null,
+  error: null,
+};
 
 export const ERROR_DE_REPORTE =
   'No se pudo enviar el reporte. Revisá la conexión y probá de nuevo.';
+
+/** The motivo chosen when the hoja opens: the one of a try that failed, if any. */
+export function getMotivoDeLaHoja(reporte: Reporte): MotivoDeReporte {
+  return reporte.motivo ?? MOTIVO_INICIAL;
+}
+
+/**
+ * The id a try is sent with. A try before may have been saved with its answer
+ * lost: the same motivo keeps its id, so it is saved once; another motivo
+ * takes `nuevoId`, since reusing the id would keep the first motivo.
+ */
+export function getIdDelIntento(
+  reporte: Reporte,
+  motivo: MotivoDeReporte,
+  nuevoId: string,
+): string {
+  return reporte.id !== null && reporte.motivo === motivo ? reporte.id : nuevoId;
+}
 
 export function puedeReportar(reporte: Reporte): boolean {
   return reporte.estado === 'sin-reportar';

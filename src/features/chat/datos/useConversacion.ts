@@ -208,7 +208,7 @@ export function useConversacion(): ConversacionEnCurso {
 
   const reportar = (id: string, motivo: MotivoDeReporte) => {
     const antes = actual.current;
-    const siguiente = dispatch({ tipo: 'reportar', id, reporteId: newId() });
+    const siguiente = dispatch({ tipo: 'reportar', id, reporteId: newId(), motivo });
     const reporte = getReporte(siguiente, id);
     if (siguiente === antes || reporte?.id == null) {
       return;

@@ -10,6 +10,7 @@ import {
   MOTIVO_INICIAL,
   MOTIVOS_DE_REPORTE,
   REPORTE_INICIAL,
+  getMotivoDeLaHoja,
   getReporte,
   isMotivoDeReporte,
   puedeReportar,
@@ -56,6 +57,7 @@ const reportar: AccionDeConversacion = {
   tipo: 'reportar',
   id: 'r1',
   reporteId: 'reporte-1',
+  motivo: 'ofensiva',
 };
 
 describe('the motivos of a reporte', () => {
@@ -76,6 +78,22 @@ describe('the motivos of a reporte', () => {
     expect(isMotivoDeReporte('ofensiva')).toBe(true);
     expect(isMotivoDeReporte('otro')).toBe(true);
     expect(isMotivoDeReporte('aburrida')).toBe(false);
+  });
+});
+
+describe('the motivo the hoja opens on', () => {
+  it('is "Es incorrecta" for a respuesta never reported', () => {
+    expect(getMotivoDeLaHoja(REPORTE_INICIAL)).toBe('incorrecta');
+  });
+
+  it('is the one of the try that failed', () => {
+    const conversacion = aplicar(respondida(), reportar, {
+      tipo: 'fallarReporte',
+      id: 'r1',
+      error: 'No se pudo enviar el reporte.',
+    });
+
+    expect(getMotivoDeLaHoja(getReporte(conversacion, 'r1')!)).toBe('ofensiva');
   });
 });
 
@@ -109,6 +127,7 @@ describe('reportar', () => {
     expect(getReporte(conversacion, 'r1')).toEqual({
       estado: 'enviando',
       id: 'reporte-1',
+      motivo: 'ofensiva',
       error: null,
     });
     expect(puedeReportar(getReporte(conversacion, 'r1')!)).toBe(false);
@@ -121,6 +140,7 @@ describe('reportar', () => {
     expect(getReporte(conversacion, 'r1')).toEqual({
       estado: 'enviado',
       id: 'reporte-1',
+      motivo: 'ofensiva',
       error: null,
     });
     expect(puedeReportar(getReporte(conversacion, 'r1')!)).toBe(false);
@@ -129,7 +149,7 @@ describe('reportar', () => {
     );
   });
 
-  it('when it fails can be reported again, with the error and the same id', () => {
+  it('when it fails can be reported again, with the error, the same id and the same motivo', () => {
     const conversacion = aplicar(respondida(), reportar, {
       tipo: 'fallarReporte',
       id: 'r1',
@@ -139,13 +159,36 @@ describe('reportar', () => {
     expect(getReporte(conversacion, 'r1')).toEqual({
       estado: 'sin-reportar',
       id: 'reporte-1',
+      motivo: 'ofensiva',
       error: 'No se pudo enviar el reporte.',
     });
     expect(puedeReportar(getReporte(conversacion, 'r1')!)).toBe(true);
 
     // A reporte that did reach the database is not saved twice.
     const otraVez = reducirConversacion(conversacion, { ...reportar, reporteId: 'reporte-2' });
-    expect(getReporte(otraVez, 'r1')).toEqual({ estado: 'enviando', id: 'reporte-1', error: null });
+    expect(getReporte(otraVez, 'r1')).toEqual({
+      estado: 'enviando',
+      id: 'reporte-1',
+      motivo: 'ofensiva',
+      error: null,
+    });
+  });
+
+  it('when it fails and is sent again with another motivo, saves it with a new id', () => {
+    const conversacion = aplicar(
+      respondida(),
+      reportar,
+      { tipo: 'fallarReporte', id: 'r1', error: 'No se pudo enviar el reporte.' },
+      { ...reportar, reporteId: 'reporte-2', motivo: 'incorrecta' },
+    );
+
+    // The first try may have been saved: reusing its id would keep its motivo.
+    expect(getReporte(conversacion, 'r1')).toEqual({
+      estado: 'enviando',
+      id: 'reporte-2',
+      motivo: 'incorrecta',
+      error: null,
+    });
   });
 
   it('a late answer does not change a reporte already sent', () => {

@@ -14,7 +14,7 @@ import {
   type RespuestaDeConsulta,
 } from './consulta';
 import { getEstadoDeFalla, type Falla } from './fallas';
-import { REPORTE_INICIAL, type Reporte } from './reporte';
+import { getIdDelIntento, REPORTE_INICIAL, type MotivoDeReporte, type Reporte } from './reporte';
 
 /**
  * Where the vista previa of a borrador stands: waiting for Confirmar or
@@ -90,10 +90,11 @@ export type AccionDeConversacion =
   /** Confirmar on the propuesta `id` failed: the card keeps its buttons with `error`. */
   | { tipo: 'fallarGuardado'; id: string; error: string }
   /**
-   * "Enviar reporte" on the respuesta `id`: it starts sending, with
-   * `reporteId` unless an earlier try already chose one.
+   * "Enviar reporte" on the respuesta `id` with its `motivo`: it starts
+   * sending, with `reporteId` unless an earlier try with the same motivo
+   * already chose one.
    */
-  | { tipo: 'reportar'; id: string; reporteId: string }
+  | { tipo: 'reportar'; id: string; reporteId: string; motivo: MotivoDeReporte }
   /** The reporte of the respuesta `id` was saved: it cannot be reported again. */
   | { tipo: 'reporteEnviado'; id: string }
   /** The reporte of the respuesta `id` failed: it can be sent again. */
@@ -265,7 +266,8 @@ export function reducirConversacion(
     case 'reportar':
       return cambiarReporte(conversacion, accion.id, 'sin-reportar', (reporte) => ({
         estado: 'enviando',
-        id: reporte.id ?? accion.reporteId,
+        id: getIdDelIntento(reporte, accion.motivo, accion.reporteId),
+        motivo: accion.motivo,
         error: null,
       }));
 
