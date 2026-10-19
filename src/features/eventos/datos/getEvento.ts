@@ -3,7 +3,8 @@ import { supabase } from '@/shared/supabase';
 
 import type { Evento } from '../dominio/evento';
 import type { IglesiaSumada } from '../dominio/eventoCompartido';
-import { toEvento } from './eventoRow';
+import { aplicarExcepciones, type Excepcion, type FechaDeSerie } from '../dominio/excepcion';
+import { toEvento, toExcepcion } from './eventoRow';
 
 /** An evento with what its detail shows besides its own columns. */
 export type EventoDetallado = {
@@ -12,8 +13,16 @@ export type EventoDetallado = {
   nombreDelDuenio: string;
   /** The duenio with the levels above it: whether the cargos cover it depends on them. */
   duenioEnEstructura: DuenioEnEstructura;
-  /** Its dates, in order: one, or one per occurrence of a series. */
+  /**
+   * Its dates, in order: one, or one per occurrence of a series, as the series
+   * generated them. A date deleted or moved on its own keeps its place here: a
+   * series repeats from its first date.
+   */
   fechas: string[];
+  /** Its dates as they are seen, in order: the excepciones applied (`aplicarExcepciones`). */
+  vistas: FechaDeSerie[];
+  /** What single dates of the series changed, or their deletion. */
+  excepciones: Excepcion[];
   /** The iglesias it is shared with, with their nombres and their place in the structure. */
   sumadas: IglesiaSumada[];
 };
@@ -31,6 +40,11 @@ const EVENTO_COLUMNS = `
   iglesias_sumadas (iglesia_id, iglesias (nombre, distrito_id, distritos (asociacion_id))),
   lugares (nombre),
   eventos_fechas (fecha),
+  excepciones (
+    fecha, fecha_nueva, titulo, hora, cambia_lugar, lugar, lugar_id,
+    cambia_descripcion, descripcion, cambia_enfasis, enfasis, borrada,
+    lugares (nombre)
+  ),
   iglesias!eventos_duenio_iglesia_id_fkey (nombre, distrito_id, distritos (asociacion_id)),
   distritos!eventos_duenio_distrito_id_fkey (nombre, asociacion_id),
   asociaciones!eventos_duenio_asociacion_id_fkey (nombre)
@@ -90,12 +104,19 @@ export async function getEvento(id: string): Promise<EventoDetallado | null> {
     throw new Error(`Evento ${id} has no duenio to name`);
   }
 
+  const excepciones = data.excepciones.map(toExcepcion);
+  // A deleted date has no row left; its excepcion still says it was one.
+  const borradas = excepciones.filter(({ borrada }) => borrada).map(({ fecha }) => fecha);
+  const deLaSerie = data.eventos_fechas.map(({ fecha }) => fecha);
+
   return {
     evento,
     nombreDelDuenio,
     duenioEnEstructura: toDuenioEnEstructura(evento.duenio, data),
     // Local `YYYY-MM-DD` strings order as plain text.
-    fechas: data.eventos_fechas.map(({ fecha }) => fecha).sort(),
+    fechas: [...deLaSerie, ...borradas].sort(),
+    vistas: aplicarExcepciones(evento, deLaSerie, excepciones),
+    excepciones,
     sumadas: data.iglesias_sumadas.map(({ iglesia_id, iglesias }) => ({
       id: iglesia_id,
       nombre: iglesias.nombre,

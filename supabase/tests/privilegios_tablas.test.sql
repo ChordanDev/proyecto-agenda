@@ -18,7 +18,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(56);
+select plan(60);
 
 -- Exact privileges ---------------------------------------------------------------
 
@@ -70,6 +70,16 @@ select is(
   ), array[]::text[]),
   array['SELECT']::text[],
   'anon has exactly the expected privileges on eventos_fechas'
+);
+
+select is(
+  coalesce((
+    select array_agg(p order by p)
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    where has_table_privilege('anon', 'public.excepciones', p)
+  ), array[]::text[]),
+  array['SELECT']::text[],
+  'anon has exactly the expected privileges on excepciones'
 );
 
 select is(
@@ -196,6 +206,16 @@ select is(
   coalesce((
     select array_agg(p order by p)
     from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    where has_table_privilege('authenticated', 'public.excepciones', p)
+  ), array[]::text[]),
+  array['DELETE', 'INSERT', 'SELECT', 'UPDATE']::text[],
+  'authenticated has exactly the expected privileges on excepciones'
+);
+
+select is(
+  coalesce((
+    select array_agg(p order by p)
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
     where has_table_privilege('authenticated', 'public.iglesias_sumadas', p)
   ), array[]::text[]),
   array['DELETE', 'INSERT', 'SELECT']::text[],
@@ -290,6 +310,10 @@ select throws_ok(
   '42501', 'permission denied for table eventos_fechas', 'anon cannot truncate eventos_fechas'
 );
 select throws_ok(
+  $$ truncate public.excepciones $$,
+  '42501', 'permission denied for table excepciones', 'anon cannot truncate excepciones'
+);
+select throws_ok(
   $$ truncate public.iglesias_sumadas $$,
   '42501', 'permission denied for table iglesias_sumadas', 'anon cannot truncate iglesias_sumadas'
 );
@@ -342,6 +366,10 @@ select throws_ok(
 select throws_ok(
   $$ truncate public.eventos_fechas $$,
   '42501', 'permission denied for table eventos_fechas', 'authenticated cannot truncate eventos_fechas'
+);
+select throws_ok(
+  $$ truncate public.excepciones $$,
+  '42501', 'permission denied for table excepciones', 'authenticated cannot truncate excepciones'
 );
 select throws_ok(
   $$ truncate public.iglesias_sumadas $$,

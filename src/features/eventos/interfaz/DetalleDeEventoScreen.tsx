@@ -160,7 +160,11 @@ type DetalleProps = {
 };
 
 function Detalle({ detallado, fecha, onDeleted }: DetalleProps) {
-  const { evento, nombreDelDuenio, fechas, duenioEnEstructura, sumadas } = detallado;
+  const { nombreDelDuenio, fechas, vistas, duenioEnEstructura, sumadas } = detallado;
+  // The date opened from the calendario, with what it changed of its own; the
+  // first one when it is not a date of the evento (any more).
+  const vista = vistas.find((candidata) => candidata.fecha === fecha) ?? vistas[0];
+  const evento = vista?.evento ?? detallado.evento;
   const router = useRouter();
   const puedeEditar = usePuedeEditar(duenioEnEstructura);
   const quienMira = useQuienMira();
@@ -172,7 +176,7 @@ function Detalle({ detallado, fecha, onDeleted }: DetalleProps) {
   const categoria = getCategoria(evento.enfasis);
   const enfasis = getEnfasisDelDetalle(evento.enfasis);
   const duenio = getDuenioDelDetalle(evento.duenio, nombreDelDuenio);
-  const fechaShown = fecha !== undefined && fechas.includes(fecha) ? fecha : fechas[0];
+  const fechaShown = vista?.fecha;
   const compartido =
     quienMira === undefined
       ? null
@@ -383,7 +387,7 @@ function Detalle({ detallado, fecha, onDeleted }: DetalleProps) {
                 // Deleting always asks first.
                 Alert.alert(
                   '¿Borrar este evento?',
-                  getAvisoDeBorrado(evento.repeticion, fechas.length),
+                  getAvisoDeBorrado(evento.repeticion, vistas.length),
                   [
                     { text: 'Cancelar', style: 'cancel' },
                     {

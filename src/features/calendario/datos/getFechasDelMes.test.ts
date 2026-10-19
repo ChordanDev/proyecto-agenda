@@ -1,10 +1,10 @@
 import { getFechasDelMes } from './getFechasDelMes';
 
-type Request = 'insideTheMonth' | 'startedBefore';
+type Request = 'insideTheMonth' | 'startedBefore' | 'movedIn';
 type Page = { data: unknown[]; error: { message: string } | null };
 
 /** The pages each request returns, in order. */
-let mockPages: Record<Request, Page[]>;
+let mockPages: Partial<Record<Request, Page[]>>;
 /** The filters, ranges and orders each page asked for, in order. */
 let mockCalls: {
   request: Request;
@@ -14,12 +14,14 @@ let mockCalls: {
 }[];
 
 // Each page is a chain of filters awaited at its end. A request is told apart
-// by its `lt`, which only the eventos that started before the month use.
+// by its table (the dates moved into the month are read from the excepciones)
+// or by its `lt`, which only the eventos that started before the month use. A
+// request with no pages given reads none.
 jest.mock('@/shared/supabase', () => ({
   supabase: {
-    from: () => ({
+    from: (table: string) => ({
       select: () => {
-        let request: Request = 'insideTheMonth';
+        let request: Request = table === 'excepciones' ? 'movedIn' : 'insideTheMonth';
         let range: [number, number] = [0, 0];
         const filters: string[] = [];
         const order: string[] = [];
@@ -45,7 +47,8 @@ jest.mock('@/shared/supabase', () => ({
           },
           then: (resolve: (value: unknown) => unknown) => {
             mockCalls.push({ request, filters, range, order });
-            return Promise.resolve(mockPages[request].shift()).then(resolve);
+            const page = mockPages[request]?.shift() ?? { data: [], error: null };
+            return Promise.resolve(page).then(resolve);
           },
         };
         return query;
@@ -75,7 +78,30 @@ const ROW = {
     ],
     iglesias: null,
     distritos: { nombre: 'Centro' },
+    excepciones: [],
   },
+};
+
+/** The columns of an excepcion that changes nothing yet. */
+const EXCEPCION = {
+  fecha_nueva: null,
+  titulo: null,
+  hora: null,
+  cambia_lugar: false,
+  lugar: null,
+  lugar_id: null,
+  lugares: null,
+  cambia_descripcion: false,
+  descripcion: null,
+  cambia_enfasis: false,
+  enfasis: null,
+  borrada: false,
+};
+
+/** A weekly series: the row of its date of 10-17. */
+const SERIE_ROW = {
+  ...ROW,
+  eventos: { ...ROW.eventos, repeticion: 'semanal', fin_de_serie: '2026-12-26' },
 };
 
 const OCTOBER = { year: 2026, month: 10 };
@@ -194,5 +220,88 @@ describe('getFechasDelMes', () => {
     await expect(getFechasDelMes(null, OCTOBER)).rejects.toThrow(
       'Could not read the calendario: timeout',
     );
+  });
+
+  it('combines a date with what it changed and keeps it on its day', async () => {
+    const horaPropia = {
+      ...SERIE_ROW,
+      eventos: {
+        ...SERIE_ROW.eventos,
+        excepciones: [{ ...EXCEPCION, fecha: '2026-10-17', hora: '20:30:00' }],
+      },
+    };
+    mockPages = { insideTheMonth: [{ data: [horaPropia], error: null }] };
+
+    const { fechas } = await getFechasDelMes(null, OCTOBER);
+
+    expect(fechas).toHaveLength(1);
+    expect(fechas[0]).toMatchObject({
+      fecha: '2026-10-17',
+      evento: { titulo: 'Congreso de jóvenes', hora: '20:30:00' },
+    });
+  });
+
+  it('shows a moved date on its new day and not on the original one', async () => {
+    const movida = { ...EXCEPCION, fecha: '2026-10-17', fecha_nueva: '2026-10-18' };
+    // The date of 10-17 is read in the month, and its excepcion moved it.
+    const original = {
+      ...SERIE_ROW,
+      eventos: { ...SERIE_ROW.eventos, excepciones: [movida] },
+    };
+    mockPages = {
+      insideTheMonth: [{ data: [original], error: null }],
+      movedIn: [{ data: [{ ...movida, eventos: SERIE_ROW.eventos }], error: null }],
+    };
+
+    const { fechas } = await getFechasDelMes('duenio_distrito_id.in.(d1)', OCTOBER);
+
+    expect(fechas.map(({ fecha }) => fecha)).toEqual(['2026-10-18']);
+    expect(mockCalls.filter((call) => call.request === 'movedIn')).toEqual([
+      {
+        request: 'movedIn',
+        filters: [
+          'or duenio_distrito_id.in.(d1) {"referencedTable":"eventos"}',
+          'gte fecha_nueva "2026-10-01"',
+          'lte fecha_nueva "2026-10-31"',
+        ],
+        range: [0, 999],
+        order: ['evento_id', 'fecha'],
+      },
+    ]);
+  });
+
+  it('leaves out a date moved to another month', async () => {
+    const original = {
+      ...SERIE_ROW,
+      eventos: {
+        ...SERIE_ROW.eventos,
+        excepciones: [{ ...EXCEPCION, fecha: '2026-10-17', fecha_nueva: '2026-11-02' }],
+      },
+    };
+    mockPages = { insideTheMonth: [{ data: [original], error: null }] };
+
+    expect((await getFechasDelMes(null, OCTOBER)).fechas).toEqual([]);
+  });
+
+  it('takes what a date moved into the month changed', async () => {
+    const movida = {
+      ...EXCEPCION,
+      fecha: '2026-09-26',
+      fecha_nueva: '2026-10-03',
+      cambia_lugar: true,
+      lugar_id: 'l2',
+      lugares: { nombre: 'Salón' },
+    };
+    mockPages = {
+      movedIn: [{ data: [{ ...movida, eventos: SERIE_ROW.eventos }], error: null }],
+    };
+
+    const { fechas } = await getFechasDelMes(null, OCTOBER);
+
+    expect(fechas).toHaveLength(1);
+    expect(fechas[0]).toMatchObject({
+      fecha: '2026-10-03',
+      evento: { lugar: 'Salón', lugarId: 'l2', hora: '19:00:00' },
+    });
   });
 });
