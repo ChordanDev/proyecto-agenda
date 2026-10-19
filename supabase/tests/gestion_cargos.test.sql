@@ -78,7 +78,7 @@ insert into public.cargos (id, usuario_id, iglesia_id, distrito_id, asociacion_i
 -- The privileges -----------------------------------------------------------------------
 
 select function_privs_are(
-  'public', 'editar_cargo', array['uuid', 'text', 'text'], 'anon', array[]::text[],
+  'public', 'editar_cargo', array['uuid', 'text', 'text', 'boolean'], 'anon', array[]::text[],
   'anon cannot edit a cargo'
 );
 select function_privs_are(
@@ -86,7 +86,7 @@ select function_privs_are(
   'anon cannot remove a cargo'
 );
 select function_privs_are(
-  'public', 'editar_cargo', array['uuid', 'text', 'text'], 'authenticated', array['EXECUTE'],
+  'public', 'editar_cargo', array['uuid', 'text', 'text', 'boolean'], 'authenticated', array['EXECUTE'],
   'a usuario can try to edit a cargo, and the rule decides'
 );
 select function_privs_are(

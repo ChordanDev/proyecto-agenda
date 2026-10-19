@@ -10,6 +10,7 @@ import {
   ordenarEncargados,
   puedeEditarEncargado,
   validarEncargado,
+  validarIglesia,
   type Encargado,
 } from './encargados';
 
@@ -136,6 +137,23 @@ describe('puedeEditarEncargado', () => {
 
   it('never lets her edit a secretaria, herself included', () => {
     expect(puedeEditarEncargado(encargado({ nombre: 'Laura', esSecretaria: true }))).toBe(false);
+  });
+
+  it('lets the pastor edit a common encargado and a secretaria', () => {
+    expect(puedeEditarEncargado(encargado({ nombre: 'Raúl' }), 'pastor')).toBe(true);
+    expect(puedeEditarEncargado(encargado({ nombre: 'Laura', esSecretaria: true }), 'pastor')).toBe(
+      true,
+    );
+  });
+});
+
+describe('validarIglesia', () => {
+  it('asks the pastor to choose the iglesia', () => {
+    expect(validarIglesia(null)).toBe('Elegí la iglesia.');
+  });
+
+  it('accepts a chosen iglesia', () => {
+    expect(validarIglesia('central')).toBeUndefined();
   });
 });
 

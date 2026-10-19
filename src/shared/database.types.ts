@@ -388,7 +388,7 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
 "editar_cargo":
-{ Args: { "cargo_id": string,"funcion"?: string,"nombre": string }; Returns: undefined
+{ Args: { "cargo_id": string,"es_secretaria"?: boolean,"funcion"?: string,"nombre": string }; Returns: undefined
                            },
 "get_dispositivo":
 { Args: { "token": string }; Returns: {

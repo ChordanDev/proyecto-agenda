@@ -2,6 +2,7 @@ import { PlaceholderScreen } from '@/shared/ui/PlaceholderScreen';
 
 import { useGestor } from '../datos/useGestor';
 import { GestionAdminScreen } from './GestionAdminScreen';
+import { GestionPastorScreen } from './GestionPastorScreen';
 import { GestionSecretariaScreen } from './GestionSecretariaScreen';
 
 /**
@@ -20,7 +21,7 @@ export function GestionScreen() {
         />
       );
     case 'pastor':
-      return <PlaceholderScreen title="Gestión del pastor" />;
+      return <GestionPastorScreen distritoIds={gestor.vista.distritoIds} />;
     case 'admin':
       return <GestionAdminScreen />;
     default:
