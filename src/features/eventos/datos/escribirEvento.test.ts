@@ -1,5 +1,11 @@
 import type { EventoAGuardar } from '../dominio/formularioDeEvento';
-import { borrarEvento, guardarEvento, quitarEventoDeIglesia } from './escribirEvento';
+import {
+  borrarEvento,
+  borrarFecha,
+  guardarEvento,
+  guardarExcepcion,
+  quitarEventoDeIglesia,
+} from './escribirEvento';
 
 const mockRpc = jest.fn();
 const mockReadEvento = jest.fn();
@@ -140,5 +146,101 @@ describe('quitarEventoDeIglesia', () => {
 
     await expect(quitarEventoDeIglesia('e1', 'i3')).rejects.toMatchObject({ tipo: 'sin-permiso' });
     expect(mockReadEvento).not.toHaveBeenCalled();
+  });
+});
+
+describe('guardarExcepcion', () => {
+  it('sends only the fields that changed', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: null });
+
+    await guardarExcepcion('e1', {
+      fecha: '2026-10-17',
+      fechaNueva: null,
+      cambios: { hora: '20:30:00' },
+    });
+
+    expect(mockRpc).toHaveBeenCalledWith('guardar_excepcion', {
+      evento_id: 'e1',
+      fecha: '2026-10-17',
+      hora: '20:30:00',
+    });
+  });
+
+  it('flags the fields emptied, and sends a lugar of the list by its id', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: null });
+
+    await guardarExcepcion('e1', {
+      fecha: '2026-10-17',
+      fechaNueva: '2026-10-18',
+      cambios: { lugar: 'Salón', lugarId: 'l2', descripcion: null, enfasis: null },
+    });
+
+    expect(mockRpc).toHaveBeenCalledWith('guardar_excepcion', {
+      evento_id: 'e1',
+      fecha: '2026-10-17',
+      fecha_nueva: '2026-10-18',
+      cambia_lugar: true,
+      lugar_id: 'l2',
+      cambia_descripcion: true,
+      cambia_enfasis: true,
+    });
+  });
+
+  it('sends a lugar written by hand as text', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: null });
+
+    await guardarExcepcion('e1', {
+      fecha: '2026-10-17',
+      fechaNueva: null,
+      cambios: { lugar: 'Plaza', lugarId: null },
+    });
+
+    expect(mockRpc).toHaveBeenCalledWith('guardar_excepcion', {
+      evento_id: 'e1',
+      fecha: '2026-10-17',
+      cambia_lugar: true,
+      lugar: 'Plaza',
+    });
+  });
+
+  it('keeps any 22023 of a saved date as any other error', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { code: '22023', message: 'invalid' } });
+
+    await expect(
+      guardarExcepcion('e1', { fecha: '2026-10-17', fechaNueva: null, cambios: { titulo: 'X' } }),
+    ).rejects.toMatchObject({ tipo: 'otro' });
+  });
+
+  it('tells a date that changed meanwhile', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { code: '23514', message: 'deleted' } });
+
+    await expect(
+      guardarExcepcion('e1', { fecha: '2026-10-17', fechaNueva: null, cambios: { titulo: 'X' } }),
+    ).rejects.toMatchObject({ tipo: 'fecha-cambiada' });
+  });
+});
+
+describe('borrarFecha', () => {
+  it('tells a last date left that the cached dates did not know about', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { code: '22023', message: 'last fecha' } });
+
+    await expect(borrarFecha('e1', '2026-10-17')).rejects.toMatchObject({
+      tipo: 'fecha-cambiada',
+    });
+  });
+
+  it('deletes a single date of the series', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: null });
+
+    await borrarFecha('e1', '2026-10-17');
+
+    expect(mockRpc).toHaveBeenCalledWith('borrar_fecha', { evento_id: 'e1', fecha: '2026-10-17' });
+  });
+
+  it('takes a series deleted meanwhile as done', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: NO_VISIBLE });
+    mockReadEvento.mockResolvedValue(GONE);
+
+    await expect(borrarFecha('e1', '2026-10-17')).resolves.toBeUndefined();
   });
 });

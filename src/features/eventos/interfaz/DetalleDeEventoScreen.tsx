@@ -5,15 +5,32 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 import { nombrarConNivel } from '@/features/calendario/dominio/calendarioTexts';
 import { categorias, colors, fontSize, radius, spacing } from '@/shared/theme';
-import { AppText, BackButton, Button, Card, FormaDeEnfasis, ScreenBackground } from '@/shared/ui';
+import {
+  AppText,
+  BackButton,
+  Button,
+  Card,
+  ConfirmDialog,
+  DialogText,
+  FormaDeEnfasis,
+  ScreenBackground,
+} from '@/shared/ui';
 
 import type { EventoDetallado } from '../datos/getEvento';
-import { getTipoDeError, useBorrarEvento } from '../datos/useEscribirEvento';
+import { getTipoDeError, useBorrarEvento, useBorrarFecha } from '../datos/useEscribirEvento';
 import { useEvento } from '../datos/useEvento';
 import { usePuedeEditar } from '../datos/usePuedeEditar';
 import { useQuienMira } from '../datos/useQuienMira';
 import { useQuitarEventoDeIglesia } from '../datos/useQuitarEventoDeIglesia';
 import { getCategoria } from '../dominio/categoria';
+import {
+  getConfirmacionDeBorrarFecha,
+  getHojaDeSerie,
+  getVistaAbierta,
+  muestraHojaDeBorrar,
+  muestraHojaDeSerie,
+  NOTA_DE_CAMBIOS_PROPIOS,
+} from '../dominio/edicionDeFecha';
 import { getMensajeDeError } from '../dominio/errorDeEscritura';
 import {
   getAvisoDeBorrado,
@@ -33,6 +50,8 @@ import {
 } from '../dominio/eventoCompartido';
 import { formatHasta, formatRepeticionDelDetalle } from '../dominio/repeticion';
 import { avisarSinConexion } from './avisarSinConexion';
+import { HojaDeAlcanceDeEdicion } from './HojaDeAlcanceDeEdicion';
+import { NotaDeSerie } from './NotaDeSerie';
 import { REPEAT_PATHS } from './SelectorDeRepeticion';
 
 // Layout of the approved mockup, which the theme has no tokens for. The line
@@ -161,14 +180,17 @@ type DetalleProps = {
 
 function Detalle({ detallado, fecha, onDeleted }: DetalleProps) {
   const { nombreDelDuenio, fechas, vistas, duenioEnEstructura, sumadas } = detallado;
-  // The date opened from the calendario, with what it changed of its own; the
-  // first one when it is not a date of the evento (any more).
-  const vista = vistas.find((candidata) => candidata.fecha === fecha) ?? vistas[0];
+  // The date opened from the calendario, with what it changed of its own.
+  const vista = getVistaAbierta(vistas, fecha);
   const evento = vista?.evento ?? detallado.evento;
   const router = useRouter();
   const puedeEditar = usePuedeEditar(duenioEnEstructura);
   const quienMira = useQuienMira();
   const borrar = useBorrarEvento(evento.id);
+  const borrarFecha = useBorrarFecha(evento.id);
+  // Editar or Borrar on a date of a series first asks which dates (capture 5c, 5d).
+  const [hoja, setHoja] = useState<'editar' | 'borrar' | null>(null);
+  const [borrandoFecha, setBorrandoFecha] = useState(false);
   const quitar = useQuitarEventoDeIglesia(evento.id);
   // The iglesia the evento was just quitado from. The detail stays and says
   // so once the evento read again confirms it (`getAvisoDeQuitado`).
@@ -186,6 +208,46 @@ function Detalle({ detallado, fecha, onDeleted }: DetalleProps) {
   const avisoDeQuitado =
     quitada === null ? null : getAvisoDeQuitado(quitada, duenioEnEstructura, sumadas);
   const hasActions = puedeEditar || paraQuitar.length > 0 || avisoDeQuitado !== null;
+
+  // A date of a series asks first: "only this date" or "the whole series".
+  const conHoja = muestraHojaDeSerie(evento, puedeEditar) && vista !== undefined;
+  const hojaDeSerie =
+    conHoja && hoja !== null && fechas[0] !== undefined
+      ? getHojaDeSerie(hoja, vista.fecha, evento.repeticion, fechas[0])
+      : null;
+  const confirmacionDeBorrarFecha =
+    vista === undefined ? null : getConfirmacionDeBorrarFecha(vista.fecha);
+
+  const editarSerie = () => {
+    router.push({ pathname: '/evento/editar/[id]', params: { id: evento.id } });
+  };
+
+  // The form of a date is anchored on the date of the series it comes from.
+  const editarFecha = () => {
+    if (vista !== undefined) {
+      router.push({
+        pathname: '/evento/editar/[id]',
+        params: { id: evento.id, fecha: vista.fechaOriginal },
+      });
+    }
+  };
+
+  // Deleting always asks first.
+  const askBorrarSerie = () => {
+    Alert.alert('¿Borrar este evento?', getAvisoDeBorrado(evento.repeticion, vistas.length), [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Borrar',
+        style: 'destructive',
+        onPress: () =>
+          borrar.mutate(undefined, {
+            onSuccess: onDeleted,
+            onError: (error) =>
+              Alert.alert('No se pudo borrar', getMensajeDeError(getTipoDeError(error))),
+          }),
+      },
+    ]);
+  };
 
   const askQuitar = (iglesia: IglesiaSumada, nombreDeIglesia: string) => {
     if (!avisarSinConexion()) {
@@ -267,6 +329,8 @@ function Detalle({ detallado, fecha, onDeleted }: DetalleProps) {
           {evento.titulo}
         </AppText>
       </View>
+
+      {vista?.tieneCambios && <NotaDeSerie role="text">{NOTA_DE_CAMBIOS_PROPIOS}</NotaDeSerie>}
 
       <View style={styles.rowsCard}>
         {rows.map((row, index) => (
@@ -372,48 +436,90 @@ function Detalle({ detallado, fecha, onDeleted }: DetalleProps) {
             <Button
               label="Editar"
               onPress={() => {
-                if (avisarSinConexion()) {
-                  router.push({ pathname: '/evento/editar/[id]', params: { id: evento.id } });
+                if (!avisarSinConexion()) {
+                  return;
+                }
+                if (conHoja) {
+                  setHoja('editar');
+                } else {
+                  editarSerie();
                 }
               }}
             />
             <Pressable
               accessibilityRole="button"
-              disabled={borrar.isPending}
+              disabled={borrar.isPending || borrarFecha.isPending}
               onPress={() => {
                 if (!avisarSinConexion()) {
                   return;
                 }
-                // Deleting always asks first.
-                Alert.alert(
-                  '¿Borrar este evento?',
-                  getAvisoDeBorrado(evento.repeticion, vistas.length),
-                  [
-                    { text: 'Cancelar', style: 'cancel' },
-                    {
-                      text: 'Borrar',
-                      style: 'destructive',
-                      onPress: () =>
-                        borrar.mutate(undefined, {
-                          onSuccess: onDeleted,
-                          onError: (error) =>
-                            Alert.alert(
-                              'No se pudo borrar',
-                              getMensajeDeError(getTipoDeError(error)),
-                            ),
-                        }),
-                    },
-                  ],
-                );
+                if (conHoja && muestraHojaDeBorrar(evento, puedeEditar, vistas.length)) {
+                  setHoja('borrar');
+                } else {
+                  askBorrarSerie();
+                }
               }}
               style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}
             >
               <AppText variant="cuerpoGrande" weight="bold" color="peligro">
-                {borrar.isPending ? 'Borrando…' : 'Borrar'}
+                {borrar.isPending || borrarFecha.isPending ? 'Borrando…' : 'Borrar'}
               </AppText>
             </Pressable>
           </View>
         </>
+      )}
+
+      {hojaDeSerie !== null && (
+        <HojaDeAlcanceDeEdicion
+          visible={hoja !== null}
+          pregunta={hojaDeSerie.pregunta}
+          recordatorio={hojaDeSerie.recordatorio}
+          soloEsta={hojaDeSerie.soloEsta}
+          onSoloEsta={() => {
+            setHoja(null);
+            if (hoja === 'editar') {
+              editarFecha();
+            } else {
+              setBorrandoFecha(true);
+            }
+          }}
+          onTodaLaSerie={() => {
+            setHoja(null);
+            if (hoja === 'editar') {
+              editarSerie();
+            } else {
+              askBorrarSerie();
+            }
+          }}
+          onClose={() => setHoja(null)}
+        />
+      )}
+
+      {borrandoFecha && confirmacionDeBorrarFecha !== null && (
+        <ConfirmDialog
+          title={confirmacionDeBorrarFecha.titulo}
+          confirmLabel={confirmacionDeBorrarFecha.boton}
+          tone="danger"
+          busy={borrarFecha.isPending}
+          onConfirm={() => {
+            if (vista === undefined || !avisarSinConexion()) {
+              return;
+            }
+            borrarFecha.mutate(vista.fechaOriginal, {
+              onSuccess: () => {
+                setBorrandoFecha(false);
+                onDeleted();
+              },
+              onError: (error) => {
+                setBorrandoFecha(false);
+                Alert.alert('No se pudo borrar', getMensajeDeError(getTipoDeError(error)));
+              },
+            });
+          }}
+          onCancel={() => setBorrandoFecha(false)}
+        >
+          <DialogText>{confirmacionDeBorrarFecha.mensaje}</DialogText>
+        </ConfirmDialog>
       )}
     </>
   );

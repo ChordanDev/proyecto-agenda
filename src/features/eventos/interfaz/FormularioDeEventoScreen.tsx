@@ -28,11 +28,26 @@ import {
 } from '@/shared/ui';
 
 import { useEvento } from '../datos/useEvento';
-import { getTipoDeError, hasConexion, useGuardarEvento } from '../datos/useEscribirEvento';
+import {
+  getTipoDeError,
+  hasConexion,
+  useGuardarEvento,
+  useGuardarExcepcion,
+} from '../datos/useEscribirEvento';
 import { useIglesiasParaCompartir } from '../datos/useIglesiasParaCompartir';
 import { useOpcionesDeDuenio } from '../datos/useOpcionesDeDuenio';
 import { getDuenioDelDetalle } from '../dominio/detalleDeEvento';
+import {
+  formularioDeFecha,
+  getAvisoDePerdidas,
+  getLeyendaDeUnaFecha,
+  LEYENDA_DEL_RESTO,
+  PIE_DE_UNA_FECHA,
+  validarFormularioDeFecha,
+  type EdicionDeFecha,
+} from '../dominio/edicionDeFecha';
 import { getMensajeDeError } from '../dominio/errorDeEscritura';
+import type { Excepcion } from '../dominio/excepcion';
 import {
   debePreguntarPorFechaPasada,
   getTextoDeFechaPasada,
@@ -65,6 +80,7 @@ import { HojaDeFecha } from './HojaDeFecha';
 import { HojaDeLugar } from './HojaDeLugar';
 import { SelectorDeEnfasis } from './SelectorDeEnfasis';
 import { SelectorDeIglesiasSumadas } from './SelectorDeIglesiasSumadas';
+import { NotaDeSerie } from './NotaDeSerie';
 import { SelectorDeRepeticion } from './SelectorDeRepeticion';
 
 // Layout of the approved mockup, which the theme has no tokens for. The line
@@ -102,13 +118,21 @@ const DISABLED_FIELD_COLOR = '#F5F6F8';
 // The mockups draw no pressed state; the same value as `Button`.
 const PRESSED_OPACITY = 0.85;
 const PARAGRAPH_SIZE = 16;
+// Under the form of a single date (06-crear-evento.html, line 205).
+const PIE_SIZE = 15;
+const PIE_MARGIN_HORIZONTAL = 4;
 const PARAGRAPH_LINE_HEIGHT = 1.45;
 
 const SAFE_AREA_EDGES = ['top', 'left', 'right', 'bottom'] as const;
 
 export type ModoDelFormulario =
   /** `fecha` is the day selected in the calendario, if any. */
-  { tipo: 'nuevo'; fecha: string | undefined } | { tipo: 'editar'; id: string };
+  | { tipo: 'nuevo'; fecha: string | undefined }
+  /**
+   * `fecha` is a date of the series to change on its own, the one of the series
+   * it comes from; without it, the whole evento is edited.
+   */
+  | { tipo: 'editar'; id: string; fecha?: string };
 
 /**
  * Creates an evento, or edits one with the same form loaded with its data. It
@@ -129,6 +153,40 @@ export function FormularioDeEventoScreen({ modo }: { modo: ModoDelFormulario }) 
   };
 
   const renderContent = () => {
+    // A single date of a series: the date as it is seen, if it still exists.
+    const vista =
+      modo.tipo === 'editar' && modo.fecha !== undefined
+        ? evento.data?.vistas.find((candidata) => candidata.fechaOriginal === modo.fecha)
+        : undefined;
+
+    if (modo.tipo === 'editar' && modo.fecha !== undefined && evento.data && vista === undefined) {
+      return (
+        <Card style={styles.message}>
+          <AppText color="textoSecundario" style={styles.paragraph}>
+            Esta fecha ya no es parte de la serie.
+          </AppText>
+          <Button label="Volver" variant="secondary" onPress={leave} />
+        </Card>
+      );
+    }
+
+    if (opciones.data && vista !== undefined && evento.data) {
+      return (
+        <Formulario
+          opciones={opciones.data}
+          initial={formularioDeFecha(vista.evento, vista.fecha)}
+          id={evento.data.evento.id}
+          unaFecha={{
+            fechaOriginal: vista.fechaOriginal,
+            serie: evento.data.evento,
+            fechas: evento.data.fechas,
+            excepciones: evento.data.excepciones,
+          }}
+          onClose={leave}
+        />
+      );
+    }
+
     if (opciones.data && (modo.tipo === 'nuevo' || evento.data)) {
       const initial =
         modo.tipo === 'nuevo' || !evento.data
@@ -143,6 +201,7 @@ export function FormularioDeEventoScreen({ modo }: { modo: ModoDelFormulario }) 
           opciones={opciones.data}
           initial={initial}
           id={modo.tipo === 'editar' ? modo.id : undefined}
+          excepciones={evento.data?.excepciones}
           onClose={leave}
         />
       );
@@ -217,11 +276,15 @@ type FormularioProps = {
   initial: FormularioDeEvento;
   /** The evento being edited; undefined for a new one. */
   id: string | undefined;
+  /** A single date of the series being changed on its own, without the fields of the series. */
+  unaFecha?: EdicionDeFecha;
+  /** What single dates of the series being edited changed: saving it can lose some. */
+  excepciones?: readonly Excepcion[];
   /** Leaves the form, after saving or when the evento no longer exists. */
   onClose: () => void;
 };
 
-function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
+function Formulario({ opciones, initial, id, unaFecha, excepciones, onClose }: FormularioProps) {
   const [formulario, setFormulario] = useState(initial);
   // The fields only show what is missing after a first attempt to save.
   const [triedToSave, setTriedToSave] = useState(false);
@@ -242,6 +305,12 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
   const [focusFechaRequests, setFocusFechaRequests] = useState(0);
   const fechaButton = useRef<View>(null);
   const guardar = useGuardarEvento(id);
+  const guardarFecha = useGuardarExcepcion(id ?? '');
+  const guardando = unaFecha === undefined ? guardar.isPending : guardarFecha.isPending;
+  // What saving the whole series asks first when it loses dates with changes of their own.
+  const [avisoDePerdidas, setAvisoDePerdidas] = useState<ReturnType<
+    typeof getAvisoDePerdidas
+  > | null>(null);
   const iglesias = useIglesiasParaCompartir();
   const hoy = useToday();
   const editando = id !== undefined;
@@ -255,7 +324,18 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
     iglesias: iglesias.data,
     inicial: initial,
   });
-  const errores = triedToSave && !result.ok ? result.errores : {};
+  // A single date checks what every evento needs, and that its day is free.
+  const resultDeFecha =
+    unaFecha === undefined ? null : validarFormularioDeFecha(formulario, { hoy, ...unaFecha });
+  const resultOk = resultDeFecha === null ? result.ok : resultDeFecha.ok;
+  const errores =
+    !triedToSave || resultOk
+      ? {}
+      : resultDeFecha !== null && !resultDeFecha.ok
+        ? resultDeFecha.errores
+        : !result.ok
+          ? result.errores
+          : {};
   const opcionDeDuenio = getOpcionDeDuenio(opciones, formulario.duenio);
   const severalDuenios = countOpciones(opciones) > 1;
   const nombreDelLugar = getNombreDelLugar(formulario.lugar);
@@ -291,11 +371,11 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
     setTriedToSave(true);
     setSaveError(null);
 
-    if (!result.ok) {
+    if (!resultOk || formulario.fecha === null) {
       return;
     }
 
-    if (debePreguntarPorFechaPasada({ fecha: result.evento.fechas[0], fechaOriginal, hoy })) {
+    if (debePreguntarPorFechaPasada({ fecha: formulario.fecha, fechaOriginal, hoy })) {
       setPreguntandoFecha(true);
       return;
     }
@@ -312,36 +392,66 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
     persist();
   };
 
-  const persist = () => {
-    if (!result.ok) {
+  const onSaveError = (error: unknown) => {
+    const tipo = getTipoDeError(error);
+
+    // Saving again would fail the same way: there is nothing left to edit.
+    if (tipo === 'no-existe') {
+      Alert.alert('No se pudo guardar', getMensajeDeError(tipo));
+      onClose();
       return;
     }
 
+    setSaveError(getMensajeDeError(tipo));
+  };
+
+  /** `aceptaPerdidas`: the person already chose "Guardar igual". */
+  const persist = (aceptaPerdidas = false) => {
     // What was written stays in the form whatever happens.
-    if (!hasConexion()) {
+    if ((resultDeFecha === null ? result.ok : resultDeFecha.ok) && !hasConexion()) {
       setSaveError(getMensajeDeError('sin-conexion'));
       return;
     }
 
-    guardar.mutate(result.evento, {
-      onSuccess: onClose,
-      onError: (error) => {
-        const tipo = getTipoDeError(error);
+    if (resultDeFecha !== null) {
+      if (resultDeFecha.ok) {
+        guardarFecha.mutate(resultDeFecha.excepcion, { onSuccess: onClose, onError: onSaveError });
+      }
+      return;
+    }
 
-        // Saving again would fail the same way: there is nothing left to edit.
-        if (tipo === 'no-existe') {
-          Alert.alert('No se pudo guardar', getMensajeDeError(tipo));
-          onClose();
-          return;
-        }
+    if (!result.ok) {
+      return;
+    }
 
-        setSaveError(getMensajeDeError(tipo));
-      },
-    });
+    const aviso =
+      excepciones === undefined || aceptaPerdidas
+        ? null
+        : getAvisoDePerdidas(
+            excepciones,
+            result.evento,
+            hoy,
+            initial.duenio === null ? undefined : { duenio: initial.duenio },
+          );
+    if (aviso !== null) {
+      setAvisoDePerdidas(aviso);
+      return;
+    }
+
+    guardar.mutate(result.evento, { onSuccess: onClose, onError: onSaveError });
   };
 
   return (
     <>
+      {unaFecha !== undefined && (
+        <NotaDeSerie role="alert">
+          <AppText weight="bold" color="azulOscuro">
+            {getLeyendaDeUnaFecha(initial.fecha ?? unaFecha.fechaOriginal)}
+          </AppText>{' '}
+          {LEYENDA_DEL_RESTO}
+        </NotaDeSerie>
+      )}
+
       <View style={styles.fields}>
         <Field error={errores.titulo}>
           <TextField
@@ -352,40 +462,42 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
           />
         </Field>
 
-        <Field error={errores.duenio}>
-          <AppText variant="label" nativeID="duenio">
-            Dueño
-          </AppText>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Dueño: ${opcionDeDuenio?.nombre ?? 'sin elegir'}`}
-            // With a single possible duenio there is nothing to choose.
-            disabled={!severalDuenios}
-            onPress={() => setOpenSheet('duenio')}
-            style={({ pressed }) => [styles.picker, pressed && styles.pressed]}
-          >
-            <View style={styles.pickerTexts}>
-              {opcionDeDuenio ? (
-                <>
-                  <AppText variant="cuerpoGrande" style={styles.pickerLine}>
-                    {opcionDeDuenio.nombre}
-                  </AppText>
-                  <AppText variant="chico">{opcionDeDuenio.detalle}</AppText>
-                </>
-              ) : (
-                <AppText variant="cuerpoGrande" color="textoTenue">
-                  Elegir
-                </AppText>
-              )}
-            </View>
-            {severalDuenios && <Chevron />}
-          </Pressable>
-          {opcionDeDuenio && (
-            <AppText variant="chico" style={styles.hint}>
-              {getDuenioDelDetalle(opcionDeDuenio.duenio, opcionDeDuenio.nombre).seVe}.
+        {unaFecha === undefined && (
+          <Field error={errores.duenio}>
+            <AppText variant="label" nativeID="duenio">
+              Dueño
             </AppText>
-          )}
-        </Field>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Dueño: ${opcionDeDuenio?.nombre ?? 'sin elegir'}`}
+              // With a single possible duenio there is nothing to choose.
+              disabled={!severalDuenios}
+              onPress={() => setOpenSheet('duenio')}
+              style={({ pressed }) => [styles.picker, pressed && styles.pressed]}
+            >
+              <View style={styles.pickerTexts}>
+                {opcionDeDuenio ? (
+                  <>
+                    <AppText variant="cuerpoGrande" style={styles.pickerLine}>
+                      {opcionDeDuenio.nombre}
+                    </AppText>
+                    <AppText variant="chico">{opcionDeDuenio.detalle}</AppText>
+                  </>
+                ) : (
+                  <AppText variant="cuerpoGrande" color="textoTenue">
+                    Elegir
+                  </AppText>
+                )}
+              </View>
+              {severalDuenios && <Chevron />}
+            </Pressable>
+            {opcionDeDuenio && (
+              <AppText variant="chico" style={styles.hint}>
+                {getDuenioDelDetalle(opcionDeDuenio.duenio, opcionDeDuenio.nombre).seVe}.
+              </AppText>
+            )}
+          </Field>
+        )}
 
         <View style={styles.dateTime}>
           <View style={styles.date}>
@@ -447,55 +559,59 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
           </View>
         </View>
 
-        <Field error={errores.fechaFin}>
-          <AppText variant="label" color={seRepite ? 'textoTenue' : 'texto'}>
-            Fecha de fin{' '}
-            <AppText variant="label" weight="regular" color="textoTenue">
-              (opcional)
-            </AppText>
-          </AppText>
-          <View style={styles.endDateRow}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Fecha de fin: ${
-                formulario.fechaFin ? formatFechaDelCampo(formulario.fechaFin) : 'sin fecha de fin'
-              }`}
-              accessibilityState={{ disabled: seRepite }}
-              // A series cannot last several days: one excludes the other.
-              disabled={seRepite}
-              onPress={() => setOpenSheet('fechaFin')}
-              style={({ pressed }) => [
-                styles.dateBox,
-                styles.endDateBox,
-                seRepite && styles.disabledBox,
-                pressed && styles.pressed,
-              ]}
-            >
-              <AppText
-                variant={formulario.fechaFin ? 'cuerpoGrande' : 'cuerpo'}
-                color={formulario.fechaFin ? 'texto' : 'textoTenue'}
-                numberOfLines={1}
-              >
-                {formulario.fechaFin
-                  ? formatFechaDelCampo(formulario.fechaFin)
-                  : 'Solo si dura varios días'}
+        {unaFecha === undefined && (
+          <Field error={errores.fechaFin}>
+            <AppText variant="label" color={seRepite ? 'textoTenue' : 'texto'}>
+              Fecha de fin{' '}
+              <AppText variant="label" weight="regular" color="textoTenue">
+                (opcional)
               </AppText>
-            </Pressable>
-            {formulario.fechaFin !== null && (
-              <Button
-                label="Quitar"
-                variant="secondary"
-                onPress={() => update({ fechaFin: null })}
-                style={styles.clearButton}
-              />
-            )}
-          </View>
-          {seRepite && (
-            <AppText variant="chico" style={styles.hint}>
-              Un evento que se repite no puede durar varios días.
             </AppText>
-          )}
-        </Field>
+            <View style={styles.endDateRow}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Fecha de fin: ${
+                  formulario.fechaFin
+                    ? formatFechaDelCampo(formulario.fechaFin)
+                    : 'sin fecha de fin'
+                }`}
+                accessibilityState={{ disabled: seRepite }}
+                // A series cannot last several days: one excludes the other.
+                disabled={seRepite}
+                onPress={() => setOpenSheet('fechaFin')}
+                style={({ pressed }) => [
+                  styles.dateBox,
+                  styles.endDateBox,
+                  seRepite && styles.disabledBox,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <AppText
+                  variant={formulario.fechaFin ? 'cuerpoGrande' : 'cuerpo'}
+                  color={formulario.fechaFin ? 'texto' : 'textoTenue'}
+                  numberOfLines={1}
+                >
+                  {formulario.fechaFin
+                    ? formatFechaDelCampo(formulario.fechaFin)
+                    : 'Solo si dura varios días'}
+                </AppText>
+              </Pressable>
+              {formulario.fechaFin !== null && (
+                <Button
+                  label="Quitar"
+                  variant="secondary"
+                  onPress={() => update({ fechaFin: null })}
+                  style={styles.clearButton}
+                />
+              )}
+            </View>
+            {seRepite && (
+              <AppText variant="chico" style={styles.hint}>
+                Un evento que se repite no puede durar varios días.
+              </AppText>
+            )}
+          </Field>
+        )}
 
         <View style={styles.field}>
           <AppText variant="label">
@@ -546,44 +662,54 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
         error={errores.enfasis}
       />
 
-      <SelectorDeRepeticion
-        fecha={formulario.fecha ?? hoy}
-        hoy={hoy}
-        repeticion={formulario.repeticion}
-        finDeSerie={formulario.finDeSerie}
-        tieneFechaFin={formulario.fechaFin !== null && formulario.fechaFin !== formulario.fecha}
-        editando={editando}
-        errorDeRepeticion={errores.repeticion}
-        errorDeHasta={errores.finDeSerie}
-        onChangeRepeticion={(repeticion) =>
-          update({
-            repeticion,
-            // "Hasta" is suggested a year after the first date, and can be shortened.
-            finDeSerie:
-              repeticion === 'ninguna' ||
-              formulario.finDeSerie !== null ||
-              formulario.fecha === null
-                ? formulario.finDeSerie
-                : getHastaSugerido(formulario.fecha),
-          })
-        }
-        onOpenHasta={() => setOpenSheet('finDeSerie')}
-      />
-
-      {/* An evento of asociacion is seen by every iglesia: it is not shared. */}
-      {opcionDeDuenio && opcionDeDuenio.duenio.alcance !== 'asociacion' && (
-        <SelectorDeIglesiasSumadas
-          duenio={opcionDeDuenio.duenio}
-          nombreDelDuenio={opcionDeDuenio.nombre}
-          elegidas={formulario.iglesiasSumadas}
-          iglesias={iglesias.data}
-          isError={iglesias.isError}
-          onRetry={() => void iglesias.refetch()}
-          onChange={(iglesiasSumadas) => update({ iglesiasSumadas })}
+      {unaFecha === undefined && (
+        <SelectorDeRepeticion
+          fecha={formulario.fecha ?? hoy}
+          hoy={hoy}
+          repeticion={formulario.repeticion}
+          finDeSerie={formulario.finDeSerie}
+          tieneFechaFin={formulario.fechaFin !== null && formulario.fechaFin !== formulario.fecha}
+          editando={editando}
+          errorDeRepeticion={errores.repeticion}
+          errorDeHasta={errores.finDeSerie}
+          onChangeRepeticion={(repeticion) =>
+            update({
+              repeticion,
+              // "Hasta" is suggested a year after the first date, and can be shortened.
+              finDeSerie:
+                repeticion === 'ninguna' ||
+                formulario.finDeSerie !== null ||
+                formulario.fecha === null
+                  ? formulario.finDeSerie
+                  : getHastaSugerido(formulario.fecha),
+            })
+          }
+          onOpenHasta={() => setOpenSheet('finDeSerie')}
         />
       )}
 
-      {(saveError !== null || (triedToSave && !result.ok)) && (
+      {/* An evento of asociacion is seen by every iglesia: it is not shared. */}
+      {unaFecha === undefined &&
+        opcionDeDuenio &&
+        opcionDeDuenio.duenio.alcance !== 'asociacion' && (
+          <SelectorDeIglesiasSumadas
+            duenio={opcionDeDuenio.duenio}
+            nombreDelDuenio={opcionDeDuenio.nombre}
+            elegidas={formulario.iglesiasSumadas}
+            iglesias={iglesias.data}
+            isError={iglesias.isError}
+            onRetry={() => void iglesias.refetch()}
+            onChange={(iglesiasSumadas) => update({ iglesiasSumadas })}
+          />
+        )}
+
+      {unaFecha !== undefined && (
+        <AppText variant="chico" style={styles.pie}>
+          {PIE_DE_UNA_FECHA}
+        </AppText>
+      )}
+
+      {(saveError !== null || (triedToSave && !resultOk)) && (
         <View accessibilityRole="alert" style={styles.banner}>
           <AppText weight="semibold" color="peligro">
             {saveError ?? 'Falta completar lo que está marcado.'}
@@ -593,11 +719,37 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
 
       <Button
         label={
-          guardar.isPending ? 'Guardando…' : id === undefined ? 'Crear evento' : 'Guardar cambios'
+          guardando
+            ? 'Guardando…'
+            : unaFecha !== undefined
+              ? 'Guardar esta fecha'
+              : id === undefined
+                ? 'Crear evento'
+                : 'Guardar cambios'
         }
-        disabled={guardar.isPending}
+        disabled={guardando}
         onPress={save}
       />
+
+      {avisoDePerdidas !== null && (
+        <ConfirmDialog
+          title={avisoDePerdidas.titulo}
+          confirmLabel="Guardar igual"
+          cancelLabel="Volver a la serie"
+          tone="primary"
+          busy={false}
+          onConfirm={() => {
+            setAvisoDePerdidas(null);
+            persist(true);
+          }}
+          onCancel={() => setAvisoDePerdidas(null)}
+        >
+          <DialogText>
+            <AppText weight="bold">{avisoDePerdidas.cantidad}</AppText>
+          </DialogText>
+          <DialogText>{avisoDePerdidas.cuales}</DialogText>
+        </ConfirmDialog>
+      )}
 
       {preguntandoFecha && formulario.fecha !== null && (
         <ConfirmDialog
@@ -851,6 +1003,11 @@ const styles = StyleSheet.create({
   },
   clearButton: {
     minHeight: accesibilidad.alturaCampo,
+  },
+  pie: {
+    marginHorizontal: PIE_MARGIN_HORIZONTAL,
+    lineHeight: PIE_SIZE * HINT_LINE_HEIGHT,
+    fontSize: PIE_SIZE,
   },
   banner: {
     padding: BANNER_PADDING,

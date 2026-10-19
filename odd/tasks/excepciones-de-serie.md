@@ -23,7 +23,7 @@ Objective: change or delete a single date of a series, in the database, the cale
 - T1 S1-S3,S7 migration + pgTAP — inline — done (pgTAP eventos_excepciones 48/48, eventos_guardar 44/44)
 - T2 S5 domain rules `excepcion.ts` — inline — done (RED: module missing; GREEN 19/19)
 - T3 S4,S6 reads, types, glossary — inline — done (Jest 972/972; types equal to `supabase gen types`; PostgREST selects probed live)
-- T4 S8-S13 one-date flow — inline — pending
+- T4 S8-S13 one-date flow — inline — done (RED: edicionDeFecha module missing, 7 data tests failing; GREEN Jest 1007/1007; screens not verified on a device, see the manual-check issue)
 
 Route: inline (no Writer trigger: sequential units sharing files).
 
@@ -37,3 +37,6 @@ Route: inline (no Writer trigger: sequential units sharing files).
 - L6 RDD review (reliability lens) approved and acknowledged. Fixed its two warnings: check_excepcion only checks a fecha_nueva or lugar_id that changes (a lugar reset in guardar_evento no longer aborts a duenio change, pgTAP 59/59, RED observed before the fix); the detail does not offer "Solo el…" to delete the last date left.
 - L7 Jorge review of #210 (head 7adcaf3): TR-1 blocker fixed (guardar_evento raises 22023 when no date would be left); CD-4 (an empty guardar_excepcion still needs a date of a series); TR-2 (row lock on the evento in guardar_excepcion and borrar_fecha, unique index on (evento_id, fecha_nueva)); SP-1 (check_dias_de_serie looks up only the affected days, cap of 500 fechas, since renewing "Hasta" keeps the first date); CD-3 (getExcepcionesPerdidas counts a lugar-only change lost to a new duenio). TR-3 was already fixed in bbb25e3 by relaxing the trigger. TR-4 (three month reads at different moments) is left. pgTAP 66/66 with RED observed, Jest green.
 - L10 Second Jorge review of #210 (head 1e94f1e): approved, one low finding CD-R1 fixed: check_dias_de_serie also checks the day the excepcion of a date written again moved to (pgTAP 67/67, RED observed). TR-5/CD-R2 (22023 shown as "Probá de nuevo") left for #213, SP-2/TR-6 pre-existing.
+- L8 Jorge review of #213 (head cc6a683): F1 was already fixed in bf49c96; F2 (useGuardarExcepcion and useBorrarFecha read the evento again on no-existe or fecha-cambiada) and S1 (useBorrarFecha marks the evento stale without refetching while the detail leaves) fixed with hook tests; getAvisoDePerdidas takes the serie as it was and names dates that lose a lugar of the old duenio. Jest 1014/1014.
+- L9 Second Jorge review of #213 (head 8236305): TR-C1 fixed (22023 from borrar_fecha is fecha-cambiada, so the evento is read again) and CD-C1 fixed (mixed reasons say the dates lose their own changes); added hook tests for the no-existe branch and for an error that is not about the evento (RDD advisories). Jest 1020/1020.
+- L11 RDD advisories on d713ed1: 22023 counts as fecha-cambiada only for borrar_fecha; renamed a hook test; noted the unused singular of mezclados. Jest 1022/1022.
