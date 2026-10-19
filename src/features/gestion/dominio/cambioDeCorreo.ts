@@ -1,5 +1,5 @@
-// Changing the correo of a usuario: only an admin, and only of a usuario who
-// holds a cargo they manage. Whoever else manages cargos removes the cargo and
+// Changing the correo of a usuario: only an admin, and only of a usuario whose
+// every cargo they manage. Whoever else manages cargos removes the cargo and
 // invites the right correo instead. The database comes in as ports; the server
 // function (supabase/functions/cambiar-correo) wires the real ones.
 //
@@ -51,7 +51,13 @@ export async function cambiarCorreo(
       puertos.leerCargosDelGestor(),
       puertos.leerCargosDelUsuario(usuarioId),
     ]);
-    if (!cargosDelUsuario.some((cargo) => puedeCambiarCorreo(cargosDelGestor, cargo))) {
+    // Every cargo, not one: whoever controls the correo signs in as the usuario
+    // and holds all of their cargos, so an admin cannot take a usuario who also
+    // holds a cargo they do not manage (another admin, another asociacion).
+    if (
+      cargosDelUsuario.length === 0 ||
+      !cargosDelUsuario.every((cargo) => puedeCambiarCorreo(cargosDelGestor, cargo))
+    ) {
       return { ok: false, falla: 'sin_permiso' };
     }
 

@@ -77,6 +77,36 @@ describe('cambiarCorreo', () => {
     expect(await cambiarCorreo(PEDIDO, puertos)).toEqual({ ok: false, falla: 'sin_permiso' });
   });
 
+  it('rejected: the admin cannot change the correo of an admin of another asociacion who is also an encargado of theirs', async () => {
+    // Taking that correo would sign the admin in as the other one, with every
+    // cargo they hold.
+    const { puertos, estado } = crearPuertos({
+      cargosDelGestor: [ADMIN],
+      cargosDelUsuario: [ENCARGADO, OTRO_ADMIN],
+    });
+
+    expect(await cambiarCorreo(PEDIDO, puertos)).toEqual({ ok: false, falla: 'sin_permiso' });
+    expect(estado.usuarios).toEqual({ 'ana@example.com': 'usuario-ana' });
+  });
+
+  it('rejected: the admin cannot change the correo of a usuario with a cargo in another asociacion', async () => {
+    const { puertos } = crearPuertos({
+      cargosDelGestor: [ADMIN],
+      cargosDelUsuario: [ENCARGADO, { ...ENCARGADO, asociacionId: 'otra-asociacion' }],
+    });
+
+    expect(await cambiarCorreo(PEDIDO, puertos)).toEqual({ ok: false, falla: 'sin_permiso' });
+  });
+
+  it('allowed: the admin changes the correo of a usuario whose every cargo they manage', async () => {
+    const { puertos } = crearPuertos({
+      cargosDelGestor: [ADMIN],
+      cargosDelUsuario: [ENCARGADO, PASTOR],
+    });
+
+    expect(await cambiarCorreo(PEDIDO, puertos)).toEqual({ ok: true });
+  });
+
   it('rejects a correo that belongs to another usuario, without changing anything', async () => {
     const { puertos, estado } = crearPuertos({
       cargosDelGestor: [ADMIN],
