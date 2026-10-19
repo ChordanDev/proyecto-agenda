@@ -11,8 +11,14 @@
 -- under the names `project_url` and `service_role_key`. Without them the
 -- schedule does nothing and leaves a warning in the log of the database.
 --
+-- `service_role_key` must be exactly the value the function sees as
+-- SUPABASE_SERVICE_ROLE_KEY: the legacy service_role key, a JWT that starts
+-- with `eyJ` (Project Settings, API Keys, Legacy API keys). A new secret key
+-- (`sb_secret_...`) gets a 401, and since pg_net does not wait for the answer
+-- it only shows in net._http_response.
+--
 --   select vault.create_secret('https://<ref>.supabase.co', 'project_url');
---   select vault.create_secret('<service_role key>', 'service_role_key');
+--   select vault.create_secret('<legacy service_role JWT, eyJ...>', 'service_role_key');
 
 create extension if not exists pg_cron with schema pg_catalog;
 create extension if not exists pg_net with schema extensions;

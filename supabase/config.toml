@@ -449,7 +449,9 @@ verify_jwt = true
 verify_jwt = true
 
 # The daily recordatorios (issue #163). Only the schedule of pg_cron calls it,
-# with the service_role key, which the function itself checks: the gateway
-# would reject the new secret keys, which are not JWTs.
+# with the legacy service_role key (a JWT, the value of
+# SUPABASE_SERVICE_ROLE_KEY) that Vault keeps. The function itself checks for
+# exactly that key: the gateway would also let in any other valid JWT, such as
+# the anon key, so its check is left off.
 [functions.enviar-recordatorios]
 verify_jwt = false
