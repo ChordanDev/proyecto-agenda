@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Usuario</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&amp;family=Oswald:wght@500;600&amp;display=swap">
+<style>
+body{margin:0;font-family:'Noto Sans','Segoe UI',system-ui,sans-serif;color:#222222}
+a{color:#1B3550}a:hover{color:#10233A}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; background: linear-gradient(180deg, #2F557F 0px, #E6EBF1 190px, #C9D4E0 100%); display: flex; flex-direction: column; font-family: 'Noto Sans', 'Segoe UI', system-ui, sans-serif; color: #222222">
+  <!-- Usuarios of the admin (#155, #160). State: vista 'usuario' | 'agregar' | 'correo'.
+       The cargo of admin never shows: only the developers assign it (#13). Quitar a cargo uses the same confirmation as 08c. -->
+  <header style="flex-shrink: 0; padding: 22px 16px 0; display: flex; align-items: center; gap: 12px">
+    <sc-if value="{{ verUsuario }}" hint-placeholder-val="{{ true }}">
+      <a href="GestionAdmin.dc.html" aria-label="Volver" style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: #FFFFFF; display: flex; align-items: center; justify-content: center; color: #1B3550">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>
+      </a>
+    </sc-if>
+    <sc-if value="{{ enFormulario }}" hint-placeholder-val="{{ false }}">
+      <a href="GestionAdmin.dc.html" aria-label="Cancelar" style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: #FFFFFF; display: flex; align-items: center; justify-content: center; color: #1B3550">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </a>
+    </sc-if>
+    <span style="font-size: 20px; font-weight: 700; color: #000000">{{ titulo }}</span>
+  </header>
+
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 30px 16px 36px; display: flex; flex-direction: column; gap: 14px">
+    <sc-if value="{{ verUsuario }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 16px; padding: 18px 16px; border-radius: 20px; background: #FFFFFF">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="nombre" style="font-size: 16px; font-weight: 700">Nombre</label>
+        <input id="nombre" type="text" value="Luis Acosta" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 16px; font-weight: 700">Correo</span>
+        <span style="font-size: 18px; color: #222222">luis.acosta@gmail.com</span>
+        <button type="button" onClick="{{ cambiarCorreo }}" style="align-self: flex-start; min-height: 44px; display: flex; align-items: center; border: 0; background: transparent; padding: 0; font-family: inherit; font-size: 16px; font-weight: 700; color: #1B3550; text-decoration: underline; cursor: pointer">Cambiar correo</button>
+      </div>
+      </div>
+      <h2 style="margin: 0 4px; font-size: 19px; font-weight: 700">Cargos</h2>
+      <div style="display: flex; flex-direction: column; background: #FFFFFF; border-radius: 20px; overflow: hidden">
+        <sc-for list="{{ cargos }}" as="c" hint-placeholder-count="2">
+          <div style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 12px 14px 12px 18px; border-bottom: 1px solid #EEEEEE">
+            <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0"><span style="font-size: 17px; font-weight: 700">{{ c.cargo }}</span><span style="font-size: 15px; color: #4A4A4A">{{ c.donde }}</span></span>
+            <button type="button" style="margin-left: auto; flex-shrink: 0; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 2px solid #B0103F; background: #FFFFFF; color: #B0103F; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">Quitar</button>
+          </div>
+        </sc-for>
+      </div>
+      <!-- Opens Agregar usuario with nombre and correo already filled. -->
+      <button type="button" onClick="{{ darCargo }}" style="display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 58px; border-radius: 14px; border: 0; background: #1B3550; color: #FFFFFF; font-family: inherit; font-size: 18px; font-weight: 700; cursor: pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg><span>Darle otro cargo</span></button>
+      <button type="button" style="display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 56px; border-radius: 14px; border: 0; background: #E3EAF2; color: #1B3550; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Guardar nombre</button>
+    </sc-if>
+
+    <sc-if value="{{ verAgregar }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 18px 16px; border-radius: 20px; background: #FFFFFF">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="nuevoNombre" style="font-size: 16px; font-weight: 700">Nombre</label>
+        <input id="nuevoNombre" type="text" value="Pablo Ortiz" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="nuevoCorreo" style="font-size: 16px; font-weight: 700">Correo</label>
+        <input id="nuevoCorreo" type="text" value="pablo.ortiz@gmail.com" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
+      </div>
+        <span id="tCargo" style="margin-top: 4px; font-size: 16px; font-weight: 700">Cargo</span>
+        <!-- One cargo per alta. Encargado and Secretaria ask for the iglesia; Pastor asks for the distrito. -->
+        <div role="radiogroup" aria-labelledby="tCargo" style="display: flex; flex-direction: column">
+          <button type="button" role="radio" aria-checked="false" style="display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 0; border: 0; border-bottom: 1px solid #EEEEEE; background: transparent; font-family: inherit; font-size: 17px; font-weight: 600; text-align: left; color: #222222; cursor: pointer"><span style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid #9AA7B6; box-sizing: border-box; flex-shrink: 0"></span>Encargado de iglesia</button>
+          <button type="button" role="radio" aria-checked="false" style="display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 0; border: 0; border-bottom: 1px solid #EEEEEE; background: transparent; font-family: inherit; font-size: 17px; font-weight: 600; text-align: left; color: #222222; cursor: pointer"><span style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid #9AA7B6; box-sizing: border-box; flex-shrink: 0"></span>Secretaria de iglesia</button>
+          <button type="button" role="radio" aria-checked="true" style="display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 0; border: 0; background: transparent; font-family: inherit; font-size: 17px; font-weight: 600; text-align: left; color: #222222; cursor: pointer"><span style="width: 24px; height: 24px; border-radius: 50%; border: 7px solid #1B3550; box-sizing: border-box; flex-shrink: 0"></span>Pastor de distrito</button>
+        </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span id="tDistritoCargo" style="font-size: 16px; font-weight: 700">Distrito</span>
+        <button type="button" aria-labelledby="tDistritoCargo" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 6px 12px 6px 16px; font-family: inherit; font-size: 18px; text-align: left; cursor: pointer; color: #222222"><span>Distrito Sur</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B3550" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0"><path d="M6 9l6 6 6-6"></path></svg></button>
+      </div>
+      </div>
+      <button type="button" style="display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 58px; border-radius: 14px; border: 0; background: #1B3550; color: #FFFFFF; font-family: inherit; font-size: 18px; font-weight: 700; cursor: pointer">Agregar usuario</button>
+    </sc-if>
+
+    <!-- Only the admin changes a correo (#160): the old one stops working to sign in. -->
+    <sc-if value="{{ verCorreo }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 16px; padding: 18px 16px; border-radius: 20px; background: #FFFFFF">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 16px; font-weight: 700">Correo actual</span>
+        <span style="font-size: 18px; color: #222222">luis.acosta@gmail.com</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="correoNuevo" style="font-size: 16px; font-weight: 700">Correo nuevo</label>
+        <input id="correoNuevo" type="text" value="luisacosta.pastor@gmail.com" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
+      </div>
+        <div role="status" style="border-radius: 14px; background: #FFF1CC; color: #6B4E00; padding: 12px 14px; font-size: 15px; line-height: 1.4">El correo actual deja de servir para entrar. Luis va a entrar con el código que le llegue al correo nuevo.</div>
+      </div>
+      <button type="button" style="display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 58px; border-radius: 14px; border: 0; background: #1B3550; color: #FFFFFF; font-family: inherit; font-size: 18px; font-weight: 700; cursor: pointer">Cambiar correo</button>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const vista = st.vista || 'usuario';
+    const cargos = [
+      { cargo: 'Pastor', donde: 'Distrito Centro' },
+      { cargo: 'Encargado · Anciano', donde: 'Iglesia El Trapiche' }
+    ];
+    return {
+      cargos,
+      verUsuario: vista === 'usuario', verAgregar: vista === 'agregar', verCorreo: vista === 'correo',
+      enFormulario: vista !== 'usuario',
+      titulo: { usuario: 'Luis Acosta', agregar: 'Agregar usuario', correo: 'Cambiar correo' }[vista],
+      cambiarCorreo: () => this.setState({ vista: 'correo' }),
+      darCargo: () => this.setState({ vista: 'agregar' })
+    };
+  }
+}
+</script>
+</body>
+</html>

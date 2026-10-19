@@ -31,8 +31,38 @@ a{color:#1B3550}a:hover{color:#10233A}
     <label for="buscar" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Buscar por nombre</label>
     <div style="display: flex; align-items: center; gap: 10px; height: 56px; box-sizing: border-box; border-radius: 14px; background: #FFFFFF; padding: 0 16px">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4A4A4A" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
-      <input id="buscar" type="search" placeholder="Buscar por nombre" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-size: 17px; font-family: inherit; color: #222222">
+      <input id="buscar" type="search" value="{{ busqueda }}" placeholder="Buscar por nombre" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-size: 17px; font-family: inherit; color: #222222">
     </div>
+
+    <!-- v2 (#164, #167): "Usar mi ubicación". Off in v1; the variable "ubicacion" turns it on for the captures 3b to 3h.
+         The permiso is asked only on tapping the button, never on opening the screen. The ubicación is used once, on the phone, and never saved or sent. -->
+    <sc-if value="{{ conBoton }}" hint-placeholder-val="{{ false }}">
+      <button type="button" onClick="{{ usarUbicacion }}" style="display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 54px; box-sizing: border-box; border-radius: 14px; border: 2px solid #1B3550; background: #FFFFFF; color: #1B3550; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>Usar mi ubicación</button>
+    </sc-if>
+    <!-- While the phone looks for the ubicación: it can take a few seconds. -->
+    <sc-if value="{{ buscando }}" hint-placeholder-val="{{ false }}">
+      <button type="button" disabled aria-busy="true" style="display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 54px; box-sizing: border-box; border-radius: 14px; border: 2px solid #1B3550; background: #FFFFFF; color: #1B3550; font-family: inherit; font-size: 17px; font-weight: 700; opacity: 0.6">Buscando tu ubicación…</button>
+    </sc-if>
+    <!-- With ubicación, the button gives way to this line and the list shows every iglesia by distance; one without coordinates goes last, without distance. -->
+    <sc-if value="{{ porCercania }}" hint-placeholder-val="{{ false }}">
+      <span role="status" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 6px; font-size: 16px; font-weight: 700; color: #1B3550"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>De la más cercana a la más lejana</span>
+    </sc-if>
+    <!-- Permiso denied or no ubicación: the buscador por nombre keeps working. Denied for good: the button goes, since tapping it again would not ask. -->
+    <sc-if value="{{ conAviso }}" hint-placeholder-val="{{ false }}">
+      <div role="alert" style="display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 20px; background: #FFFFFF">
+        <span style="width: 40px; height: 40px; border-radius: 50%; background: #FFF1CC; color: #8A6400; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9.5 17h-19L12 3z"></path><path d="M12 10v4.5M12 17.5v.5"></path></svg></span>
+        <span style="display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 17px; font-weight: 700">No pudimos usar tu ubicación.</span>
+          <span style="font-size: 15px; line-height: 1.4; color: #4A4A4A">Podés buscar tu iglesia por nombre.</span>
+          <sc-if value="{{ definitivo }}" hint-placeholder-val="{{ false }}">
+            <button type="button" style="align-self: flex-start; min-height: 50px; margin-top: 6px; padding: 0 14px; border: 0; border-radius: 12px; background: #E3EAF2; color: #1B3550; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">Abrir ajustes del teléfono</button>
+          </sc-if>
+        </span>
+      </div>
+    </sc-if>
+    <sc-if value="{{ reintento }}" hint-placeholder-val="{{ false }}">
+      <button type="button" onClick="{{ usarUbicacion }}" style="display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 54px; box-sizing: border-box; border-radius: 14px; border: 2px solid #1B3550; background: #FFFFFF; color: #1B3550; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>Usar mi ubicación</button>
+    </sc-if>
 
     <div role="radiogroup" aria-label="Iglesias" style="display: flex; flex-direction: column; background: #FFFFFF; border-radius: 20px; overflow: hidden">
       <sc-for list="{{ iglesias }}" as="ig" hint-placeholder-count="4">
@@ -40,6 +70,9 @@ a{color:#1B3550}a:hover{color:#10233A}
           <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
             <span style="font-size: 18px; font-weight: 700">{{ ig.nombre }}</span>
             <span style="font-size: 15px; color: #4A4A4A">{{ ig.distrito }} · {{ ig.localidad }}</span>
+            <sc-if value="{{ ig.distancia }}" hint-placeholder-val="{{ false }}">
+              <span style="display: flex; align-items: center; gap: 4px; font-size: 15px; font-weight: 700; color: #1B3550"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>{{ ig.distancia }}</span>
+            </sc-if>
           </span>
           <sc-if value="{{ ig.sel }}" hint-placeholder-val="{{ false }}">
             <span style="width: 28px; height: 28px; border-radius: 50%; background: #2F557F; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
@@ -60,15 +93,37 @@ a{color:#1B3550}a:hover{color:#10233A}
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
   renderVals() {
-    const sel = (this.state && this.state.sel) || 'central';
-    const data = [
+    const st = this.state || {};
+    // ubicacion (v2): boton | buscando | cercania | filtrada | error | definitivo | final. Without it, the v1 screen.
+    const ubicacion = st.ubicacion || null;
+    const sel = st.sel || (ubicacion ? '' : 'central');
+    const v1 = [
       { id: 'central', nombre: 'Iglesia Central', distrito: 'Distrito Norte', localidad: 'Córdoba' },
       { id: 'norte', nombre: 'Iglesia Barrio Norte', distrito: 'Distrito Norte', localidad: 'Córdoba' },
       { id: 'rosas', nombre: 'Iglesia Las Rosas', distrito: 'Distrito Norte', localidad: 'Villa Allende' },
       { id: 'jardin', nombre: 'Iglesia Jardín', distrito: 'Distrito Sur', localidad: 'Alta Gracia' }
     ];
+    // Distance: meters under 1 km, one decimal under 10 km, none from 10 km (#165).
+    const cercania = [
+      { id: 'norte', nombre: 'Iglesia Barrio Norte', distrito: 'Distrito Norte', localidad: 'Córdoba', distancia: 'a 800 m' },
+      { id: 'central', nombre: 'Iglesia Central', distrito: 'Distrito Norte', localidad: 'Córdoba', distancia: 'a 3,2 km' },
+      { id: 'rosas', nombre: 'Iglesia Las Rosas', distrito: 'Distrito Norte', localidad: 'Villa Allende', distancia: 'a 25 km' },
+      { id: 'jardin', nombre: 'Iglesia Jardín', distrito: 'Distrito Sur', localidad: 'Alta Gracia', distancia: 'a 38 km' },
+      { id: 'sanmartin', nombre: 'Iglesia San Martín', distrito: 'Distrito Norte', localidad: 'Córdoba', distancia: '' }
+    ];
+    const filtrada = [
+      cercania[1],
+      { id: 'centenario', nombre: 'Iglesia Centenario', distrito: 'Distrito Sur', localidad: 'Alta Gracia', distancia: 'a 36 km' }
+    ];
+    const data = { cercania: cercania.slice(0, 4), filtrada, final: cercania.slice(2), error: v1.slice(0, 3), definitivo: v1.slice(0, 3) }[ubicacion] || v1;
+    const porCercania = ['cercania', 'filtrada', 'final'].includes(ubicacion);
     return {
+      busqueda: ubicacion === 'filtrada' ? 'Central' : '',
+      conBoton: ubicacion === 'boton', buscando: ubicacion === 'buscando', porCercania,
+      conAviso: ubicacion === 'error' || ubicacion === 'definitivo', definitivo: ubicacion === 'definitivo', reintento: ubicacion === 'error',
+      usarUbicacion: () => this.setState({ ubicacion: 'buscando' }),
       iglesias: data.map((ig) => ({
+        distancia: '',
         ...ig,
         sel: ig.id === sel,
         notSel: ig.id !== sel,

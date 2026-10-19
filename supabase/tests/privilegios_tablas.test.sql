@@ -18,7 +18,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(44);
+select plan(56);
 
 -- Exact privileges ---------------------------------------------------------------
 
@@ -116,6 +116,36 @@ select is(
   coalesce((
     select array_agg(p order by p)
     from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    where has_table_privilege('anon', 'public.chat_consentimientos', p)
+  ), array[]::text[]),
+  array[]::text[],
+  'anon has exactly the expected privileges on chat_consentimientos'
+);
+
+select is(
+  coalesce((
+    select array_agg(p order by p)
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    where has_table_privilege('anon', 'public.chat_consultas', p)
+  ), array[]::text[]),
+  array[]::text[],
+  'anon has exactly the expected privileges on chat_consultas'
+);
+
+select is(
+  coalesce((
+    select array_agg(p order by p)
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    where has_table_privilege('anon', 'public.chat_gastos', p)
+  ), array[]::text[]),
+  array[]::text[],
+  'anon has exactly the expected privileges on chat_gastos'
+);
+
+select is(
+  coalesce((
+    select array_agg(p order by p)
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
     where has_table_privilege('authenticated', 'public.asociaciones', p)
   ), array[]::text[]),
   array['SELECT']::text[],
@@ -202,6 +232,38 @@ select is(
   'authenticated has exactly the expected privileges on perfiles'
 );
 
+-- chat_consentimientos also has insert on its usuario_id column, which is a
+-- column privilege and not one of the table; chat_limites.test.sql checks it.
+select is(
+  coalesce((
+    select array_agg(p order by p)
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    where has_table_privilege('authenticated', 'public.chat_consentimientos', p)
+  ), array[]::text[]),
+  array['SELECT']::text[],
+  'authenticated has exactly the expected privileges on chat_consentimientos'
+);
+
+select is(
+  coalesce((
+    select array_agg(p order by p)
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    where has_table_privilege('authenticated', 'public.chat_consultas', p)
+  ), array[]::text[]),
+  array[]::text[],
+  'authenticated has exactly the expected privileges on chat_consultas'
+);
+
+select is(
+  coalesce((
+    select array_agg(p order by p)
+    from unnest(array['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']) as p
+    where has_table_privilege('authenticated', 'public.chat_gastos', p)
+  ), array[]::text[]),
+  array[]::text[],
+  'authenticated has exactly the expected privileges on chat_gastos'
+);
+
 -- Truncate --------------------------------------------------------------------
 -- The privilege check comes first, so the tables are not touched.
 
@@ -244,6 +306,18 @@ select throws_ok(
   $$ truncate public.perfiles $$,
   '42501', 'permission denied for table perfiles', 'anon cannot truncate perfiles'
 );
+select throws_ok(
+  $$ truncate public.chat_consentimientos $$,
+  '42501', 'permission denied for table chat_consentimientos', 'anon cannot truncate chat_consentimientos'
+);
+select throws_ok(
+  $$ truncate public.chat_consultas $$,
+  '42501', 'permission denied for table chat_consultas', 'anon cannot truncate chat_consultas'
+);
+select throws_ok(
+  $$ truncate public.chat_gastos $$,
+  '42501', 'permission denied for table chat_gastos', 'anon cannot truncate chat_gastos'
+);
 
 reset role;
 
@@ -285,6 +359,18 @@ select throws_ok(
 select throws_ok(
   $$ truncate public.perfiles $$,
   '42501', 'permission denied for table perfiles', 'authenticated cannot truncate perfiles'
+);
+select throws_ok(
+  $$ truncate public.chat_consentimientos $$,
+  '42501', 'permission denied for table chat_consentimientos', 'authenticated cannot truncate chat_consentimientos'
+);
+select throws_ok(
+  $$ truncate public.chat_consultas $$,
+  '42501', 'permission denied for table chat_consultas', 'authenticated cannot truncate chat_consultas'
+);
+select throws_ok(
+  $$ truncate public.chat_gastos $$,
+  '42501', 'permission denied for table chat_gastos', 'authenticated cannot truncate chat_gastos'
 );
 
 reset role;

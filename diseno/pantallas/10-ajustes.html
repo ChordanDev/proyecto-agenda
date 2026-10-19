@@ -45,26 +45,31 @@ a{color:#1B3550}a:hover{color:#10233A}
     </div>
     </sc-if>
 
-    <!-- v2: event reminders. Kept here so they do not need a new design; off in v1. -->
+    <!-- v2: Recordatorios (#161, #162). Off in v1 (conNotificaciones). Tied to the phone, not to the person.
+         recordatorios: 'encendido' (hermano, encargado, secretaria: their iglesia, on by default) | 'inicio' (pastor, admin: no iglesia chosen yet, off)
+         | 'elegidas' (pastor, admin with iglesias chosen) | 'sinPermiso' (the phone denied notifications). hoja 'pastor' | 'admin' opens the choice of iglesias. -->
     <sc-if value="{{ conNotificaciones }}" hint-placeholder-val="{{ false }}">
     <section style="display: flex; flex-direction: column; gap: 10px">
-      <h2 style="margin: 0 4px; font-size: 17px; font-weight: 700">Notificaciones</h2>
+      <h2 style="margin: 0 4px; font-size: 17px; font-weight: 700">Recordatorios</h2>
       <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; border-radius: 20px; background: #FFFFFF">
         <div style="display: flex; align-items: center; gap: 12px">
-          <span id="lblRec" style="flex: 1; font-size: 18px; font-weight: 700">Recordatorios de eventos</span>
+          <span id="lblRec" style="flex: 1; font-size: 18px; font-weight: 700; color: {{ colorTitulo }}">Recordatorios de eventos</span>
           <sc-if value="{{ on }}" hint-placeholder-val="{{ true }}">
             <button type="button" role="switch" aria-checked="true" aria-labelledby="lblRec" onClick="{{ toggle }}" style="position: relative; width: 62px; height: 36px; flex-shrink: 0; border-radius: 999px; border: 0; background: #2F557F; cursor: pointer; padding: 0">
               <span style="position: absolute; top: 4px; left: 30px; width: 28px; height: 28px; border-radius: 50%; background: #FFFFFF"></span>
             </button>
           </sc-if>
           <sc-if value="{{ off }}" hint-placeholder-val="{{ false }}">
-            <button type="button" role="switch" aria-checked="false" aria-labelledby="lblRec" onClick="{{ toggle }}" style="position: relative; width: 62px; height: 36px; flex-shrink: 0; border-radius: 999px; border: 0; background: #C9D0D8; cursor: pointer; padding: 0">
+            <button type="button" role="switch" aria-checked="false" aria-labelledby="lblRec" onClick="{{ toggle }}" disabled="{{ sinPermiso }}" style="position: relative; width: 62px; height: 36px; flex-shrink: 0; border-radius: 999px; border: 0; background: #C9D0D8; cursor: pointer; padding: 0; opacity: {{ opacidadSwitch }}">
               <span style="position: absolute; top: 4px; left: 4px; width: 28px; height: 28px; border-radius: 50%; background: #FFFFFF"></span>
             </button>
           </sc-if>
         </div>
-        <span style="font-size: 15px; line-height: 1.4; color: #4A4A4A">Te avisamos el día anterior a cada evento de tu iglesia.</span>
-        <sc-if value="{{ on }}" hint-placeholder-val="{{ true }}">
+        <sc-if value="{{ conTexto }}" hint-placeholder-val="{{ true }}">
+          <span style="font-size: 15px; line-height: 1.4; color: #4A4A4A">{{ texto }}</span>
+        </sc-if>
+        <!-- Hermano and encargado: the example of the aviso. Only eventos with énfasis avisan (#163). -->
+        <sc-if value="{{ conEjemplo }}" hint-placeholder-val="{{ true }}">
           <div style="display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 14px; background: #EEF1F5">
             <span style="width: 12px; height: 20px; border-radius: 0 20px 20px 0; background: #FFD84D; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15); flex-shrink: 0"></span>
             <span style="display: flex; flex-direction: column; gap: 1px">
@@ -73,20 +78,43 @@ a{color:#1B3550}a:hover{color:#10233A}
             </span>
           </div>
         </sc-if>
+        <!-- Pastor and admin start with no iglesia: off until they choose. -->
+        <sc-if value="{{ inicio }}" hint-placeholder-val="{{ false }}">
+          <button type="button" onClick="{{ abrirHoja }}" style="display: flex; align-items: center; justify-content: center; min-height: 54px; border: 0; border-radius: 14px; background: #1B3550; font-family: inherit; font-size: 17px; font-weight: 700; color: #FFFFFF; cursor: pointer">Elegir iglesias</button>
+        </sc-if>
+        <sc-if value="{{ elegidas }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: #EEF1F5">
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+              <span style="font-size: 16px; font-weight: 700">2 iglesias</span>
+              <span style="font-size: 15px; color: #4A4A4A">Iglesia Central y Iglesia Las Rosas</span>
+            </span>
+            <button type="button" onClick="{{ abrirHoja }}" style="display: inline-flex; align-items: center; min-height: 46px; padding: 0 16px; border: 0; border-radius: 12px; background: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 700; color: #1B3550; flex-shrink: 0; cursor: pointer">Cambiar</button>
+          </div>
+        </sc-if>
+        <!-- The phone denied the permiso: the switch is off and grey until it is given. -->
+        <sc-if value="{{ sinPermiso }}" hint-placeholder-val="{{ false }}">
+          <div role="alert" style="display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 14px; background: #FFF8E1">
+            <span style="width: 40px; height: 40px; border-radius: 50%; background: #FFF1CC; color: #8A6400; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9.5 17h-19L12 3z"></path><path d="M12 10v4.5M12 17.5v.5"></path></svg></span>
+            <span style="display: flex; flex-direction: column; gap: 4px">
+              <span style="font-size: 16px; font-weight: 700">El teléfono no deja que la app te avise</span>
+              <span style="font-size: 15px; line-height: 1.4; color: #4A4A4A">Entrá a la configuración del teléfono, tocá <strong>Notificaciones</strong> y activalas para Agenda de iglesia.</span>
+            </span>
+          </div>
+          <button type="button" style="display: flex; align-items: center; justify-content: center; min-height: 54px; border: 0; border-radius: 14px; background: #1B3550; font-family: inherit; font-size: 17px; font-weight: 700; color: #FFFFFF; cursor: pointer">Abrir la configuración</button>
+        </sc-if>
       </div>
     </section>
     </sc-if>
-
     <!-- Only with a sesion: the hermano sees Mi iglesia alone. -->
     <sc-if value="{{ conSesion }}" hint-placeholder-val="{{ true }}">
     <section style="display: flex; flex-direction: column; gap: 10px">
       <h2 style="margin: 0 4px; font-size: 17px; font-weight: 700">Cuenta</h2>
       <div style="display: flex; flex-direction: column; gap: 14px; padding: 16px 18px; border-radius: 20px; background: #FFFFFF">
         <div style="display: flex; align-items: center; gap: 12px">
-          <span style="width: 44px; height: 44px; border-radius: 50%; background: #E3EAF2; color: #1B3550; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; flex-shrink: 0">MG</span>
+          <span style="width: 44px; height: 44px; border-radius: 50%; background: #E3EAF2; color: #1B3550; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; flex-shrink: 0">{{ iniciales }}</span>
           <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
-            <span style="font-size: 18px; font-weight: 700">Marta Gómez</span>
-            <span style="font-size: 15px; color: #4A4A4A">Encargada de calendario · Iglesia Central</span>
+            <span style="font-size: 18px; font-weight: 700">{{ nombre }}</span>
+            <span style="font-size: 15px; color: #4A4A4A">{{ cargo }}</span>
           </span>
         </div>
         <!-- Asks first, as the yellow notice of a usuario without cargos does. -->
@@ -108,6 +136,46 @@ a{color:#1B3550}a:hover{color:#10233A}
       Ajustes
     </a>
   </nav>
+
+  <!-- Choice of iglesias for pastor (those of their distritos) and admin (all, with a buscador). -->
+  <sc-if value="{{ conHoja }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(16,35,58,0.55); display: flex; flex-direction: column; justify-content: flex-end">
+      <div role="dialog" aria-modal="true" aria-labelledby="tIglesias" style="background: #FFFFFF; border-radius: 28px 28px 0 0; padding: 12px 16px 32px; display: flex; flex-direction: column; gap: 10px">
+        <span style="width: 44px; height: 5px; border-radius: 3px; background: #C9D4E0; align-self: center"></span>
+        <span id="tIglesias" style="font-size: 21px; font-weight: 700">¿De qué iglesias querés recordatorios?</span>
+        <sc-if value="{{ hojaAdmin }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; align-items: center; gap: 10px; height: 52px; box-sizing: border-box; padding: 0 16px; border-radius: 14px; background: #EEF1F5; color: #717171">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+            <label for="buscarRec" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Buscar iglesia</label>
+            <input id="buscarRec" type="search" placeholder="Buscar iglesia" style="flex: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 17px; color: #222222">
+          </div>
+        </sc-if>
+        <div style="display: flex; flex-direction: column">
+          <sc-for list="{{ opciones }}" as="o" hint-placeholder-count="4">
+            <sc-if value="{{ o.titulo }}" hint-placeholder-val="{{ false }}">
+              <span style="padding: 8px 0 2px; font-size: 15px; font-weight: 700">{{ o.titulo }}</span>
+            </sc-if>
+            <sc-if value="{{ o.nombre }}" hint-placeholder-val="{{ true }}">
+              <button type="button" role="checkbox" aria-checked="{{ o.marcada }}" style="display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 4px 0; border: 0; border-bottom: 1px solid #EEEEEE; background: transparent; font-family: inherit; text-align: left; color: #222222; cursor: pointer">
+                <span style="width: 28px; height: 28px; border-radius: 8px; box-sizing: border-box; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #FFFFFF; background: {{ o.fondo }}; border: {{ o.borde }}">
+                  <sc-if value="{{ o.si }}" hint-placeholder-val="{{ true }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+                </span>
+                <span style="display: flex; flex-direction: column; gap: 1px">
+                  <span style="font-size: 17px; font-weight: 600">{{ o.nombre }}</span>
+                  <sc-if value="{{ o.distrito }}" hint-placeholder-val="{{ false }}"><span style="font-size: 15px; color: #4A4A4A">{{ o.distrito }}</span></sc-if>
+                </span>
+              </button>
+            </sc-if>
+          </sc-for>
+        </div>
+        <sc-if value="{{ hojaPastor }}" hint-placeholder-val="{{ true }}">
+          <span style="font-size: 15px; line-height: 1.4; color: #4A4A4A">Los eventos del distrito llegan con cualquiera de ellas.</span>
+        </sc-if>
+        <button type="button" style="display: flex; align-items: center; justify-content: center; min-height: 54px; margin-top: 4px; border: 0; border-radius: 14px; background: #1B3550; font-family: inherit; font-size: 17px; font-weight: 700; color: #FFFFFF; cursor: pointer">Guardar ({{ cuantas }})</button>
+        <button type="button" onClick="{{ cerrarHoja }}" style="min-height: 54px; border: 0; border-radius: 14px; background: #E3EAF2; color: #1B3550; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Cancelar</button>
+      </div>
+    </div>
+  </sc-if>
 
   <sc-if value="{{ confirmando }}" hint-placeholder-val="{{ false }}">
     <div style="position: absolute; inset: 0; background: rgba(16,35,58,0.55); display: flex; align-items: center; padding: 0 20px">
@@ -141,15 +209,42 @@ a{color:#1B3550}a:hover{color:#10233A}
 class Component extends DCLogic {
   renderVals() {
     const st = this.state || {};
-    const off = !!st.off;
-    const conNotificaciones = false; // v2
+    // v2 (#161): recordatorios is off in v1; the captures 10f to 10k set it.
+    const recordatorios = st.recordatorios || null;
+    const conNotificaciones = !!recordatorios;
+    const rol = st.rol || 'encargado';
+    const sinPermiso = recordatorios === 'sinPermiso';
+    const off = recordatorios === 'inicio' || sinPermiso || !!st.off;
+    const hoja = st.hoja || null;
+    const cuenta = {
+      encargado: { iniciales: 'MG', nombre: 'Marta Gómez', cargo: 'Encargada de calendario · Iglesia Central' },
+      pastor: { iniciales: 'JR', nombre: 'Juan Ramírez', cargo: 'Pastor · Distrito Norte' },
+      admin: { iniciales: 'LP', nombre: 'Laura Paz', cargo: 'Admin · Asociación' }
+    }[rol];
+    const textos = {
+      encendido: 'Te avisamos a las 20 h del día anterior a cada evento de Iglesia Central. Las actividades regulares no avisan.',
+      inicio: 'Elegí de qué iglesias querés que te avisemos, a las 20 h del día anterior a cada evento.',
+      elegidas: 'Te avisamos a las 20 h del día anterior a cada evento de estas iglesias. Las actividades regulares no avisan.'
+    };
+    const marca = (nombre, si, distrito) => ({ nombre, distrito: distrito || '', si, marcada: si ? 'true' : 'false', fondo: si ? '#1B3550' : '#FFFFFF', borde: si ? '0' : '2px solid #9AA7B6', titulo: '' });
+    const opciones = hoja === 'admin'
+      ? [{ titulo: 'Elegidas' }, marca('Iglesia Central', true, 'Distrito Norte'), { titulo: 'Todas' }, marca('Iglesia Barrio Norte', false, 'Distrito Norte'), marca('Iglesia El Trapiche', false, 'Distrito Sur')]
+      : [marca('Iglesia Central', true), marca('Iglesia Barrio Norte', false), marca('Iglesia Las Rosas', true), marca('Iglesia San Martín', false)];
     const conSesion = st.conSesion !== false;
     const confirmando = !!st.confirmando;
     const confirmandoSalir = !!st.confirmandoSalir;
     const sinConexion = st.sinConexion !== false;
     return {
       on: !off, off, toggle: () => this.setState({ off: !off }),
-      conNotificaciones, conSesion, sinSesion: !conSesion, confirmando, confirmandoSalir, sinConexion,
+      conNotificaciones, conSesion, ...cuenta, sinPermiso,
+      texto: textos[recordatorios] || '', conTexto: !!textos[recordatorios],
+      colorTitulo: sinPermiso ? '#717171' : '#222222', opacidadSwitch: sinPermiso ? '0.5' : '1',
+      conEjemplo: recordatorios === 'encendido', inicio: recordatorios === 'inicio', elegidas: recordatorios === 'elegidas',
+      conHoja: !!hoja, hojaPastor: hoja === 'pastor', hojaAdmin: hoja === 'admin',
+      opciones: opciones.map((o) => ({ nombre: '', distrito: '', si: false, ...o })),
+      cuantas: hoja === 'admin' ? '1 iglesia' : '2 iglesias',
+      abrirHoja: () => this.setState({ hoja: rol === 'admin' ? 'admin' : 'pastor' }),
+      cerrarHoja: () => this.setState({ hoja: null }), sinSesion: !conSesion, confirmando, confirmandoSalir, sinConexion,
       pedirEliminar: () => this.setState({ confirmando: true }),
       pedirSalir: () => this.setState({ confirmandoSalir: true }),
       cancelar: () => this.setState({ confirmando: false, confirmandoSalir: false })

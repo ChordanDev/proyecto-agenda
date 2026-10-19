@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Distrito</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&amp;family=Oswald:wght@500;600&amp;display=swap">
+<style>
+body{margin:0;font-family:'Noto Sans','Segoe UI',system-ui,sans-serif;color:#222222}
+a{color:#1B3550}a:hover{color:#10233A}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 940px; box-sizing: border-box; background: linear-gradient(180deg, #2F557F 0px, #E6EBF1 190px, #C9D4E0 100%); display: flex; flex-direction: column; font-family: 'Noto Sans', 'Segoe UI', system-ui, sans-serif; color: #222222">
+  <!-- Nuevo and Editar distrito, admin only (#155, #158, #159).
+       State: modo 'nuevo' | 'editar'; hoja 'sacar' (the iglesia goes to another distrito) | 'agregar' (bring an iglesia from another distrito, or create one). -->
+  <header style="flex-shrink: 0; padding: 22px 16px 0; display: flex; align-items: center; gap: 12px">
+    <a href="GestionAdmin.dc.html" aria-label="Cancelar" style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: #FFFFFF; display: flex; align-items: center; justify-content: center; color: #1B3550">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+    </a>
+    <span style="font-size: 20px; font-weight: 700; color: #000000">{{ titulo }}</span>
+  </header>
+
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 26px 16px 36px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; flex-direction: column; gap: 12px; padding: 18px 16px; border-radius: 20px; background: #FFFFFF">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="nombre" style="font-size: 16px; font-weight: 700">Nombre</label>
+        <input id="nombre" type="text" value="{{ nombre }}" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
+      </div>
+      <sc-if value="{{ editando }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 16px; font-weight: 700">Pastor</span>
+        <span style="font-size: 18px; color: #222222">Sin pastor</span>
+        <!-- Opens Agregar usuario (09d) with "Pastor de distrito" and this distrito chosen. -->
+        <a href="Usuario.dc.html" style="align-self: flex-start; min-height: 44px; display: flex; align-items: center; border: 0; background: transparent; padding: 0; font-family: inherit; font-size: 16px; font-weight: 700; color: #1B3550; text-decoration: underline; cursor: pointer">Nombrar pastor</a>
+      </div>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ editando }}" hint-placeholder-val="{{ true }}">
+      <!-- Every iglesia belongs to a distrito: "Sacar" always moves it to another one. -->
+      <h2 style="margin: 0 4px; font-size: 19px; font-weight: 700">Iglesias (3)</h2>
+      <div style="display: flex; flex-direction: column; background: #FFFFFF; border-radius: 20px; overflow: hidden">
+        <sc-for list="{{ iglesias }}" as="ig" hint-placeholder-count="3">
+          <div style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 12px 14px 12px 18px; border-bottom: 1px solid #EEEEEE">
+            <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0"><span style="font-size: 17px; font-weight: 700">{{ ig.nombre }}</span><span style="font-size: 15px; color: #4A4A4A">{{ ig.localidad }}</span></span>
+            <button type="button" onClick="{{ sacar }}" style="margin-left: auto; flex-shrink: 0; min-height: 44px; padding: 0 16px; border-radius: 12px; border: 0; background: #E3EAF2; color: #1B3550; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">Sacar</button>
+          </div>
+        </sc-for>
+      </div>
+      <button type="button" onClick="{{ agregar }}" style="display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 56px; border-radius: 14px; border: 0; background: #E3EAF2; color: #1B3550; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg><span>Agregar iglesia</span></button>
+    </sc-if>
+
+    <button type="button" style="display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 58px; border-radius: 14px; border: 0; background: #1B3550; color: #FFFFFF; font-family: inherit; font-size: 18px; font-weight: 700; cursor: pointer">{{ boton }}</button>
+    <!-- A distrito is given de baja only without active iglesias (#159). -->
+    <sc-if value="{{ editando }}" hint-placeholder-val="{{ true }}">
+      <button type="button" disabled style="min-height: 54px; border-radius: 14px; border: 2px solid #B0103F; background: #FFFFFF; color: #B0103F; font-family: inherit; font-size: 17px; font-weight: 700; opacity: 0.45">Dar de baja</button>
+      <span style="margin: 0 4px; font-size: 15px; line-height: 1.4; color: #4A4A4A">Para darlo de baja, pasá antes sus 3 iglesias a otro distrito.</span>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ hojaSacar }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(16,35,58,0.55); display: flex; flex-direction: column; justify-content: flex-end">
+      <div role="dialog" aria-modal="true" aria-labelledby="tSacar" style="background: #FFFFFF; border-radius: 28px 28px 0 0; padding: 12px 16px 32px; display: flex; flex-direction: column; gap: 12px">
+        <span style="width: 44px; height: 5px; border-radius: 3px; background: #C9D4E0; align-self: center"></span>
+        <span id="tSacar" style="font-size: 21px; font-weight: 700">¿A qué distrito pasa Iglesia El Trapiche?</span>
+        <div role="radiogroup" aria-labelledby="tSacar" style="display: flex; flex-direction: column">
+          <button type="button" role="radio" aria-checked="true" style="display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 0; border: 0; border-bottom: 1px solid #EEEEEE; background: transparent; font-family: inherit; font-size: 17px; font-weight: 600; text-align: left; color: #222222; cursor: pointer"><span style="width: 24px; height: 24px; border-radius: 50%; border: 7px solid #1B3550; box-sizing: border-box; flex-shrink: 0"></span>Distrito Centro</button>
+          <button type="button" role="radio" aria-checked="false" style="display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 0; border: 0; border-bottom: 1px solid #EEEEEE; background: transparent; font-family: inherit; font-size: 17px; font-weight: 600; text-align: left; color: #222222; cursor: pointer"><span style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid #9AA7B6; box-sizing: border-box; flex-shrink: 0"></span>Distrito Norte</button>
+          <button type="button" role="radio" aria-checked="false" style="display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 0; border: 0; background: transparent; font-family: inherit; font-size: 17px; font-weight: 600; text-align: left; color: #222222; cursor: pointer"><span style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid #9AA7B6; box-sizing: border-box; flex-shrink: 0"></span>Distrito Oeste</button>
+        </div>
+        <div role="status" style="border-radius: 14px; background: #FFF1CC; color: #6B4E00; padding: 12px 14px; font-size: 15px; line-height: 1.4">Su calendario va a mostrar los eventos del Distrito Centro. Sus eventos, lugares y encargados se quedan con ella.</div>
+        <button type="button" style="display: flex; align-items: center; justify-content: center; min-height: 54px; margin-top: 4px; border-radius: 14px; border: 0; background: #1B3550; color: #FFFFFF; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Pasar al Distrito Centro</button>
+        <button type="button" onClick="{{ cerrar }}" style="min-height: 54px; border: 0; border-radius: 14px; background: #E3EAF2; color: #1B3550; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Cancelar</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hojaAgregar }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(16,35,58,0.55); display: flex; flex-direction: column; justify-content: flex-end">
+      <div role="dialog" aria-modal="true" aria-labelledby="tAgregar" style="background: #FFFFFF; border-radius: 28px 28px 0 0; padding: 12px 16px 32px; display: flex; flex-direction: column; gap: 12px">
+        <span style="width: 44px; height: 5px; border-radius: 3px; background: #C9D4E0; align-self: center"></span>
+        <span id="tAgregar" style="font-size: 21px; font-weight: 700">Agregar iglesia al Distrito Sur</span>
+        <div style="display: flex; align-items: center; gap: 10px; height: 52px; box-sizing: border-box; padding: 0 16px; border-radius: 14px; background: #EEF1F5; color: #717171">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+          <label for="buscarIg" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Buscar iglesia</label>
+          <input id="buscarIg" type="search" placeholder="Buscar iglesia" style="flex: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 17px; color: #222222">
+        </div>
+        <!-- Iglesias of other distritos. Choosing one shows the same notice of a cambio de distrito before moving it. -->
+        <div style="display: flex; flex-direction: column">
+          <sc-for list="{{ otras }}" as="o" hint-placeholder-count="3">
+            <button type="button" style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 0; border: 0; border-bottom: 1px solid #EEEEEE; background: transparent; font-family: inherit; text-align: left; color: #222222; cursor: pointer">
+              <span style="display: flex; flex-direction: column; gap: 1px"><span style="font-size: 17px; font-weight: 700">{{ o.nombre }}</span><span style="font-size: 15px; color: #4A4A4A">Hoy en {{ o.distrito }}</span></span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#717171" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left: auto; flex-shrink: 0"><path d="M9 6l6 6-6 6"></path></svg>
+            </button>
+          </sc-for>
+        </div>
+        <!-- Opens Nueva iglesia (09b) with this distrito chosen. -->
+        <a href="Iglesia.dc.html" style="display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 56px; border-radius: 14px; border: 0; background: #E3EAF2; color: #1B3550; font-family: inherit; font-size: 17px; font-weight: 700; text-decoration: none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg><span>Crear una iglesia nueva</span></a>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":940}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const editando = (st.modo || 'editar') === 'editar';
+    const iglesias = [
+      { nombre: 'Iglesia El Trapiche', localidad: 'El Trapiche' },
+      { nombre: 'Iglesia La Florida', localidad: 'La Florida' },
+      { nombre: 'Iglesia Potrero', localidad: 'Potrero de los Funes' }
+    ];
+    const otras = [
+      { nombre: 'Iglesia Barrio Norte', distrito: 'Distrito Norte' },
+      { nombre: 'Iglesia Central', distrito: 'Distrito Norte' },
+      { nombre: 'Iglesia Juana Koslay', distrito: 'Distrito Centro' }
+    ];
+    return {
+      editando, iglesias, otras,
+      nombre: editando ? 'Distrito Sur' : '',
+      titulo: editando ? 'Editar distrito' : 'Nuevo distrito',
+      boton: editando ? 'Guardar cambios' : 'Crear distrito',
+      hojaSacar: editando && st.hoja === 'sacar',
+      hojaAgregar: editando && st.hoja === 'agregar',
+      sacar: () => this.setState({ hoja: 'sacar' }),
+      agregar: () => this.setState({ hoja: 'agregar' }),
+      cerrar: () => this.setState({ hoja: null })
+    };
+  }
+}
+</script>
+</body>
+</html>

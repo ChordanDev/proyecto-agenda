@@ -37,16 +37,19 @@ a{color:#1B3550}a:hover{color:#10233A}
       </sc-for>
     </div>
 
+    <!-- Each tab has its own main button (#155). Distritos keeps both. -->
+    <sc-if value="{{ verDistritos }}" hint-placeholder-val="{{ true }}">
     <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
-      <button type="button" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px; border-radius: 14px; border: 0; background: #1B3550; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
-        Nuevo distrito
-      </button>
-      <button type="button" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px; border-radius: 14px; border: 0; background: #1B3550; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
-        Nueva iglesia
-      </button>
-    </div>
+        <button type="button" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px; border-radius: 14px; border: 0; background: #1B3550; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+          Nuevo distrito
+        </button>
+        <button type="button" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px; border-radius: 14px; border: 0; background: #1B3550; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+          Nueva iglesia
+        </button>
+      </div>
+    </sc-if>
 
     <sc-if value="{{ verDistritos }}" hint-placeholder-val="{{ true }}">
       <div role="alert" style="display: flex; gap: 14px; align-items: flex-start; padding: 16px 18px; border-radius: 20px; background: #FFFFFF">
@@ -58,42 +61,64 @@ a{color:#1B3550}a:hover{color:#10233A}
     </div>
       <div style="display: flex; flex-direction: column; background: #FFFFFF; border-radius: 20px; overflow: hidden">
         <sc-for list="{{ distritos }}" as="d" hint-placeholder-count="4">
-          <div style="display: flex; flex-direction: column; gap: 4px; padding: 14px 18px; border-bottom: 1px solid #EEEEEE">
+          <!-- Tapping a distrito opens Editar distrito (09c). -->
+          <div style="display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 18px; border-bottom: 1px solid #EEEEEE">
+            <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
             <span style="font-size: 17px; font-weight: 700">{{ d.nombre }}</span>
             <span style="font-size: 15px; color: #4A4A4A">{{ d.iglesias }}</span>
             <sc-if value="{{ d.conPastor }}" hint-placeholder-val="{{ true }}"><span style="font-size: 15px; color: #1B3550; font-weight: 600">{{ d.pastor }}</span></sc-if>
             <sc-if value="{{ d.sinPastor }}" hint-placeholder-val="{{ false }}"><span style="align-self: flex-start; padding: 3px 10px; border-radius: 999px; background: #FFF1CC; color: #6B4E00; font-size: 13px; font-weight: 700">Sin pastor</span></sc-if>
+            </span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#717171" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left: auto; flex-shrink: 0"><path d="M9 6l6 6-6 6"></path></svg>
           </div>
         </sc-for>
       </div>
     </sc-if>
 
+    <!-- Iglesias (#155, #158, #159): distrito and localidad; tapping one opens Editar iglesia (09b). Dadas de baja go apart, with "Reactivar". -->
     <sc-if value="{{ verIglesias }}" hint-placeholder-val="{{ false }}">
+      <a href="Iglesia.dc.html" style="display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 58px; border-radius: 14px; border: 0; background: #1B3550; color: #FFFFFF; font-family: inherit; font-size: 18px; font-weight: 700; text-decoration: none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg><span>Nueva iglesia</span></a>
+      <div style="display: flex; align-items: center; gap: 10px; height: 52px; box-sizing: border-box; padding: 0 16px; border-radius: 14px; background: #FFFFFF; color: #717171">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+        <label for="buscarIglesia" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Buscar iglesia</label>
+        <input id="buscarIglesia" type="search" placeholder="Buscar iglesia" style="flex: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 17px; color: #222222">
+      </div>
       <div style="display: flex; flex-direction: column; background: #FFFFFF; border-radius: 20px; overflow: hidden">
-        <sc-for list="{{ iglesias }}" as="ig" hint-placeholder-count="6">
-          <div style="display: flex; flex-direction: column; gap: 4px; padding: 14px 18px; border-bottom: 1px solid #EEEEEE">
-            <span style="font-size: 17px; font-weight: 700">{{ ig.nombre }}</span>
-            <span style="font-size: 15px; color: #4A4A4A">{{ ig.distrito }}</span>
-            <sc-if value="{{ ig.ubic }}" hint-placeholder-val="{{ true }}">
-              <span style="display: flex; align-items: center; gap: 6px; font-size: 14px; color: #1B3550; font-weight: 600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>Dirección cargada</span>
-            </sc-if>
-            <sc-if value="{{ ig.sinUbic }}" hint-placeholder-val="{{ false }}">
-              <span style="align-self: flex-start; padding: 3px 10px; border-radius: 999px; background: #FFF1CC; color: #6B4E00; font-size: 13px; font-weight: 700">Falta la dirección</span>
-            </sc-if>
+        <sc-for list="{{ iglesias }}" as="ig" hint-placeholder-count="4">
+          <div style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 12px 14px 12px 18px; border-bottom: 1px solid #EEEEEE">
+            <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0"><span style="font-size: 17px; font-weight: 700">{{ ig.nombre }}</span><span style="font-size: 15px; color: #4A4A4A">{{ ig.distrito }} · {{ ig.localidad }}</span></span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#717171" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left: auto; flex-shrink: 0"><path d="M9 6l6 6-6 6"></path></svg>
+          </div>
+        </sc-for>
+      </div>
+      <h2 style="margin: 0 4px; font-size: 17px; font-weight: 700; color: #4A4A4A">Dadas de baja</h2>
+      <div style="display: flex; flex-direction: column; background: #FFFFFF; border-radius: 20px; overflow: hidden">
+        <sc-for list="{{ bajas }}" as="ba" hint-placeholder-count="1">
+          <div style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 12px 14px 12px 18px; border-bottom: 1px solid #EEEEEE">
+            <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0"><span style="font-size: 17px; font-weight: 700; color: #4A4A4A">{{ ba.nombre }}</span><span style="font-size: 15px; color: #4A4A4A">Era del {{ ba.distrito }}</span></span>
+            <button type="button" style="margin-left: auto; flex-shrink: 0; min-height: 44px; padding: 0 16px; border-radius: 12px; border: 0; background: #E3EAF2; color: #1B3550; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">Reactivar</button>
           </div>
         </sc-for>
       </div>
     </sc-if>
 
+    <!-- Usuarios (#155, #160): everyone with a cargo in the asociación; with several cargos, the first one and how many more. Tapping one opens Usuario (09d). -->
     <sc-if value="{{ verUsuarios }}" hint-placeholder-val="{{ false }}">
+      <a href="Usuario.dc.html" style="display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 58px; border-radius: 14px; border: 0; background: #1B3550; color: #FFFFFF; font-family: inherit; font-size: 18px; font-weight: 700; text-decoration: none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg><span>Agregar usuario</span></a>
+      <div style="display: flex; align-items: center; gap: 10px; height: 52px; box-sizing: border-box; padding: 0 16px; border-radius: 14px; background: #FFFFFF; color: #717171">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+        <label for="buscarUsuario" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Buscar por nombre o correo</label>
+        <input id="buscarUsuario" type="search" placeholder="Buscar por nombre o correo" style="flex: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 17px; color: #222222">
+      </div>
       <div style="display: flex; flex-direction: column; background: #FFFFFF; border-radius: 20px; overflow: hidden">
         <sc-for list="{{ usuarios }}" as="u" hint-placeholder-count="6">
-          <div style="display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid #EEEEEE">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px 12px 18px; border-bottom: 1px solid #EEEEEE">
             <span style="width: 44px; height: 44px; border-radius: 50%; background: #E3EAF2; color: #1B3550; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; flex-shrink: 0">{{ u.ini }}</span>
             <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
               <span style="font-size: 17px; font-weight: 700">{{ u.nombre }}</span>
-              <span style="font-size: 15px; color: #4A4A4A">{{ u.rol }} · {{ u.ambito }}</span>
+              <span style="font-size: 15px; color: #4A4A4A">{{ u.cargos }}</span>
             </span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#717171" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left: auto; flex-shrink: 0"><path d="M9 6l6 6-6 6"></path></svg>
           </div>
         </sc-for>
       </div>
@@ -138,25 +163,24 @@ class Component extends DCLogic {
     ].map((d) => ({ ...d, conPastor: !!d.pastor, sinPastor: !d.pastor }));
 
     const iglesias = [
-      { nombre: 'Iglesia Central', distrito: 'Distrito Norte', ubic: true },
-      { nombre: 'Iglesia Barrio Norte', distrito: 'Distrito Norte', ubic: true },
-      { nombre: 'Iglesia Las Rosas', distrito: 'Distrito Norte', ubic: true },
-      { nombre: 'Iglesia San Martín', distrito: 'Distrito Norte', ubic: false },
-      { nombre: 'Iglesia Jardín', distrito: 'Distrito Sur', ubic: true },
-      { nombre: 'Iglesia Villa Esperanza', distrito: 'Distrito Sur', ubic: true }
-    ].map((ig) => ({ ...ig, sinUbic: !ig.ubic }));
+      { nombre: 'Iglesia Barrio Norte', distrito: 'Distrito Norte', localidad: 'Villa Mercedes' },
+      { nombre: 'Iglesia Central', distrito: 'Distrito Norte', localidad: 'San Luis' },
+      { nombre: 'Iglesia El Trapiche', distrito: 'Distrito Sur', localidad: 'El Trapiche' },
+      { nombre: 'Iglesia Las Rosas', distrito: 'Distrito Norte', localidad: 'San Luis' }
+    ];
+    const bajas = [{ nombre: 'Iglesia Los Molles', distrito: 'Distrito Sur' }];
 
     const usuarios = [
-      { ini: 'JR', nombre: 'Juan Ramírez', rol: 'Pastor', ambito: 'Distrito Norte' },
-      { ini: 'LA', nombre: 'Luis Acosta', rol: 'Pastor', ambito: 'Distrito Centro' },
-      { ini: 'MG', nombre: 'Marta Gómez', rol: 'Encargada', ambito: 'Iglesia Central' },
-      { ini: 'RF', nombre: 'Raúl Fernández', rol: 'Encargado', ambito: 'Iglesia Central' },
-      { ini: 'AR', nombre: 'Ana Ruiz', rol: 'Encargada', ambito: 'Iglesia Barrio Norte' },
-      { ini: 'DP', nombre: 'Daniel Pereyra', rol: 'Encargado', ambito: 'Iglesia Las Rosas' }
+      { ini: 'AR', nombre: 'Ana Ruiz', cargos: 'Secretaria de iglesia · Barrio Norte' },
+      { ini: 'JR', nombre: 'Juan Ramírez', cargos: 'Pastor · Distrito Norte' },
+      { ini: 'LA', nombre: 'Luis Acosta', cargos: 'Pastor · Distrito Centro y 1 cargo más' },
+      { ini: 'MG', nombre: 'Marta Gómez', cargos: 'Secretaria de iglesia · Central' },
+      { ini: 'RF', nombre: 'Raúl Fernández', cargos: 'Encargado · Central' },
+      { ini: 'DP', nombre: 'Daniel Pereyra', cargos: 'Encargado · Las Rosas' }
     ];
 
     return {
-      tabs, distritos, iglesias, usuarios,
+      tabs, distritos, iglesias, bajas, usuarios,
       verDistritos: tab === 'dist', verIglesias: tab === 'igl', verUsuarios: tab === 'usr'
     };
   }

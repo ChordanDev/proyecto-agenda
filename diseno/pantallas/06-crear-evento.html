@@ -14,22 +14,28 @@ body{margin:0;font-family:'Noto Sans','Segoe UI',system-ui,sans-serif;color:#222
 a{color:#1B3550}a:hover{color:#10233A}
 </style>
 </helmet>
-<div style="position: relative; width: 390px; height: 1885px; box-sizing: border-box; background: linear-gradient(180deg, #2F557F 0px, #E6EBF1 190px, #C9D4E0 100%); display: flex; flex-direction: column; font-family: 'Noto Sans', 'Segoe UI', system-ui, sans-serif; color: #222222">
+<div style="position: relative; width: 390px; height: {{ alto }}px; box-sizing: border-box; background: linear-gradient(180deg, #2F557F 0px, #E6EBF1 190px, #C9D4E0 100%); display: flex; flex-direction: column; font-family: 'Noto Sans', 'Segoe UI', system-ui, sans-serif; color: #222222">
 
   <header style="flex-shrink: 0; padding: 22px 16px 0; display: flex; align-items: center; gap: 12px">
     <a href="Calendario.dc.html" aria-label="Cancelar" style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: #FFFFFF; display: flex; align-items: center; justify-content: center; color: #1B3550">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
     </a>
-    <span style="font-size: 20px; font-weight: 700; color: #000000">Nuevo evento</span>
+    <span style="font-size: 20px; font-weight: 700; color: #000000">{{ tituloPantalla }}</span>
   </header>
 
   <div style="display: flex; flex-direction: column; gap: 14px; padding: 30px 16px 36px">
+
+    <!-- v2 (#171): editing one fecha of a serie. Title, fecha, hora, lugar, descripción and énfasis can change; the fecha cannot move onto another fecha of the serie. -->
+    <sc-if value="{{ unaFecha }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 16px; background: #E3EAF2; color: #1B3550; font-size: 16px; line-height: 1.4"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5M12 7.5v.5"></path></svg><span><strong>Estás cambiando solo el sábado 17 de octubre.</strong> Las demás fechas de la serie no cambian.</span></div>
+    </sc-if>
 
     <div style="display: flex; flex-direction: column; gap: 16px; padding: 18px 16px; border-radius: 20px; background: #FFFFFF">
       <div style="display: flex; flex-direction: column; gap: 8px">
         <label for="titulo" style="font-size: 16px; font-weight: 700">Título</label>
         <input id="titulo" type="text" value="Culto joven" style="height: 56px; box-sizing: border-box; border: 0; border-radius: 12px; background: #EEF1F5; padding: 0 16px; font-size: 18px; font-family: inherit; color: #222222">
       </div>
+      <sc-if value="{{ conSerie }}" hint-placeholder-val="{{ true }}">
       <!-- Dueño: opens the sheet in 6b with the levels the cargos cover. With a single possible dueño it comes chosen and shows no arrow. -->
       <div style="display: flex; flex-direction: column; gap: 8px">
         <span id="tDuenio" style="font-size: 16px; font-weight: 700">Dueño</span>
@@ -44,6 +50,7 @@ a{color:#1B3550}a:hover{color:#10233A}
         </button>
         <span style="font-size: 14px; line-height: 1.4; color: #4A4A4A">{{ duenio.seVe }}</span>
       </div>
+      </sc-if>
       <div style="display: grid; grid-template-columns: 3fr 2fr; gap: 12px">
         <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0">
           <label for="fecha" style="font-size: 16px; font-weight: 700">Fecha</label>
@@ -66,6 +73,7 @@ a{color:#1B3550}a:hover{color:#10233A}
           </sc-if>
         </div>
       </div>
+      <sc-if value="{{ conSerie }}" hint-placeholder-val="{{ true }}">
       <!-- Fecha de fin: date only, no end time. It excludes repetición: one is disabled while the other is set. -->
       <div style="display: flex; flex-direction: column; gap: 8px">
         <label for="fechaFin" style="font-size: 16px; font-weight: 700; color: {{ finColor }}">Fecha de fin <span style="font-weight: 400; color: #717171">(opcional)</span></label>
@@ -74,6 +82,7 @@ a{color:#1B3550}a:hover{color:#10233A}
           <span style="font-size: 14px; line-height: 1.4; color: #4A4A4A">Un evento que se repite no puede durar varios días.</span>
         </sc-if>
       </div>
+      </sc-if>
       <!-- Lugar: opens the sheet in 6c with the lugares of the chosen dueño. Optional: with none chosen it shows the placeholder in grey. -->
       <div style="display: flex; flex-direction: column; gap: 8px">
         <span id="tLugar" style="font-size: 16px; font-weight: 700">Lugar <span style="font-weight: 400; color: #717171">(opcional)</span></span>
@@ -113,6 +122,7 @@ a{color:#1B3550}a:hover{color:#10233A}
       </sc-for>
     </div>
 
+    <sc-if value="{{ conSerie }}" hint-placeholder-val="{{ true }}">
     <div role="radiogroup" aria-labelledby="tRep" style="display: flex; flex-direction: column; padding: 16px 16px 4px; border-radius: 20px; background: #FFFFFF">
       <span id="tRep" style="font-size: 16px; font-weight: 700; margin-bottom: 4px">Repetición</span>
       <sc-if value="{{ tieneFin }}" hint-placeholder-val="{{ false }}">
@@ -142,9 +152,10 @@ a{color:#1B3550}a:hover{color:#10233A}
         </div>
       </sc-if>
     </div>
+    </sc-if>
 
     <!-- v2 (#14): sharing with other iglesias. Kept here so it does not need a new design; off in v1. -->
-    <sc-if value="{{ conCompartir }}" hint-placeholder-val="{{ false }}">
+    <sc-if value="{{ conCompartirSerie }}" hint-placeholder-val="{{ false }}">
     <div style="display: flex; flex-direction: column; gap: 12px; padding: 18px 16px; border-radius: 20px; background: #FFFFFF">
       <div style="display: flex; flex-direction: column; gap: 4px">
         <span style="font-size: 16px; font-weight: 700">Compartir con otras iglesias</span>
@@ -190,7 +201,10 @@ a{color:#1B3550}a:hover{color:#10233A}
     </div>
     </sc-if>
 
-    <a href="Calendario.dc.html" style="display: flex; align-items: center; justify-content: center; min-height: 58px; border-radius: 14px; background: #1B3550; color: #FFFFFF; font-size: 18px; font-weight: 700; text-decoration: none">Crear evento</a>
+    <sc-if value="{{ unaFecha }}" hint-placeholder-val="{{ false }}">
+      <span style="margin: 0 4px; font-size: 15px; line-height: 1.4; color: #4A4A4A">El dueño, la repetición, "Hasta", la fecha de fin y las iglesias sumadas se cambian en toda la serie.</span>
+    </sc-if>
+    <a href="Calendario.dc.html" style="display: flex; align-items: center; justify-content: center; min-height: 58px; border-radius: 14px; background: #1B3550; color: #FFFFFF; font-size: 18px; font-weight: 700; text-decoration: none">{{ botonGuardar }}</a>
   </div>
 
   <!-- 6c: the Lugar sheet. Lists the lugares of the chosen dueño, sorted by name, then "+ Agregar lugar".
@@ -252,6 +266,19 @@ a{color:#1B3550}a:hover{color:#10233A}
     </div>
   </sc-if>
 
+  <!-- v2 (#171): on Guardar of the whole serie, when the change leaves cambios propios without their fecha (a shorter "Hasta", another day). Asked before saving. -->
+  <sc-if value="{{ perdidas }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(16,35,58,0.55); display: flex; align-items: center; padding: 0 20px">
+      <div role="alertdialog" aria-modal="true" aria-labelledby="tPerdidas" style="width: 100%; border-radius: 22px; background: #FFFFFF; padding: 24px 20px 20px; display: flex; flex-direction: column; gap: 12px">
+        <span id="tPerdidas" style="font-size: 21px; font-weight: 700">¿Guardar los cambios de la serie?</span>
+        <span style="font-size: 16px; line-height: 1.45; color: #333333"><strong>2 fechas con cambios propios se van a perder.</strong></span>
+        <span style="font-size: 16px; line-height: 1.45; color: #333333">Son el sábado 15 de mayo y el sábado 19 de junio de 2027, que quedan fuera del nuevo "Hasta".</span>
+        <button type="button" style="display: flex; align-items: center; justify-content: center; min-height: 54px; margin-top: 8px; border-radius: 14px; border: 0; background: #1B3550; color: #FFFFFF; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Guardar igual</button>
+        <button type="button" onClick="{{ cerrarPerdidas }}" style="min-height: 54px; border: 0; border-radius: 14px; background: #E3EAF2; color: #1B3550; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Volver a la serie</button>
+      </div>
+    </div>
+  </sc-if>
+
   <!-- A hora of the madrugada, from 00:00 to 05:59, is asked about on leaving the field or on saving (#128). "Cambiar" goes back to the hora. -->
   <sc-if value="{{ horaRara }}" hint-placeholder-val="{{ false }}">
     <div style="position: absolute; inset: 0; background: rgba(16,35,58,0.55); display: flex; align-items: center; padding: 0 20px">
@@ -280,6 +307,9 @@ class Component extends DCLogic {
     const hora = st.hora || 'normal';
     // Fecha: 'pasada' shows the notice under the field, 'dialogo' also the question of Guardar (#132).
     const fecha = st.fecha || 'futura';
+    // v2 (#171): modo 'unaFecha' edits one fecha of a serie; perdidas is the question on saving the whole serie.
+    const unaFecha = st.modo === 'unaFecha';
+    const perdidas = !!st.perdidas;
 
     const META = [
       { k: 'S', lema: 'Somos', cat: 'Identidad' },
@@ -369,6 +399,11 @@ class Component extends DCLogic {
     }));
 
     return {
+      unaFecha, conSerie: !unaFecha, conCompartirSerie: conCompartir && !unaFecha, perdidas,
+      alto: unaFecha ? 1180 : (perdidas ? 844 : 1885),
+      tituloPantalla: unaFecha || perdidas ? 'Editar evento' : 'Nuevo evento',
+      botonGuardar: unaFecha ? 'Guardar esta fecha' : (perdidas ? 'Guardar cambios' : 'Crear evento'),
+      cerrarPerdidas: () => this.setState({ perdidas: false }),
       enfasis, repes, elegidas, resultados, q,
       fechaTexto: fecha === 'futura' ? 'Sáb 17 oct' : 'Mar 1 sep',
       fechaPasada: fecha !== 'futura',
