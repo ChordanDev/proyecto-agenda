@@ -113,11 +113,11 @@ Estos pasos requieren acceso a las cuentas y no están automatizados.
 1. **Proyecto de Supabase de desarrollo**, en la región de São Paulo.
 2. **Secretos del repositorio en GitHub** (Settings › Secrets and variables › Actions):
 
-   | Secreto                 | Valor                                                              |
-   | ----------------------- | ------------------------------------------------------------------ |
-   | `SUPABASE_ACCESS_TOKEN` | Token de acceso personal de Supabase (Account › Access Tokens).    |
-   | `SUPABASE_DB_PASSWORD`  | Contraseña de la base del proyecto de desarrollo.                  |
-   | `SUPABASE_PROJECT_ID`   | Identificador (reference ID) del proyecto de desarrollo.           |
+   | Secreto | Valor |
+   | --- | --- |
+   | `SUPABASE_DB_URL` | Cadena de conexión del **Session pooler** del proyecto de desarrollo (Connect › Session pooler), con la contraseña de la base en lugar de `[YOUR-PASSWORD]`. |
+
+   Se usa el Session pooler porque los servidores de GitHub no tienen IPv6 y la dirección directa de la base solo responde por IPv6.
 
 3. **Protección de la rama `main`:** marcar como obligatorias las verificaciones `Types`, `Style`, `Domain tests` y `Permission tests`.
 
