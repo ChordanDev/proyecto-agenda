@@ -29,6 +29,11 @@ insert into public.iglesias (id, distrito_id, nombre, direccion, localidad) valu
 insert into public.iglesias (id, distrito_id, nombre, direccion, localidad, excluida_del_buscador) values
   ('10000000-0000-4000-8000-000000000099', 'd0000000-0000-4000-8000-000000000001', 'Iglesia de prueba', 'Calle Ficticia 123', 'Córdoba', true);
 
+-- A church the admin gave de baja: it is listed apart in the gestion of the
+-- admin, with "Reactivar", and nowhere else.
+insert into public.iglesias (id, distrito_id, nombre, direccion, localidad, de_baja) values
+  ('10000000-0000-4000-8000-000000000098', 'd0000000-0000-4000-8000-000000000004', 'Alpa Corral', 'Calle Principal 50', 'Alpa Corral', true);
+
 -- Simulated usuarios -------------------------------------------------------------
 -- Four usuarios that can log in to the local Supabase, one per case of the
 -- permission table: an encargado, a pastor, an admin and a usuario without

@@ -153,14 +153,14 @@ isOneToOne: false
                   ]
                 },"distritos": {
                   Row: {
-                    "asociacion_id": string,"id": string,"nombre": string
+                    "asociacion_id": string,"de_baja": boolean,"id": string,"nombre": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "asociacion_id": string,"id"?: string,"nombre": string
+                    "asociacion_id": string,"de_baja"?: boolean,"id"?: string,"nombre": string
                   }
                   Update: {
-                    "asociacion_id"?: string,"id"?: string,"nombre"?: string
+                    "asociacion_id"?: string,"de_baja"?: boolean,"id"?: string,"nombre"?: string
                   }
                   Relationships: [
                     {
@@ -257,14 +257,14 @@ isOneToOne: false
                   ]
                 },"iglesias": {
                   Row: {
-                    "direccion": string,"distrito_id": string,"excluida_del_buscador": boolean,"id": string,"latitud": number | null,"localidad": string,"longitud": number | null,"nombre": string
+                    "de_baja": boolean,"direccion": string,"distrito_id": string,"excluida_del_buscador": boolean,"id": string,"latitud": number | null,"localidad": string,"longitud": number | null,"nombre": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "direccion": string,"distrito_id": string,"excluida_del_buscador"?: boolean,"id"?: string,"latitud"?: number | null,"localidad": string,"longitud"?: number | null,"nombre": string
+                    "de_baja"?: boolean,"direccion": string,"distrito_id": string,"excluida_del_buscador"?: boolean,"id"?: string,"latitud"?: number | null,"localidad": string,"longitud"?: number | null,"nombre": string
                   }
                   Update: {
-                    "direccion"?: string,"distrito_id"?: string,"excluida_del_buscador"?: boolean,"id"?: string,"latitud"?: number | null,"localidad"?: string,"longitud"?: number | null,"nombre"?: string
+                    "de_baja"?: boolean,"direccion"?: string,"distrito_id"?: string,"excluida_del_buscador"?: boolean,"id"?: string,"latitud"?: number | null,"localidad"?: string,"longitud"?: number | null,"nombre"?: string
                   }
                   Relationships: [
                     {
@@ -384,6 +384,12 @@ isOneToOne: false
               "consultas_del_dia": number,"gasto_del_mes": number
             }[]
                            },
+"dar_de_baja_distrito":
+{ Args: { "distrito_id": string }; Returns: undefined
+                           },
+"dar_de_baja_iglesia":
+{ Args: { "iglesia_id": string }; Returns: undefined
+                           },
 "delete_own_usuario":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
@@ -452,6 +458,12 @@ isOneToOne: false
                            },
 "quitar_evento_de_iglesia":
 { Args: { "evento_id": string,"iglesia_id": string }; Returns: undefined
+                           },
+"reactivar_distrito":
+{ Args: { "distrito_id": string }; Returns: undefined
+                           },
+"reactivar_iglesia":
+{ Args: { "iglesia_id": string }; Returns: undefined
                            },
 "registrar_consulta":
 { Args: { "costo_usd": number,"dia": string,"mes": string,"usuario_id": string }; Returns: {
