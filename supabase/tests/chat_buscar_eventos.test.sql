@@ -1,0 +1,260 @@
+-- Permission tests for what the chat de consulta reads: buscar_eventos finds
+-- only the eventos of the calendario of the usuario who asks, and only a
+-- usuario with a sesion can call it.
+--
+-- The way permission tests are written is explained at the top of
+-- estructura_permisos.test.sql, and how a test acts as a usuario at the top of
+-- cargos_permisos.test.sql.
+--
+-- The structure of the fixtures:
+--
+--   Asociación de la prueba (the admin)
+--     Distrito del pastor (the pastor)
+--       Iglesia del encargado (the encargado)
+--       Iglesia vecina
+--     Otro distrito
+--       Iglesia de otro distrito
+--   Otra asociación (in the hora of São Paulo)
+--     Distrito de otra asociación
+--       Iglesia de otra asociación (its encargado)
+--
+-- Run with: npm run db:test
+
+begin;
+
+create extension if not exists pgtap with schema extensions;
+
+select plan(29);
+
+-- Fixtures ---------------------------------------------------------------------
+
+insert into public.asociaciones (id, nombre, zona_horaria) values
+  ('aaaaaaaa-0000-4000-8000-000000000001', 'Asociación de la prueba', 'America/Argentina/Buenos_Aires'),
+  ('aaaaaaaa-0000-4000-8000-000000000002', 'Otra asociación', 'America/Sao_Paulo');
+
+insert into public.distritos (id, asociacion_id, nombre) values
+  ('dddddddd-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'Distrito del pastor'),
+  ('dddddddd-0000-4000-8000-000000000002', 'aaaaaaaa-0000-4000-8000-000000000001', 'Otro distrito'),
+  ('dddddddd-0000-4000-8000-000000000003', 'aaaaaaaa-0000-4000-8000-000000000002', 'Distrito de otra asociación');
+
+insert into public.iglesias (id, distrito_id, nombre, direccion, localidad) values
+  ('11111111-0000-4000-8000-000000000001', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia del encargado', 'Calle 1', 'Localidad'),
+  ('11111111-0000-4000-8000-000000000002', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia vecina', 'Calle 2', 'Localidad'),
+  ('11111111-0000-4000-8000-000000000003', 'dddddddd-0000-4000-8000-000000000002', 'Iglesia de otro distrito', 'Calle 3', 'Localidad'),
+  ('11111111-0000-4000-8000-000000000004', 'dddddddd-0000-4000-8000-000000000003', 'Iglesia de otra asociación', 'Calle 4', 'Localidad');
+
+insert into auth.users (id, aud, role, email) values
+  ('bbbbbbbb-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'encargado@prueba.example.com'),
+  ('bbbbbbbb-0000-4000-8000-000000000002', 'authenticated', 'authenticated', 'pastor@prueba.example.com'),
+  ('bbbbbbbb-0000-4000-8000-000000000003', 'authenticated', 'authenticated', 'admin@prueba.example.com'),
+  ('bbbbbbbb-0000-4000-8000-000000000004', 'authenticated', 'authenticated', 'sincargo@prueba.example.com'),
+  ('bbbbbbbb-0000-4000-8000-000000000005', 'authenticated', 'authenticated', 'otra@prueba.example.com');
+
+insert into public.cargos (usuario_id, iglesia_id, distrito_id, asociacion_id) values
+  ('bbbbbbbb-0000-4000-8000-000000000001', '11111111-0000-4000-8000-000000000001', null, null),
+  ('bbbbbbbb-0000-4000-8000-000000000002', null, 'dddddddd-0000-4000-8000-000000000001', null),
+  ('bbbbbbbb-0000-4000-8000-000000000003', null, null, 'aaaaaaaa-0000-4000-8000-000000000001'),
+  ('bbbbbbbb-0000-4000-8000-000000000005', '11111111-0000-4000-8000-000000000004', null, null);
+
+insert into public.eventos (id, titulo, lugar, descripcion, alcance, duenio_iglesia_id, duenio_distrito_id, duenio_asociacion_id, hora, fecha_fin) values
+  ('eeeeeeee-0000-4000-8000-000000000001', 'Culto joven', 'Templo', null, 'iglesia', '11111111-0000-4000-8000-000000000001', null, null, '19:00', null),
+  ('eeeeeeee-0000-4000-8000-000000000002', 'Culto del otro distrito', null, null, 'iglesia', '11111111-0000-4000-8000-000000000003', null, null, '18:00', null),
+  ('eeeeeeee-0000-4000-8000-000000000003', 'Congreso de Jóvenes', null, null, 'distrito', null, 'dddddddd-0000-4000-8000-000000000001', null, '09:00', null),
+  ('eeeeeeee-0000-4000-8000-000000000004', 'Campamento', null, 'Traer carpa', 'asociacion', null, null, 'aaaaaaaa-0000-4000-8000-000000000001', '08:00', '2026-11-16'),
+  ('eeeeeeee-0000-4000-8000-000000000005', 'Compartido 100%', null, null, 'iglesia', '11111111-0000-4000-8000-000000000003', null, null, '20:00', null),
+  ('eeeeeeee-0000-4000-8000-000000000006', 'Culto de otra asociación', null, null, 'iglesia', '11111111-0000-4000-8000-000000000004', null, null, '19:00', null),
+  ('eeeeeeee-0000-4000-8000-000000000007', 'Culto de oración', null, null, 'iglesia', '11111111-0000-4000-8000-000000000001', null, null, '19:00', null);
+
+insert into public.eventos_fechas (evento_id, fecha) values
+  ('eeeeeeee-0000-4000-8000-000000000001', '2026-11-14'),
+  ('eeeeeeee-0000-4000-8000-000000000002', '2026-11-14'),
+  ('eeeeeeee-0000-4000-8000-000000000003', '2026-11-14'),
+  ('eeeeeeee-0000-4000-8000-000000000004', '2026-11-10'),
+  ('eeeeeeee-0000-4000-8000-000000000005', '2026-11-14'),
+  ('eeeeeeee-0000-4000-8000-000000000006', '2026-11-14'),
+  ('eeeeeeee-0000-4000-8000-000000000007', '2026-11-21'),
+  ('eeeeeeee-0000-4000-8000-000000000007', '2026-11-28');
+
+-- The Iglesia de otro distrito shares one evento with the Iglesia del encargado.
+insert into public.iglesias_sumadas (evento_id, iglesia_id) values
+  ('eeeeeeee-0000-4000-8000-000000000005', '11111111-0000-4000-8000-000000000001');
+
+-- The functions themselves -----------------------------------------------------------
+
+select isnt_definer('public', 'buscar_eventos', array['date', 'date', 'text', 'integer']);
+select function_privs_are(
+  'public', 'buscar_eventos', array['date', 'date', 'text', 'integer'], 'anon', array[]::text[],
+  'anon cannot execute buscar_eventos'
+);
+select function_privs_are(
+  'public', 'buscar_eventos', array['date', 'date', 'text', 'integer'], 'authenticated', array['EXECUTE'],
+  'authenticated can execute buscar_eventos'
+);
+select isnt_definer('public', 'get_zona_horaria_de_usuario', array[]::text[]);
+select function_privs_are(
+  'public', 'get_zona_horaria_de_usuario', array[]::text[], 'anon', array[]::text[],
+  'anon cannot execute get_zona_horaria_de_usuario'
+);
+
+-- Without a sesion (anon): the hermano has no chat ---------------------------------
+
+set local role anon;
+
+select throws_ok(
+  $$ select * from public.buscar_eventos('2026-11-14', '2026-11-14') $$,
+  '42501', 'permission denied for function buscar_eventos', 'anon cannot search eventos'
+);
+
+-- The encargado ---------------------------------------------------------------------
+
+set local role authenticated;
+set local request.jwt.claims to '{"sub": "bbbbbbbb-0000-4000-8000-000000000001", "role": "authenticated"}';
+
+select results_eq(
+  $$ select evento_id::text from public.buscar_eventos('2026-11-14', '2026-11-14', null, 20) $$,
+  $$ values
+       ('eeeeeeee-0000-4000-8000-000000000004'),
+       ('eeeeeeee-0000-4000-8000-000000000003'),
+       ('eeeeeeee-0000-4000-8000-000000000001'),
+       ('eeeeeeee-0000-4000-8000-000000000005') $$,
+  'the encargado finds the eventos of their iglesia, distrito and asociacion and those sumados to it, in order of fecha and hora'
+);
+select is_empty(
+  $$ select 1 from public.buscar_eventos('2026-11-14', '2026-11-14', null, 20)
+     where evento_id = 'eeeeeeee-0000-4000-8000-000000000002' $$,
+  'the encargado does not find an evento of an iglesia of another distrito, though anyone can read it'
+);
+select is_empty(
+  $$ select 1 from public.buscar_eventos('2026-11-14', '2026-11-14', null, 20)
+     where evento_id = 'eeeeeeee-0000-4000-8000-000000000006' $$,
+  'the encargado does not find an evento of another asociacion'
+);
+select results_eq(
+  $$ select count(*)::integer, min(total)::integer, max(total)::integer
+     from public.buscar_eventos('2026-11-14', '2026-11-14') $$,
+  $$ values (3, 4, 4) $$,
+  'by default it returns the first three, each with the total of coincidencias'
+);
+select results_eq(
+  $$ select duenio, lugar from public.buscar_eventos('2026-11-14', '2026-11-14', 'culto joven') $$,
+  $$ values ('Iglesia del encargado', 'Templo') $$,
+  'each coincidencia says its duenio and its lugar'
+);
+select results_eq(
+  $$ select duenio from public.buscar_eventos('2026-11-14', '2026-11-14', 'congreso') $$,
+  $$ values ('Distrito del pastor') $$,
+  'an evento of distrito says the nombre of its distrito'
+);
+select results_eq(
+  $$ select evento_id::text from public.buscar_eventos('2026-11-14', '2026-11-14', '  CONGRESO   jovenes ') $$,
+  $$ values ('eeeeeeee-0000-4000-8000-000000000003') $$,
+  'texto matches every word, without caring about capitals, accents or spaces'
+);
+select results_eq(
+  $$ select evento_id::text from public.buscar_eventos('2026-11-14', '2026-11-14', 'joven') $$,
+  $$ values ('eeeeeeee-0000-4000-8000-000000000003'), ('eeeeeeee-0000-4000-8000-000000000001') $$,
+  'a word can be part of a longer one'
+);
+select results_eq(
+  $$ select evento_id::text from public.buscar_eventos('2026-11-14', '2026-11-14', 'carpa') $$,
+  $$ values ('eeeeeeee-0000-4000-8000-000000000004') $$,
+  'texto also looks in the descripcion'
+);
+select results_eq(
+  $$ select evento_id::text from public.buscar_eventos('2026-11-14', '2026-11-14', '100%') $$,
+  $$ values ('eeeeeeee-0000-4000-8000-000000000005') $$,
+  'a % in texto is just a character'
+);
+select is_empty(
+  $$ select 1 from public.buscar_eventos('2026-11-14', '2026-11-14', 'culto del otro') $$,
+  'texto does not reach eventos outside the calendario of the usuario'
+);
+select results_eq(
+  $$ select evento_id::text, fecha from public.buscar_eventos('2026-11-15', '2026-11-15') $$,
+  $$ values ('eeeeeeee-0000-4000-8000-000000000004', '2026-11-10'::date) $$,
+  'an evento of several days falls on every day of its range'
+);
+select results_eq(
+  $$ select fecha, total::integer from public.buscar_eventos('2026-11-20', '2026-11-30', 'oracion') $$,
+  $$ values ('2026-11-21'::date, 2), ('2026-11-28'::date, 2) $$,
+  'a series has one coincidencia per date'
+);
+select throws_ok(
+  $$ select * from public.buscar_eventos('2026-11-14', '2026-11-13') $$,
+  '22023', 'A busqueda goes from desde to hasta, at most 366 days later',
+  'hasta cannot be before desde'
+);
+select throws_ok(
+  $$ select * from public.buscar_eventos('2026-01-01', '2027-01-03') $$,
+  '22023', 'A busqueda goes from desde to hasta, at most 366 days later',
+  'a busqueda cannot span more than a year'
+);
+select throws_ok(
+  $$ select * from public.buscar_eventos('2026-11-14', '2026-11-14', null, 21) $$,
+  '22023', 'A busqueda returns from 1 to 20 eventos',
+  'a busqueda cannot return more than 20 eventos'
+);
+select is(
+  public.get_zona_horaria_de_usuario(), 'America/Argentina/Buenos_Aires',
+  'the zona horaria of the encargado is the one of their asociacion'
+);
+
+-- The pastor ------------------------------------------------------------------------
+
+set local request.jwt.claims to '{"sub": "bbbbbbbb-0000-4000-8000-000000000002", "role": "authenticated"}';
+
+select results_eq(
+  $$ select evento_id::text from public.buscar_eventos('2026-11-14', '2026-11-14', null, 20) $$,
+  $$ values
+       ('eeeeeeee-0000-4000-8000-000000000004'),
+       ('eeeeeeee-0000-4000-8000-000000000003'),
+       ('eeeeeeee-0000-4000-8000-000000000001'),
+       ('eeeeeeee-0000-4000-8000-000000000005') $$,
+  'the pastor finds the calendarios of the iglesias of their distrito, and not those of another distrito'
+);
+
+-- The admin -------------------------------------------------------------------------
+
+set local request.jwt.claims to '{"sub": "bbbbbbbb-0000-4000-8000-000000000003", "role": "authenticated"}';
+
+select results_eq(
+  $$ select evento_id::text from public.buscar_eventos('2026-11-14', '2026-11-14', null, 20) $$,
+  $$ values
+       ('eeeeeeee-0000-4000-8000-000000000004'),
+       ('eeeeeeee-0000-4000-8000-000000000003'),
+       ('eeeeeeee-0000-4000-8000-000000000002'),
+       ('eeeeeeee-0000-4000-8000-000000000001'),
+       ('eeeeeeee-0000-4000-8000-000000000005') $$,
+  'the admin finds every iglesia of their asociacion, and not those of another one'
+);
+
+-- A usuario of another asociacion -----------------------------------------------------
+
+set local request.jwt.claims to '{"sub": "bbbbbbbb-0000-4000-8000-000000000005", "role": "authenticated"}';
+
+select results_eq(
+  $$ select evento_id::text from public.buscar_eventos('2026-11-14', '2026-11-14', null, 20) $$,
+  $$ values ('eeeeeeee-0000-4000-8000-000000000006') $$,
+  'an encargado of another asociacion finds only their own calendario'
+);
+select is(
+  public.get_zona_horaria_de_usuario(), 'America/Sao_Paulo',
+  'the zona horaria is the one of the asociacion of the usuario'
+);
+
+-- A usuario without cargos ------------------------------------------------------------
+
+set local request.jwt.claims to '{"sub": "bbbbbbbb-0000-4000-8000-000000000004", "role": "authenticated"}';
+
+select is_empty(
+  $$ select 1 from public.buscar_eventos('2026-11-14', '2026-11-14', null, 20) $$,
+  'a usuario without cargos has no calendario to search'
+);
+select is(
+  public.get_zona_horaria_de_usuario(), null,
+  'a usuario without cargos has no zona horaria'
+);
+
+select * from finish();
+
+rollback;
