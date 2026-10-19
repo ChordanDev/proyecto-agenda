@@ -1,4 +1,4 @@
-import type { QueryClient } from '@tanstack/react-query';
+import { onlineManager, type QueryClient } from '@tanstack/react-query';
 
 import {
   getIglesiasEnEstructura,
@@ -80,15 +80,33 @@ export async function sincronizarRecordatorios(
 
 /**
  * Lets the phone follow whatever changed (the iglesia elegida, the session),
- * when it already has the permiso. Never asks for it, and a failure (such as no
- * connection) only waits for the next time Ajustes reads it.
+ * when it already has the permiso. Never asks for it. A failure, such as
+ * signing out without a connection, tries again once the connection comes
+ * back: until then the phone would keep the iglesias of whoever used it.
  */
 export async function actualizarRecordatorios(queryClient: QueryClient): Promise<void> {
+  // Only the latest change is worth trying again.
+  stopWaitingForConnection?.();
+  stopWaitingForConnection = null;
+
   try {
-    if ((await getPermiso()) !== 'concedido') return;
-    await sincronizarRecordatorios(queryClient);
+    if ((await getPermiso()) === 'concedido') {
+      await sincronizarRecordatorios(queryClient);
+    }
   } catch {
-    // Nothing to tell: Ajustes tries again when it reads the registro.
+    waitForConnection(queryClient);
   }
   await queryClient.invalidateQueries({ queryKey: registroQueryKey });
+}
+
+let stopWaitingForConnection: (() => void) | null = null;
+
+function waitForConnection(queryClient: QueryClient) {
+  const unsubscribe = onlineManager.subscribe((online) => {
+    if (!online) return;
+    unsubscribe();
+    stopWaitingForConnection = null;
+    void actualizarRecordatorios(queryClient);
+  });
+  stopWaitingForConnection = unsubscribe;
 }

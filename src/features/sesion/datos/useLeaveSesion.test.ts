@@ -69,7 +69,10 @@ describe('forgetSesion', () => {
 
   it('forgets the recordatorios read with the session, which show the iglesias of the usuario', () => {
     const queryClient = newClient();
-    const registro = { modo: 'eligiendo', registro: { encendido: true, iglesiaIds: ['iglesia-1'] } };
+    const registro = {
+      modo: 'eligiendo',
+      registro: { encendido: true, iglesiaIds: ['iglesia-1'] },
+    };
     queryClient.setQueryData(['recordatorios', 'registro', true], registro);
     queryClient.setQueryData(['recordatorios', 'permiso'], 'concedido');
 
