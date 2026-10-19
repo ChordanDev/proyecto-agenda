@@ -143,6 +143,32 @@ describe('the versioned calendario de prueba and its casos', () => {
     expect(desconocidos).toEqual([]);
   });
 
+  it('finds the word coro only in the Ensayo del coro, as buscar_eventos matches part of a word', () => {
+    const normalizar = (texto: string) =>
+      texto.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+    const titulos = ARCHIVO.eventos
+      .filter((evento) =>
+        normalizar([evento.titulo, evento.lugar, evento.descripcion].join(' ')).includes('coro'),
+      )
+      .map((evento) => evento.titulo);
+
+    expect(new Set(titulos)).toEqual(new Set(['Ensayo del coro']));
+  });
+
+  it('expects the shared evento to be said with its duenio, not just its lugar', () => {
+    const caso = CASOS.find((candidato) => candidato.id === 'simple-compartido');
+    const [titulo] = caso?.esperado.eventos ?? [];
+    const evento = ARCHIVO.eventos.find((candidato) => candidato.titulo === titulo);
+    const fragmentos = caso?.esperado.contiene ?? [];
+
+    expect(evento?.sumadas).toEqual([ARCHIVO.encargadoDe]);
+    expect(fragmentos).not.toEqual([]);
+    for (const fragmento of fragmentos) {
+      expect(evento?.duenio).toContain(fragmento);
+      expect(evento?.lugar ?? '').not.toContain(fragmento);
+    }
+  });
+
   it('gives each caso its own id', () => {
     const ids = CASOS.map((caso) => caso.id);
 

@@ -114,8 +114,8 @@ export const CASOS: readonly Caso[] = [
     // Shared by Iglesia Evals Norte, so it is said with the iglesia that owns it.
     id: 'simple-compartido',
     categoria: 'simple',
-    mensaje: '¿Quién organiza el concierto de coros?',
-    esperado: { tipo: 'respuesta', eventos: ['Concierto de coros'], contiene: ['Norte'] },
+    mensaje: '¿Quién organiza el recital de piano?',
+    esperado: { tipo: 'respuesta', eventos: ['Recital de piano'], contiene: ['Evals Norte'] },
   },
   {
     id: 'simple-miercoles',
@@ -264,7 +264,8 @@ export const CASOS: readonly Caso[] = [
     esperado: { tipo: 'respuesta', eventos: ['Día de la familia'], contieneAlguno: SIN_EL_DATO },
   },
 
-  // Sin coincidencias: Iglesia Evals Norte is not in the calendario of this person.
+  // Sin coincidencias: the eventos Iglesia Evals Norte does not share are not in the
+  // calendario of this person.
   {
     id: 'sin-otra-iglesia',
     categoria: 'sin_coincidencias',
