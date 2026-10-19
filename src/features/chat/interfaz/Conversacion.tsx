@@ -16,8 +16,10 @@ const LIST_PADDING_HORIZONTAL = 16;
 const LIST_PADDING_BOTTOM = 18;
 const LIST_GAP = 14;
 
-type ConversacionProps = Omit<ConversacionEnCurso, 'vuelta' | 'nueva'> & {
+type ConversacionProps = Omit<ConversacionEnCurso, 'vuelta' | 'nueva' | 'editar'> & {
   onIrAlFormulario: () => void;
+  onEditar: (id: string) => void;
+  onVerEvento: (id: string) => void;
 };
 
 /**
@@ -29,7 +31,10 @@ export function Conversacion({
   conversacion,
   enviar,
   reintentar,
+  confirmar,
   onIrAlFormulario,
+  onEditar,
+  onVerEvento,
 }: ConversacionProps) {
   const isOnline = useOnlineStatus();
   const list = useRef<ScrollView>(null);
@@ -56,6 +61,9 @@ export function Conversacion({
             mensaje={mensaje}
             onReintentar={mensaje === ultimo ? reintentar : null}
             onIrAlFormulario={onIrAlFormulario}
+            onConfirmar={confirmar}
+            onEditar={onEditar}
+            onVerEvento={onVerEvento}
           />
         ))}
         {conversacion.enviando && <Buscando />}

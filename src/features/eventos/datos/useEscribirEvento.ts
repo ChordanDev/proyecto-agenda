@@ -38,10 +38,12 @@ function useInvalidarEventos() {
  * the form opens: tapping Guardar again after an answer that never came saves
  * that same evento instead of a second one. When the evento was deleted
  * meanwhile, the calendarios and the evento are read again so it disappears.
+ * `idParaCrear` is the id a new one gets when it was chosen before, as the
+ * vista previa of the chat does: saving it from the form saves that evento.
  */
-export function useGuardarEvento(id: string | undefined) {
+export function useGuardarEvento(id: string | undefined, idParaCrear?: string) {
   const invalidar = useInvalidarEventos();
-  const [nuevoId] = useState(newId);
+  const [nuevoId] = useState(() => idParaCrear ?? newId());
   const destino: EventoDestino = id === undefined ? { crear: nuevoId } : { editar: id };
 
   return useMutation({

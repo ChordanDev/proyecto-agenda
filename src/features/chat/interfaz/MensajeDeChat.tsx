@@ -4,8 +4,10 @@ import { colors } from '@/shared/theme';
 import { AppText } from '@/shared/ui';
 
 import { getLineasDeEventos, type MensajeDeChat as Mensaje } from '../dominio/conversacion';
+import { getTarjetaDePropuesta } from '../dominio/propuesta';
 import { FallaDeMensaje } from './EstadoDeFalla';
 import { EventoDeRespuesta } from './EventoDeRespuesta';
+import { TarjetaDePropuesta } from './TarjetaDePropuesta';
 
 // Layout of the approved mockup, which the theme has no tokens for. The line
 // numbers are those of diseno/pantallas/07-chat-ia.html.
@@ -26,10 +28,21 @@ type MensajeDeChatProps = {
   /** For the falla that can be retried; null on any other mensaje. */
   onReintentar: (() => void) | null;
   onIrAlFormulario: () => void;
+  /** Confirmar, Editar and "Ver evento" of a propuesta, by its id. */
+  onConfirmar: (id: string) => void;
+  onEditar: (id: string) => void;
+  onVerEvento: (id: string) => void;
 };
 
-/** A mensaje of the conversacion: a pregunta, a respuesta or a falla. */
-export function MensajeDeChat({ mensaje, onReintentar, onIrAlFormulario }: MensajeDeChatProps) {
+/** A mensaje of the conversacion: a pregunta, a respuesta, a falla or a propuesta. */
+export function MensajeDeChat({
+  mensaje,
+  onReintentar,
+  onIrAlFormulario,
+  onConfirmar,
+  onEditar,
+  onVerEvento,
+}: MensajeDeChatProps) {
   switch (mensaje.tipo) {
     case 'pregunta':
       return (
@@ -54,6 +67,17 @@ export function MensajeDeChat({ mensaje, onReintentar, onIrAlFormulario }: Mensa
           falla={mensaje.falla}
           onReintentar={onReintentar}
           onIrAlFormulario={onIrAlFormulario}
+        />
+      );
+    case 'propuesta':
+      return (
+        <TarjetaDePropuesta
+          tarjeta={getTarjetaDePropuesta(mensaje.borrador)}
+          estado={mensaje.estado}
+          error={mensaje.error}
+          onConfirmar={() => onConfirmar(mensaje.id)}
+          onEditar={() => onEditar(mensaje.id)}
+          onVerEvento={() => onVerEvento(mensaje.id)}
         />
       );
   }

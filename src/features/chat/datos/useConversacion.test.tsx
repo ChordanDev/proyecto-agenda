@@ -12,6 +12,14 @@ jest.mock('./enviarConsulta', () => ({
   enviarConsulta: (pedido: unknown) => mockEnviarConsulta(pedido),
 }));
 jest.mock('@/shared/supabase', () => ({ supabase: {} }));
+
+// The save of an evento, under the control of each test.
+const mockGuardarEvento = jest.fn();
+
+jest.mock('@/features/eventos/datos/escribirEvento', () => ({
+  ...jest.requireActual('@/features/eventos/datos/escribirEvento'),
+  guardarEvento: (evento: unknown, destino: unknown) => mockGuardarEvento(evento, destino),
+}));
 jest.mock('./zonaHoraria', () => ({ getZonaHoraria: () => Promise.resolve('UTC') }));
 jest.mock('@/features/sesion/datos/useSesion', () => ({ useSesion: () => true }));
 
@@ -45,7 +53,7 @@ function renderConversacion() {
   return () => latest.current!;
 }
 
-const respuesta = { tipo: 'respuesta', texto: 'Listo', eventos: [], aviso: null };
+const respuesta = { tipo: 'respuesta', texto: 'Listo', eventos: [], aviso: null, borrador: null };
 
 /** Lets a pending consulta finish inside act. */
 const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 0)));
@@ -53,6 +61,7 @@ const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 0)))
 beforeEach(() => {
   mockNextId = 0;
   mockEnviarConsulta.mockReset();
+  mockGuardarEvento.mockReset();
   onlineManager.setOnline(true);
 });
 
@@ -137,5 +146,125 @@ describe('useConversacion with the presupuesto agotado', () => {
 
     expect(chat().vuelta).toBeNull();
     expect(chat().conversacion.bloqueo).toBeNull();
+  });
+});
+
+const borrador = {
+  titulo: 'Culto joven',
+  fecha: '2099-10-24',
+  hora: '19:00:00',
+  fechaFin: null,
+  lugar: 'Templo',
+  descripcion: null,
+  enfasis: 'nuevas_generaciones',
+  duenio: { alcance: 'iglesia', iglesiaId: 'i1' },
+  duenioNombre: 'Iglesia Central',
+  repeticion: 'ninguna',
+  finDeSerie: null,
+};
+
+/** A chat whose last mensaje is the propuesta of `borrador`, with its id. */
+async function renderConPropuesta() {
+  mockEnviarConsulta.mockResolvedValue({
+    ok: true,
+    respuesta: { ...respuesta, texto: 'Te preparé el evento.', borrador },
+  });
+  const chat = renderConversacion();
+  act(() => chat().enviar('Cargame un culto joven el sábado 24 a las 19 h'));
+  await settle();
+  const propuesta = chat().conversacion.mensajes.at(-1)!;
+  expect(propuesta.tipo).toBe('propuesta');
+
+  return { chat, id: propuesta.id };
+}
+
+function getEstado(chat: () => ConversacionEnCurso, id: string) {
+  const mensaje = chat().conversacion.mensajes.find((candidato) => candidato.id === id);
+  return mensaje?.tipo === 'propuesta' ? { estado: mensaje.estado, error: mensaje.error } : null;
+}
+
+describe('useConversacion: Confirmar', () => {
+  it('creates a single evento, with the id of the propuesta, when tapped twice', async () => {
+    let saved: (value: unknown) => void = () => undefined;
+    const { chat, id } = await renderConPropuesta();
+    mockGuardarEvento.mockReturnValue(new Promise((resolve) => (saved = resolve)));
+
+    const { confirmar } = chat();
+    act(() => {
+      confirmar(id);
+      confirmar(id);
+    });
+    saved(id);
+    await settle();
+
+    expect(mockGuardarEvento).toHaveBeenCalledTimes(1);
+    expect(mockGuardarEvento).toHaveBeenCalledWith(
+      expect.objectContaining({ titulo: 'Culto joven', lugar: 'Templo', fechas: ['2099-10-24'] }),
+      { crear: id },
+    );
+    expect(getEstado(chat, id)).toEqual({ estado: 'guardado', error: null });
+  });
+
+  it('does not count as a consulta', async () => {
+    const { chat, id } = await renderConPropuesta();
+    mockGuardarEvento.mockResolvedValue(id);
+
+    act(() => chat().confirmar(id));
+    await settle();
+
+    expect(mockEnviarConsulta).toHaveBeenCalledTimes(1);
+  });
+
+  it('without conexion shows the error of the form and keeps the buttons', async () => {
+    const { chat, id } = await renderConPropuesta();
+    onlineManager.setOnline(false);
+
+    act(() => chat().confirmar(id));
+    await settle();
+
+    expect(mockGuardarEvento).not.toHaveBeenCalled();
+    expect(getEstado(chat, id)).toEqual({
+      estado: 'pendiente',
+      error: 'Hace falta conexión a internet. Revisá la conexión y probá de nuevo.',
+    });
+  });
+
+  it('shows the error of the form when the save is rejected', async () => {
+    const { ErrorDeEscritura } = jest.requireActual('@/features/eventos/datos/escribirEvento');
+    const { chat, id } = await renderConPropuesta();
+    mockGuardarEvento.mockRejectedValue(new ErrorDeEscritura('sin-permiso', 'denied'));
+
+    act(() => chat().confirmar(id));
+    await settle();
+
+    expect(getEstado(chat, id)).toEqual({
+      estado: 'pendiente',
+      error: 'Tus cargos no te permiten cambiar este evento.',
+    });
+  });
+});
+
+describe('useConversacion: Editar', () => {
+  it('opens the form with the borrador and leaves the card saved once it is saved there', async () => {
+    const { getFormularioPrecargado } = jest.requireActual(
+      '@/features/eventos/datos/formularioPrecargado',
+    );
+    const { chat, id } = await renderConPropuesta();
+
+    let clave = '';
+    act(() => {
+      clave = chat().editar(id)!;
+    });
+    const precargado = getFormularioPrecargado(clave);
+
+    expect(precargado).toMatchObject({
+      eventoId: id,
+      formulario: { titulo: 'Culto joven', lugar: { tipo: 'escrito', nombre: 'Templo' } },
+    });
+    expect(getEstado(chat, id)).toEqual({ estado: 'pendiente', error: null });
+
+    act(() => precargado.onGuardado(id));
+
+    expect(getEstado(chat, id)).toEqual({ estado: 'guardado', error: null });
   });
 });

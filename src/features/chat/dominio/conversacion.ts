@@ -5,6 +5,7 @@
 import { formatDayHeading, formatTime } from '@/features/calendario/dominio/calendarioTexts';
 import { getCategoria, type Categoria } from '@/features/eventos/dominio/categoria';
 
+import type { BorradorDeEvento } from './borrador';
 import {
   MAX_LARGO_DE_MENSAJE,
   MAX_MENSAJES_DEL_TRAMO,
@@ -15,16 +16,33 @@ import {
 import { getEstadoDeFalla, type Falla } from './fallas';
 
 /**
- * A mensaje of the conversacion. New kinds (the vista previa of #149) are new
- * members of this union.
+ * Where the vista previa of a borrador stands: waiting for Confirmar or
+ * Editar, being saved, or saved once, which it cannot be again.
+ */
+export type EstadoDePropuesta = 'pendiente' | 'guardando' | 'guardado';
+
+/**
+ * A mensaje of the conversacion. New kinds are new members of this union.
  * - `pregunta`: what the usuario wrote.
  * - `respuesta`: what the asistente answered, with the eventos it found.
  * - `falla`: the pregunta before it got no respuesta, and can be retried.
+ * - `propuesta`: a respuesta with the borrador of an evento, drawn as its
+ *   vista previa. Its `id`, a UUID, is the id its evento is created with: a
+ *   save tried again, from Confirmar or from Editar, saves that one evento.
+ *   `error` is why the last Confirmar failed.
  */
 export type MensajeDeChat =
   | { tipo: 'pregunta'; id: string; texto: string }
   | { tipo: 'respuesta'; id: string; texto: string; eventos: EventoDeChat[] }
-  | { tipo: 'falla'; id: string; falla: 'sin-conexion' | 'caido' };
+  | { tipo: 'falla'; id: string; falla: 'sin-conexion' | 'caido' }
+  | {
+      tipo: 'propuesta';
+      id: string;
+      texto: string;
+      borrador: BorradorDeEvento;
+      estado: EstadoDePropuesta;
+      error: string | null;
+    };
 
 /**
  * Why the usuario cannot write: the limite diario closes the cuadro de texto,
@@ -59,7 +77,13 @@ export type AccionDeConversacion =
   | { tipo: 'reintentar' }
   /** Opens the chat again once `hoy`, of the asociacion, reaches the dia of vuelta. */
   | { tipo: 'reabrir'; hoy: string }
-  | { tipo: 'nueva'; id: number };
+  | { tipo: 'nueva'; id: number }
+  /** Confirmar on the propuesta `id`: it starts saving. */
+  | { tipo: 'confirmar'; id: string }
+  /** The evento of the propuesta `id` was saved, from Confirmar or from Editar. */
+  | { tipo: 'guardar'; id: string }
+  /** Confirmar on the propuesta `id` failed: the card keeps its buttons with `error`. */
+  | { tipo: 'fallarGuardado'; id: string; error: string };
 
 /** What the app sends to the server function: the mensaje and the tramo before it. */
 export type PedidoDeConsulta = { mensaje: string; tramo: MensajeDelTramo[] };
@@ -140,10 +164,14 @@ export function reducirConversacion(
       if (accion.conversacionId !== conversacion.id || !conversacion.enviando) {
         return conversacion;
       }
-      const { texto, eventos, aviso } = accion.respuesta;
+      const { texto, eventos, aviso, borrador } = accion.respuesta;
+      const mensaje: MensajeDeChat =
+        borrador === null
+          ? { tipo: 'respuesta', id: accion.id, texto, eventos }
+          : { tipo: 'propuesta', id: accion.id, texto, borrador, estado: 'pendiente', error: null };
       return {
         ...conversacion,
-        mensajes: [...conversacion.mensajes, { tipo: 'respuesta', id: accion.id, texto, eventos }],
+        mensajes: [...conversacion.mensajes, mensaje],
         enviando: false,
         aviso,
       };
@@ -190,7 +218,51 @@ export function reducirConversacion(
 
     case 'nueva':
       return crearConversacion(accion.id);
+
+    // A tap while it is saved, or once it was, changes nothing: one evento.
+    case 'confirmar':
+      return cambiarPropuesta(conversacion, accion.id, ['pendiente'], {
+        estado: 'guardando',
+        error: null,
+      });
+
+    case 'guardar':
+      return cambiarPropuesta(conversacion, accion.id, ['pendiente', 'guardando'], {
+        estado: 'guardado',
+        error: null,
+      });
+
+    case 'fallarGuardado':
+      return cambiarPropuesta(conversacion, accion.id, ['guardando'], {
+        estado: 'pendiente',
+        error: accion.error,
+      });
   }
+}
+
+/**
+ * Changes the propuesta `id` when it is in one of the `desde` estados. Any
+ * other case, such as a propuesta of a conversacion started again, is left
+ * as it is.
+ */
+function cambiarPropuesta(
+  conversacion: Conversacion,
+  id: string,
+  desde: readonly EstadoDePropuesta[],
+  cambios: { estado: EstadoDePropuesta; error: string | null },
+): Conversacion {
+  const indice = conversacion.mensajes.findIndex(
+    (mensaje) =>
+      mensaje.id === id && mensaje.tipo === 'propuesta' && desde.includes(mensaje.estado),
+  );
+  const propuesta = conversacion.mensajes[indice];
+  if (propuesta?.tipo !== 'propuesta') {
+    return conversacion;
+  }
+
+  const mensajes = [...conversacion.mensajes];
+  mensajes[indice] = { ...propuesta, ...cambios };
+  return { ...conversacion, mensajes };
 }
 
 /**
@@ -212,9 +284,10 @@ export function getPedido(conversacion: Conversacion, preguntaId: string): Pedid
   const tramo: MensajeDelTramo[] = [];
   anteriores.forEach((mensaje, i) => {
     const siguiente = anteriores[i + 1];
-    if (mensaje.tipo === 'pregunta' && siguiente?.tipo === 'respuesta') {
+    const respondida = siguiente?.tipo === 'respuesta' || siguiente?.tipo === 'propuesta';
+    if (mensaje.tipo === 'pregunta' && respondida) {
       tramo.push({ autor: 'usuario', texto: mensaje.texto });
-    } else if (mensaje.tipo === 'respuesta') {
+    } else if (mensaje.tipo === 'respuesta' || mensaje.tipo === 'propuesta') {
       tramo.push({ autor: 'asistente', texto: mensaje.texto });
     }
   });
