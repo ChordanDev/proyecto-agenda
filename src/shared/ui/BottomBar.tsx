@@ -22,7 +22,7 @@ const PRESSED_OPACITY = 0.85;
 /**
  * The bottom navigation of the approved design, as the tab bar of a tab layout
  * of Expo Router. Each tab takes its label from the `title` of its screen and
- * its icon from `tabBarIcon`.
+ * its icon from `tabBarIcon`. A screen with `href: null` has no tab.
  */
 export function BottomBar({ state, descriptors, navigation, insets }: BottomTabBarProps) {
   return (
@@ -34,6 +34,10 @@ export function BottomBar({ state, descriptors, navigation, insets }: BottomTabB
     >
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
+        if (isHidden(options)) {
+          return null;
+        }
+
         const focused = state.index === index;
         const label = options.title ?? route.name;
 
@@ -81,6 +85,14 @@ export function BottomBar({ state, descriptors, navigation, insets }: BottomTabB
       })}
     </View>
   );
+}
+
+/**
+ * Expo Router turns `href: null` into a tab item that does not display: the
+ * default tab bar follows it, and this one must too.
+ */
+function isHidden(options: BottomTabBarProps['descriptors'][string]['options']): boolean {
+  return StyleSheet.flatten(options.tabBarItemStyle)?.display === 'none';
 }
 
 const styles = StyleSheet.create({

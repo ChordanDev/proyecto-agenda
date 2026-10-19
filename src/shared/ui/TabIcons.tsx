@@ -2,7 +2,8 @@ import type { ColorValue } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 // The icons of the bottom navigation, redrawn from the approved mockups
-// (04a-calendario.html, lines 173 and 183): line drawings on a 24 grid.
+// (04a-calendario.html, lines 173 and 183, and 07-chat-ia.html, line 196): line
+// drawings on a 24 grid.
 const VIEW_BOX = '0 0 24 24';
 const STROKE_WIDTH = 2;
 
@@ -27,6 +28,24 @@ export function CalendarioIcon({ color, size }: TabIconProps) {
     >
       <Rect x={3} y={5} width={18} height={16} rx={2} />
       <Path d="M3 10h18M8 3v4M16 3v4" />
+    </Svg>
+  );
+}
+
+/** A speech bubble. */
+export function ChatIcon({ color, size }: TabIconProps) {
+  return (
+    <Svg
+      width={size}
+      height={size}
+      viewBox={VIEW_BOX}
+      fill="none"
+      stroke={color}
+      strokeWidth={STROKE_WIDTH}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <Path d="M21 12a8.5 8.5 0 0 1-12.4 7.6L3.5 21l1.4-4.6A8.5 8.5 0 1 1 21 12z" />
     </Svg>
   );
 }
