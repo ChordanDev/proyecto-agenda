@@ -271,6 +271,21 @@ describe('getAvisoDePerdidas', () => {
     expect(getAvisoDePerdidas([lugar], { ...nueva, duenio: serie.duenio }, HOY, serie)).toBeNull();
   });
 
+  it('says what every lost date has in common when they are lost for different reasons', () => {
+    const lugar = excepcion('2027-05-15', { cambios: { lugar: 'Salón', lugarId: 'salon' } });
+    const nueva = {
+      ...serie,
+      duenio: { alcance: 'distrito' as const, distritoId: 'distrito-norte' },
+      finDeSerie: '2027-06-01',
+      fechas: ['2027-05-15'],
+    };
+
+    // 05-15 stays in the series and loses its lugar; 06-19 is left out of "Hasta".
+    expect(getAvisoDePerdidas([lugar, junio], nueva, HOY, serie)?.cuales).toBe(
+      'Son el sábado 15 de mayo y el sábado 19 de junio de 2027, que pierden sus cambios propios con los cambios de la serie.',
+    );
+  });
+
   it('leaves out the year of the dates of this year', () => {
     const octubre = excepcion('2026-10-24', { cambios: { hora: '20:00:00' } });
     const nueva = { ...serie, finDeSerie: '2026-10-20', fechas: ['2026-10-17'] };

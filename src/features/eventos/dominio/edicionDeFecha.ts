@@ -207,9 +207,18 @@ export function validarFormularioDeFecha(
 }
 
 type Motivo =
-  'no-se-repite' | 'fuera-de-hasta' | 'fuera-de-la-serie' | 'lugar-de-otro-duenio' | 'dia-ocupado';
+  | 'mezclados'
+  | 'no-se-repite'
+  | 'fuera-de-hasta'
+  | 'fuera-de-la-serie'
+  | 'lugar-de-otro-duenio'
+  | 'dia-ocupado';
 
 const MOTIVOS: Record<Motivo, [singular: string, plural: string]> = {
+  mezclados: [
+    'que pierde sus cambios propios con los cambios de la serie',
+    'que pierden sus cambios propios con los cambios de la serie',
+  ],
   'no-se-repite': ['porque el evento deja de repetirse', 'porque el evento deja de repetirse'],
   'fuera-de-hasta': ['que queda fuera del nuevo "Hasta"', 'que quedan fuera del nuevo "Hasta"'],
   'fuera-de-la-serie': [
@@ -280,8 +289,8 @@ export function getAvisoDePerdidas(
 
   const una = perdidas.length === 1;
   const motivos = new Set(perdidas.map((excepcion) => getMotivo(excepcion, nueva, cambiaDuenio)));
-  // Lost for different reasons, they all stop being dates of the series.
-  const [motivo] = motivos.size === 1 ? motivos : new Set<Motivo>(['fuera-de-la-serie']);
+  // Lost for different reasons, what they share is losing their own changes.
+  const motivo = motivos.size === 1 ? [...motivos][0] : 'mezclados';
   const dias = formatDias(
     perdidas.map(({ fecha }) => fecha),
     hoy,

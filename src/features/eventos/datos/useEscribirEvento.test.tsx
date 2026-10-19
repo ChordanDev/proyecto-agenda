@@ -11,7 +11,8 @@ const mockRpc = jest.fn();
 jest.mock('@/shared/supabase', () => ({
   supabase: {
     rpc: (...args: unknown[]) => mockRpc(...args),
-    // Reading the evento again after a P0002 finds it gone.
+    // A P0002 makes the write read the evento again (`toErrorDeEscritura`):
+    // here it finds it gone, so the error is 'no-existe'.
     from: () => ({
       select: () => ({
         eq: () => ({ maybeSingle: () => Promise.resolve({ data: null, error: null }) }),
@@ -183,7 +184,7 @@ describe('useGuardarExcepcion and useBorrarFecha', () => {
     ]);
   });
 
-  it('reads the evento again when it was deleted while a date was deleted', async () => {
+  it('reads the evento again when the date was no longer one of the series', async () => {
     mockRpc.mockResolvedValue({
       data: null,
       error: { code: '23514', message: 'not a date of the evento' },
@@ -215,6 +216,71 @@ describe('useGuardarExcepcion and useBorrarFecha', () => {
     expect(invalidated).toEqual([
       [['calendario'], undefined],
       [['evento', 'e1'], 'none'],
+    ]);
+  });
+
+  it('reads the evento again when it was deleted meanwhile', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { code: 'P0002', message: 'no evento' } });
+    const { get, invalidated } = renderDeFecha(() => useBorrarFecha('e1'));
+
+    await act(async () => {
+      await get()
+        .mutateAsync('2026-10-17')
+        .catch(() => undefined);
+    });
+
+    // A series deleted meanwhile is already what was asked: it is read again as a success.
+    expect(invalidated).toEqual([
+      [['calendario'], undefined],
+      [['evento', 'e1'], 'none'],
+    ]);
+  });
+
+  it('reads the evento again when the cached dates were old and only one was left', async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { code: '22023', message: 'The last fecha of the evento e1' },
+    });
+    const { get, invalidated } = renderDeFecha(() => useBorrarFecha('e1'));
+
+    await act(async () => {
+      await get()
+        .mutateAsync('2026-10-17')
+        .catch(() => undefined);
+    });
+
+    expect(invalidated).toEqual([
+      [['calendario'], undefined],
+      [['evento', 'e1'], undefined],
+    ]);
+  });
+
+  it('does not read the evento again for an error that is not about it', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { code: '42501', message: 'rls' } });
+    const { get, invalidated } = renderDeFecha(() => useGuardarExcepcion('e1'));
+
+    await act(async () => {
+      await get()
+        .mutateAsync({ fecha: '2026-10-17', fechaNueva: null, cambios: { titulo: 'X' } })
+        .catch(() => undefined);
+    });
+
+    expect(invalidated).toEqual([]);
+  });
+
+  it('reads the evento again when it was deleted while a date was saved', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { code: 'P0002', message: 'no evento' } });
+    const { get, invalidated } = renderDeFecha(() => useGuardarExcepcion('e1'));
+
+    await act(async () => {
+      await get()
+        .mutateAsync({ fecha: '2026-10-17', fechaNueva: null, cambios: { titulo: 'X' } })
+        .catch(() => undefined);
+    });
+
+    expect(invalidated).toEqual([
+      [['calendario'], undefined],
+      [['evento', 'e1'], undefined],
     ]);
   });
 });
