@@ -84,6 +84,7 @@ Después de traer este cambio hay que repetir el development build, porque suma 
 | `npm run db:reset`  | Recrea la base local: aplica todas las migraciones desde cero y carga los datos simulados. |
 | `npm run db:test`   | Corre las pruebas de permisos (pgTAP) contra la base local.                        |
 | `npm run db:types`  | Regenera `src/shared/database.types.ts` desde el esquema local.                    |
+| `npm run evals:chat` | Corre los evals del chat contra la función real (cuesta plata; ver [docs/evals-chat.md](docs/evals-chat.md)). |
 
 ### Cambios en la base
 
