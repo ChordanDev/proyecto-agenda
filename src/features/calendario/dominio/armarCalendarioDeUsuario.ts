@@ -7,23 +7,32 @@ import {
   type IglesiaEnEstructura,
 } from './armarCalendario';
 
+/** An iglesia of the structure, which may come with its mark of baja. */
+type IglesiaConBaja = IglesiaEnEstructura & {
+  /** Dada de baja: out of every calendario until it is reactivada. */
+  deBaja?: boolean;
+};
+
 /**
  * The iglesias a usuario's cargos cover, in the order received. Each one is
  * asked to the same rule that decides who may write its eventos, so an
  * encargado gets their iglesia, a pastor all those of their distrito and an
- * admin all those of their asociacion.
+ * admin all those of their asociacion. An iglesia dada de baja is covered by
+ * nobody.
  */
-export function getIglesiasDeCargos<T extends IglesiaEnEstructura>(
+export function getIglesiasDeCargos<T extends IglesiaConBaja>(
   cargos: readonly Cargo[],
   iglesias: readonly T[],
 ): T[] {
-  return iglesias.filter((iglesia) =>
-    cargosAbarcanDuenio(cargos, {
-      alcance: 'iglesia',
-      iglesiaId: iglesia.id,
-      distritoId: iglesia.distritoId,
-      asociacionId: iglesia.asociacionId,
-    }),
+  return iglesias.filter(
+    (iglesia) =>
+      !iglesia.deBaja &&
+      cargosAbarcanDuenio(cargos, {
+        alcance: 'iglesia',
+        iglesiaId: iglesia.id,
+        distritoId: iglesia.distritoId,
+        asociacionId: iglesia.asociacionId,
+      }),
   );
 }
 
@@ -34,7 +43,7 @@ export function getIglesiasDeCargos<T extends IglesiaEnEstructura>(
  */
 export function armarCalendarioDeUsuario(
   cargos: readonly Cargo[],
-  iglesias: readonly IglesiaEnEstructura[],
+  iglesias: readonly IglesiaConBaja[],
   fechas: readonly FechaDeEvento[],
 ): FechaDeEvento[] {
   return armarCalendarioDeIglesias(getIglesiasDeCargos(cargos, iglesias), fechas);

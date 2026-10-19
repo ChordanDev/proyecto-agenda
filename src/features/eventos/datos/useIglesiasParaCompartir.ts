@@ -6,12 +6,14 @@ import type { IglesiaParaCompartir } from '../dominio/opcionesParaCompartir';
 
 /**
  * Reads every iglesia of the asociacion with its distrito and its coordenadas
- * when it has them: the ones an evento can be shared with.
+ * when it has them: the ones an evento can be shared with. Those dadas de baja
+ * are left out.
  */
 export async function getIglesiasParaCompartir(): Promise<IglesiaParaCompartir[]> {
   const { data, error } = await supabase
     .from('iglesias')
-    .select('id, nombre, distrito_id, latitud, longitud, distritos (nombre)');
+    .select('id, nombre, distrito_id, latitud, longitud, distritos (nombre)')
+    .eq('de_baja', false);
 
   if (error) {
     throw new Error(`Could not read the iglesias to share with: ${error.message}`);

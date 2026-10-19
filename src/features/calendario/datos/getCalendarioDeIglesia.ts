@@ -10,7 +10,8 @@ import { getFechasDelMes } from './getFechasDelMes';
 
 /**
  * The current place of the iglesia in the structure, its nombres and the eventos
- * it is sumada to; null when there is no such iglesia.
+ * it is sumada to; null when there is no such iglesia, or it was dada de baja:
+ * then the phone chooses another one, as for an iglesia that was deleted.
  */
 async function getIglesiaEnEstructura(
   iglesiaId: string,
@@ -18,7 +19,7 @@ async function getIglesiaEnEstructura(
   const { data, error } = await supabase
     .from('iglesias')
     .select(
-      'id, nombre, distrito_id, distritos (nombre, asociacion_id), iglesias_sumadas (evento_id)',
+      'id, nombre, distrito_id, de_baja, distritos (nombre, asociacion_id), iglesias_sumadas (evento_id)',
     )
     .eq('id', iglesiaId)
     .maybeSingle();
@@ -27,7 +28,7 @@ async function getIglesiaEnEstructura(
     throw new Error(`Could not read the iglesia of the calendario: ${error.message}`);
   }
 
-  if (!data) {
+  if (!data || data.de_baja) {
     return null;
   }
 
@@ -53,7 +54,7 @@ export type LecturaDeIglesia = {
 /**
  * Reads the iglesia of a calendario: its place in the structure, the nombres
  * the header shows and the eventos it is sumada to. Null when there is no such
- * iglesia (any more).
+ * iglesia (any more) or it is de baja.
  */
 export async function getIglesiaDeCalendario(iglesiaId: string): Promise<LecturaDeIglesia | null> {
   const found = await getIglesiaEnEstructura(iglesiaId);

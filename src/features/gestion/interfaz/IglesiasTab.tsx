@@ -3,7 +3,14 @@ import { useState } from 'react';
 
 import { AppText, Card, SearchField } from '@/shared/ui';
 
+import { useEstructuraDelAdmin } from '../datos/useGestionAdmin';
+import {
+  getConfirmacionDeReactivarIglesia,
+  getSubtituloDeIglesiaDeBaja,
+  puedeReactivarIglesia,
+} from '../dominio/bajaDeEstructura';
 import { buscarIglesiasDelAdmin, type IglesiaDelAdmin } from '../dominio/estructuraDelAdmin';
+import { DadasDeBaja } from './BajaDelAdmin';
 import { BotonAgregar, Fila, Lista } from './ListaDelAdmin';
 
 type IglesiasTabProps = {
@@ -11,9 +18,14 @@ type IglesiasTabProps = {
   iglesias: IglesiaDelAdmin[];
 };
 
-/** The tab Iglesias: every iglesia of the asociacion with its distrito, and a search. */
+/**
+ * The tab Iglesias: every active iglesia of the asociacion with its distrito,
+ * a search, and apart those dadas de baja, to reactivar them.
+ */
 export function IglesiasTab({ iglesias }: IglesiasTabProps) {
   const router = useRouter();
+  // The same query the screen read the iglesias from, so it is already there.
+  const deBaja = useEstructuraDelAdmin().data?.iglesiasDeBaja ?? [];
   const [texto, setTexto] = useState('');
   const encontradas = buscarIglesiasDelAdmin(iglesias, texto);
 
@@ -56,6 +68,18 @@ export function IglesiasTab({ iglesias }: IglesiasTabProps) {
           </AppText>
         </Card>
       )}
+
+      <DadasDeBaja
+        titulo="Dadas de baja"
+        filas={deBaja.map((iglesia) => ({
+          id: iglesia.id,
+          nombre: iglesia.nombre,
+          subtitulo: getSubtituloDeIglesiaDeBaja(iglesia),
+          puedeReactivar: puedeReactivarIglesia(iglesia),
+          baja: { iglesiaId: iglesia.id },
+          confirmacion: getConfirmacionDeReactivarIglesia(iglesia.nombre),
+        }))}
+      />
     </>
   );
 }

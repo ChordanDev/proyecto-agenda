@@ -5,8 +5,11 @@ import Svg, { Path } from 'react-native-svg';
 import { colors, fontSize, radius } from '@/shared/theme';
 import { AppText } from '@/shared/ui';
 
+import { useEstructuraDelAdmin } from '../datos/useGestionAdmin';
+import { getConfirmacionDeReactivarDistrito } from '../dominio/bajaDeEstructura';
 import { getAvisoDeDistritosSinPastor, type DistritoDelAdmin } from '../dominio/distritosSinPastor';
 import { getEtiquetaDePastores, getTextoDeIglesias } from '../dominio/estructuraDelAdmin';
+import { DadasDeBaja } from './BajaDelAdmin';
 import { BotonAgregar, Fila, Lista } from './ListaDelAdmin';
 
 // Layout of the approved mockup, which the theme has no tokens for. The line
@@ -30,9 +33,14 @@ type DistritosTabProps = {
   distritos: DistritoDelAdmin[];
 };
 
-/** The tab Distritos: each distrito with its iglesias and its pastor, and those without one. */
+/**
+ * The tab Distritos: each active distrito with its iglesias and its pastor,
+ * those without one, and apart those dados de baja, to reactivar them.
+ */
 export function DistritosTab({ distritos }: DistritosTabProps) {
   const router = useRouter();
+  // The same query the screen read the distritos from, so it is already there.
+  const deBaja = useEstructuraDelAdmin().data?.distritosDeBaja ?? [];
   const aviso = getAvisoDeDistritosSinPastor(distritos);
 
   return (
@@ -111,6 +119,18 @@ export function DistritosTab({ distritos }: DistritosTabProps) {
           })}
         </Lista>
       )}
+
+      {/* The mockup draws the section only in the tab Iglesias (line 94). */}
+      <DadasDeBaja
+        titulo="Dados de baja"
+        filas={deBaja.map((distrito) => ({
+          id: distrito.id,
+          nombre: distrito.nombre,
+          puedeReactivar: true,
+          baja: { distritoId: distrito.id },
+          confirmacion: getConfirmacionDeReactivarDistrito(distrito.nombre),
+        }))}
+      />
     </>
   );
 }

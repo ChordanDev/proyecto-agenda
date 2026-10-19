@@ -4,6 +4,7 @@ type IglesiaDeAjustes = {
   nombre: string;
   /** Nombre of its distrito. */
   distrito: string;
+  deBaja: boolean;
 };
 
 export type MiIglesia = {
@@ -13,7 +14,8 @@ export type MiIglesia = {
 
 /**
  * The iglesia elegida of this phone, or null when none was chosen or the one
- * chosen no longer exists: in both cases there is no iglesia to show.
+ * chosen no longer exists or was dada de baja: in every case there is no
+ * iglesia to show, and the phone chooses another one.
  */
 export function getMiIglesia(
   iglesiaElegidaId: string | null,
@@ -21,5 +23,5 @@ export function getMiIglesia(
 ): MiIglesia | null {
   const iglesia = iglesias.find(({ id }) => id === iglesiaElegidaId);
 
-  return iglesia ? { nombre: iglesia.nombre, distrito: iglesia.distrito } : null;
+  return iglesia && !iglesia.deBaja ? { nombre: iglesia.nombre, distrito: iglesia.distrito } : null;
 }

@@ -18,6 +18,7 @@ function iglesia(nombre: string, distritoNombre = 'Distrito Norte'): IglesiaDelA
     localidad: 'San Luis',
     distritoId: distritoNombre,
     distritoNombre,
+    cantidadDeEncargados: 0,
   };
 }
 

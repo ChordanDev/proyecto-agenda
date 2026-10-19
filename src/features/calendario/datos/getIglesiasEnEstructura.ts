@@ -7,13 +7,15 @@ export type IglesiaConEstructura = IglesiaEnEstructura & {
   nombre: string;
   /** Nombre of its distrito. */
   distrito: string;
+  /** Dada de baja: no cargo covers it (getIglesiasDeCargos). */
+  deBaja: boolean;
 };
 
 /** Reads every iglesia with the levels it depends on, ordered by nombre. */
 export async function getIglesiasEnEstructura(): Promise<IglesiaConEstructura[]> {
   const { data, error } = await supabase
     .from('iglesias')
-    .select('id, nombre, distrito_id, distritos (nombre, asociacion_id)')
+    .select('id, nombre, distrito_id, de_baja, distritos (nombre, asociacion_id)')
     .order('nombre');
 
   if (error) {
@@ -26,5 +28,6 @@ export async function getIglesiasEnEstructura(): Promise<IglesiaConEstructura[]>
     distritoId: row.distrito_id,
     asociacionId: row.distritos.asociacion_id,
     distrito: row.distritos.nombre,
+    deBaja: row.de_baja,
   }));
 }

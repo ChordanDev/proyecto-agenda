@@ -14,6 +14,10 @@ import {
   useGuardarDistrito,
   useMoverIglesia,
 } from '../datos/useGestionAdmin';
+import {
+  getBloqueoDeBajaDeDistrito,
+  getConfirmacionDeBajaDeDistrito,
+} from '../dominio/bajaDeEstructura';
 import type { DistritoDelAdmin } from '../dominio/distritosSinPastor';
 import {
   buscarIglesiasDelAdmin,
@@ -23,6 +27,7 @@ import {
   type ErroresDelDistrito,
   type IglesiaDelAdmin,
 } from '../dominio/estructuraDelAdmin';
+import { DarDeBaja } from './BajaDelAdmin';
 import {
   AvisoSinConexion,
   Campo,
@@ -243,6 +248,16 @@ function Formulario({ asociacionId, distrito, distritos, iglesias, onClose }: Fo
       {fallo && <ErrorAlGuardar />}
 
       <Button label={boton} disabled={!conConexion || guardar.isPending} onPress={onGuardar} />
+
+      {distrito !== null && (
+        // Only without active iglesias: the admin moves them first (09c).
+        <DarDeBaja
+          baja={{ distritoId: distrito.id }}
+          confirmacion={getConfirmacionDeBajaDeDistrito(distrito.nombre, distrito.pastores.length)}
+          bloqueo={getBloqueoDeBajaDeDistrito(propias.length)}
+          onHecho={onClose}
+        />
+      )}
 
       {distrito !== null && sacando !== null && (
         <HojaSacar
