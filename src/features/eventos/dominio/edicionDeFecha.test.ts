@@ -6,6 +6,7 @@ import {
   getLeyendaDeUnaFecha,
   getVistaAbierta,
   formularioDeFecha,
+  muestraHojaDeBorrar,
   muestraHojaDeSerie,
   validarFormularioDeFecha,
   type EdicionDeFecha,
@@ -54,6 +55,20 @@ describe('muestraHojaDeSerie', () => {
 
   it('never shows to whoever cannot edit, such as an iglesia sumada', () => {
     expect(muestraHojaDeSerie(serie, false)).toBe(false);
+  });
+});
+
+describe('muestraHojaDeBorrar', () => {
+  it('offers to delete a single date while the series has others', () => {
+    expect(muestraHojaDeBorrar(serie, true, 2)).toBe(true);
+  });
+
+  it('deletes the last date left with the whole series, without asking which', () => {
+    expect(muestraHojaDeBorrar(serie, true, 1)).toBe(false);
+  });
+
+  it('never shows to whoever cannot edit', () => {
+    expect(muestraHojaDeBorrar(serie, false, 3)).toBe(false);
   });
 });
 

@@ -45,6 +45,18 @@ export function muestraHojaDeSerie(evento: Pick<Evento, 'repeticion'>, puedeEdit
   return puedeEditar && evento.repeticion !== 'ninguna';
 }
 
+/**
+ * Whether Borrar asks the same: the last date left of a series is deleted with
+ * the whole series (public.borrar_fecha rejects it), so then it does not ask.
+ */
+export function muestraHojaDeBorrar(
+  evento: Pick<Evento, 'repeticion'>,
+  puedeEditar: boolean,
+  cantidadDeFechas: number,
+): boolean {
+  return muestraHojaDeSerie(evento, puedeEditar) && cantidadDeFechas > 1;
+}
+
 function lowerFirst(text: string): string {
   return text.charAt(0).toLowerCase() + text.slice(1);
 }

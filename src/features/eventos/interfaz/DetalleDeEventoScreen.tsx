@@ -27,6 +27,7 @@ import {
   getConfirmacionDeBorrarFecha,
   getHojaDeSerie,
   getVistaAbierta,
+  muestraHojaDeBorrar,
   muestraHojaDeSerie,
   NOTA_DE_CAMBIOS_PROPIOS,
 } from '../dominio/edicionDeFecha';
@@ -452,7 +453,7 @@ function Detalle({ detallado, fecha, onDeleted }: DetalleProps) {
                 if (!avisarSinConexion()) {
                   return;
                 }
-                if (conHoja) {
+                if (conHoja && muestraHojaDeBorrar(evento, puedeEditar, vistas.length)) {
                   setHoja('borrar');
                 } else {
                   askBorrarSerie();
