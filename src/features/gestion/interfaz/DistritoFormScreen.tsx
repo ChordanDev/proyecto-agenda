@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { HojaInferior } from '@/features/eventos/interfaz/HojaInferior';
+import { newId } from '@/shared/newId';
 import { accesibilidad, colors, fontSize, radius } from '@/shared/theme';
 import { AppText, Button, Card, SearchField, TextField } from '@/shared/ui';
 import { useOnlineStatus } from '@/shared/useOnlineStatus';
@@ -116,7 +117,12 @@ type FormularioProps = {
 function Formulario({ asociacionId, distrito, distritos, iglesias, onClose }: FormularioProps) {
   const router = useRouter();
   const conConexion = useOnlineStatus();
-  const guardar = useGuardarDistrito(asociacionId, distrito?.id ?? null);
+  // A new distrito gets its id here, once: every try sends the same one.
+  const [nuevoId] = useState(newId);
+  const guardar = useGuardarDistrito(
+    asociacionId,
+    distrito === null ? { crear: nuevoId } : { editar: distrito.id },
+  );
   const [nombre, setNombre] = useState(distrito?.nombre ?? '');
   // The field only shows what is wrong after a first attempt to save.
   const [errores, setErrores] = useState<ErroresDelDistrito>({});

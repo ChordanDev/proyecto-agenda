@@ -4,7 +4,8 @@
 --    asociacion, and moves an iglesia between its distritos.
 -- 2. The pastor, the encargado, the admin of another asociacion and anon do
 --    not.
--- 3. After moving an iglesia, the pastor of the old distrito stops covering it
+-- 3. A create sent again with the same id (its answer was lost) saves once.
+-- 4. After moving an iglesia, the pastor of the old distrito stops covering it
 --    and the one of the new distrito starts, without any other step, and its
 --    calendario shows the eventos of the new distrito and keeps its own.
 --
@@ -17,7 +18,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(41);
+select plan(47);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -153,6 +154,39 @@ select throws_ok(
   $$ update public.iglesias set localidad = ''
      where id = '11111111-0000-4000-8000-000000000001' $$,
   '23514', null, 'an iglesia needs a localidad'
+);
+
+-- A create sent again: the app chooses the id and sends the same one on every
+-- try, so a try whose answer was lost does not create a second row.
+select lives_ok(
+  $$ insert into public.distritos (id, asociacion_id, nombre)
+     values ('dddddddd-0000-4000-8000-000000000010', 'aaaaaaaa-0000-4000-8000-000000000001', 'Distrito Oeste') $$,
+  'the admin can create a distrito with the id the app chose'
+);
+select throws_ok(
+  $$ insert into public.distritos (id, asociacion_id, nombre)
+     values ('dddddddd-0000-4000-8000-000000000010', 'aaaaaaaa-0000-4000-8000-000000000001', 'Distrito Oeste') $$,
+  '23505', null, 'creating the same distrito again is rejected as a duplicate'
+);
+select is(
+  (select count(*) from public.distritos where nombre = 'Distrito Oeste'),
+  1::bigint,
+  'a distrito sent twice is saved once'
+);
+select lives_ok(
+  $$ insert into public.iglesias (id, distrito_id, nombre, direccion, localidad)
+     values ('11111111-0000-4000-8000-000000000010', 'dddddddd-0000-4000-8000-000000000002', 'Iglesia La Florida', 'Calle 3', 'La Florida') $$,
+  'the admin can create an iglesia with the id the app chose'
+);
+select throws_ok(
+  $$ insert into public.iglesias (id, distrito_id, nombre, direccion, localidad)
+     values ('11111111-0000-4000-8000-000000000010', 'dddddddd-0000-4000-8000-000000000002', 'Iglesia La Florida', 'Calle 3', 'La Florida') $$,
+  '23505', null, 'creating the same iglesia again is rejected as a duplicate'
+);
+select is(
+  (select count(*) from public.iglesias where nombre = 'Iglesia La Florida'),
+  1::bigint,
+  'an iglesia sent twice is saved once'
 );
 
 reset role;

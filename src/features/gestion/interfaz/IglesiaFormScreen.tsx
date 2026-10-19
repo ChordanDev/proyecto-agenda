@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+import { newId } from '@/shared/newId';
 import { accesibilidad, colors, fontSize, radius } from '@/shared/theme';
 import { AppText, Button, Card, TextField } from '@/shared/ui';
 import { useOnlineStatus } from '@/shared/useOnlineStatus';
@@ -88,7 +89,9 @@ type FormularioProps = {
 
 function Formulario({ iglesia, distritoInicial, distritos, onClose }: FormularioProps) {
   const conConexion = useOnlineStatus();
-  const guardar = useGuardarIglesia(iglesia?.id ?? null);
+  // A new iglesia gets its id here, once: every try sends the same one.
+  const [nuevoId] = useState(newId);
+  const guardar = useGuardarIglesia(iglesia === null ? { crear: nuevoId } : { editar: iglesia.id });
   const [datos, setDatos] = useState<DatosDeLaIglesia>(() => ({
     nombre: iglesia?.nombre ?? '',
     direccion: iglesia?.direccion ?? '',

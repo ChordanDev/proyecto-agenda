@@ -54,11 +54,17 @@ revoke execute on function public.cargos_administran_asociacion(uuid) from publi
 grant execute on function public.cargos_administran_asociacion(uuid) to authenticated;
 
 -- Privileges --------------------------------------------------------------------
--- Only with a session, and only these columns. The id takes its default.
+-- Only with a session, and only these columns.
+--
+-- The app chooses the id of a new distrito or iglesia and sends the same one on
+-- every try: if the answer of a create is lost and the admin taps it again, the
+-- second insert is rejected as a duplicate (23505) instead of creating a second
+-- row, and the app saves what the form holds by editing the first one. The id
+-- is never updated.
 
-grant insert (asociacion_id, nombre), update (nombre) on public.distritos to authenticated;
+grant insert (id, asociacion_id, nombre), update (nombre) on public.distritos to authenticated;
 
-grant insert (distrito_id, nombre, direccion, localidad),
+grant insert (id, distrito_id, nombre, direccion, localidad),
   update (distrito_id, nombre, direccion, localidad)
   on public.iglesias to authenticated;
 

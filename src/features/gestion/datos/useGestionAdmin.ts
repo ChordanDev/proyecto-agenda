@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { DatosDelDistrito, ValoresDeLaIglesia } from '../dominio/estructuraDelAdmin';
 import { getEstructuraDelAdmin } from './getEstructuraDelAdmin';
-import { guardarDistrito } from './guardarDistrito';
+import { guardarDistrito, type GuardarComo } from './guardarDistrito';
 import { guardarIglesia, moverIglesia } from './guardarIglesia';
 
 // Under ['cargos']: it holds the nombres of the pastores, and signing out
@@ -39,18 +39,22 @@ function useEscribirEstructura<Variables>(escribir: (variables: Variables) => Pr
   });
 }
 
-/** Creates a distrito of the asociacion, or renames one. */
-export function useGuardarDistrito(asociacionId: string, distritoId: string | null) {
+/**
+ * Creates a distrito of the asociacion, or renames one. A new one keeps the id
+ * the form chose on every try, so trying again never creates two.
+ */
+export function useGuardarDistrito(asociacionId: string, como: GuardarComo) {
   return useEscribirEstructura((valores: DatosDelDistrito) =>
-    guardarDistrito({ asociacionId, distritoId, valores }),
+    guardarDistrito(asociacionId, valores, como),
   );
 }
 
-/** Creates an iglesia, or edits one, its distrito included. */
-export function useGuardarIglesia(iglesiaId: string | null) {
-  return useEscribirEstructura((valores: ValoresDeLaIglesia) =>
-    guardarIglesia({ iglesiaId, valores }),
-  );
+/**
+ * Creates an iglesia, or edits one, its distrito included. A new one keeps the
+ * id the form chose on every try, so trying again never creates two.
+ */
+export function useGuardarIglesia(como: GuardarComo) {
+  return useEscribirEstructura((valores: ValoresDeLaIglesia) => guardarIglesia(valores, como));
 }
 
 /** Moves an iglesia to another distrito: "Sacar" in Editar distrito. */
