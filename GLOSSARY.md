@@ -157,6 +157,16 @@ _Avoid_: Lugar, dirección, posición
 Separación en línea recta entre la ubicación, o una iglesia, y otra iglesia. Se calcula en el teléfono, con las coordenadas que los desarrolladores cargan para cada iglesia.
 _Avoid_: Recorrido, trayecto
 
+### Recordatorios
+
+**Recordatorio**:
+Aviso en el teléfono, a las 20 h del día anterior, de un evento con énfasis de las iglesias que sigue ese teléfono. Las actividades regulares no avisan.
+_Avoid_: Notificación, alerta
+
+**Dispositivo**:
+Un teléfono registrado para recibir recordatorios, con su interruptor y las iglesias que sigue. Es del teléfono, no de la persona, como la iglesia elegida.
+_Avoid_: Teléfono registrado, suscripción
+
 ### Entregas
 
 **v1**:

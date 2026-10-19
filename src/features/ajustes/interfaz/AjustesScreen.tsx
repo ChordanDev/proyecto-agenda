@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { RecordatoriosSection } from '@/features/recordatorios/interfaz/RecordatoriosSection';
 import { useDeleteOwnUsuario } from '@/features/sesion/datos/useLeaveSesion';
 import { useSesion } from '@/features/sesion/datos/useSesion';
 import { ConfirmSignOut } from '@/features/sesion/interfaz/ConfirmSignOut';
@@ -48,8 +49,8 @@ const PRESSED_OPACITY = 0.85;
 const SAFE_AREA_EDGES = ['top', 'left', 'right'] as const;
 
 /**
- * Ajustes: the iglesia elegida of this phone, which can be changed from here;
- * with a session, signing out and "Eliminar mi cuenta", and without one, the
+ * Ajustes: the iglesia elegida of this phone, which can be changed from here,
+ * and its recordatorios; with a session, signing out and "Eliminar mi cuenta", and without one, the
  * way into Ingresar.
  */
 export function AjustesScreen() {
@@ -100,6 +101,11 @@ export function AjustesScreen() {
             />
           </View>
         )}
+
+        {/* Tied to the phone, not to the person: with or without a session. */}
+        <Section title="Recordatorios">
+          <RecordatoriosSection />
+        </Section>
 
         {/* Only with a session: the hermano sees Mi iglesia alone. */}
         {usuario && (

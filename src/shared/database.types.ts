@@ -111,6 +111,46 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"dispositivos": {
+                  Row: {
+                    "actualizado_at": string,"encendido": boolean,"id": string,"token": string,"usuario_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actualizado_at"?: string,"encendido": boolean,"id"?: string,"token": string,"usuario_id"?: string | null
+                  }
+                  Update: {
+                    "actualizado_at"?: string,"encendido"?: boolean,"id"?: string,"token"?: string,"usuario_id"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"dispositivos_iglesias": {
+                  Row: {
+                    "dispositivo_id": string,"iglesia_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "dispositivo_id": string,"iglesia_id": string
+                  }
+                  Update: {
+                    "dispositivo_id"?: string,"iglesia_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "dispositivos_iglesias_dispositivo_id_fkey"
+      columns: ["dispositivo_id"]
+isOneToOne: false
+      referencedRelation: "dispositivos"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "dispositivos_iglesias_iglesia_id_fkey"
+      columns: ["iglesia_id"]
+isOneToOne: false
+      referencedRelation: "iglesias"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"distritos": {
                   Row: {
                     "asociacion_id": string,"id": string,"nombre": string
@@ -318,6 +358,11 @@ isOneToOne: false
 "editar_cargo":
 { Args: { "cargo_id": string,"funcion"?: string,"nombre": string }; Returns: undefined
                            },
+"get_dispositivo":
+{ Args: { "token": string }; Returns: {
+              "con_usuario": boolean,"del_usuario": boolean,"encendido": boolean,"iglesia_ids": (string)[]
+            }[]
+                           },
 "get_usuario_emails":
 { Args: Record<PropertyKey, never>; Returns: {
               "email": string,"usuario_id": string
@@ -331,6 +376,9 @@ isOneToOne: false
                            },
 "guardar_cargo_invitado":
 { Args: { "distrito_id"?: string,"es_secretaria": boolean,"funcion"?: string,"iglesia_id"?: string,"nombre": string,"usuario_id": string }; Returns: string
+                           },
+"guardar_dispositivo":
+{ Args: { "encendido": boolean,"iglesia_ids": (string)[],"token": string }; Returns: undefined
                            },
 "guardar_evento":
 { Args: { "alcance": Database["public"]['Enums']["alcance"],"descripcion"?: string,"duenio_asociacion_id"?: string,"duenio_distrito_id"?: string,"duenio_iglesia_id"?: string,"enfasis"?: Database["public"]['Enums']["enfasis"],"evento_id"?: string,"fecha_fin"?: string,"fechas": (string)[],"fin_de_serie"?: string,"hora": string,"iglesias_sumadas"?: (string)[],"lugar"?: string,"lugar_id"?: string,"nuevo_evento_id"?: string,"repeticion": Database["public"]['Enums']["repeticion"],"titulo": string }; Returns: string
