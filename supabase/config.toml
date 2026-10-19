@@ -447,3 +447,9 @@ verify_jwt = true
 
 [functions.cambiar-correo]
 verify_jwt = true
+
+# The daily recordatorios (issue #163). Only the schedule of pg_cron calls it,
+# with the service_role key, which the function itself checks: the gateway
+# would reject the new secret keys, which are not JWTs.
+[functions.enviar-recordatorios]
+verify_jwt = false

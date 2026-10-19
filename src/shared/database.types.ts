@@ -387,6 +387,9 @@ isOneToOne: false
 "delete_own_usuario":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
+"disparar_recordatorios":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
 "editar_cargo":
 { Args: { "cargo_id": string,"es_secretaria"?: boolean,"funcion"?: string,"nombre": string }; Returns: undefined
                            },

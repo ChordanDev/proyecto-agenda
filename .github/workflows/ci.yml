@@ -36,6 +36,15 @@ jobs:
           for function in supabase/functions/*/; do
             (cd "$function" && deno check index.ts)
           done
+      # Their own unit tests (*_test.ts). A test that needs a local Supabase
+      # is skipped here: it runs only with SUPABASE_URL set.
+      - name: Test the Edge Functions
+        run: |
+          for function in supabase/functions/*/; do
+            if compgen -G "${function}*_test.ts" > /dev/null; then
+              (cd "$function" && deno test --allow-env)
+            fi
+          done
 
   style:
     name: Style
