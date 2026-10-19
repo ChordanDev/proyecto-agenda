@@ -8,6 +8,9 @@
 --      no longer covers it, such as the pastor of the old distrito. The pastor
 --      of the new one does not gain it: they choose it in Ajustes.
 --   3. A pastor who loses the cargo stops following the iglesias it covered.
+--   4. Saving a phone never follows an iglesia de baja: a phone that still has
+--      it saved (a hermano whose app kept it as its iglesia elegida) does not
+--      follow it again, nor once it is reactivada.
 --
 -- A phone keeps an iglesia while any cargo of its usuario still covers it, the
 -- same rule as public.guardar_dispositivo, so an admin, or a pastor who is
@@ -115,3 +118,60 @@ create trigger cargos_quitar_seguidas_al_cambiar
   for each row
   when (old.distrito_id is not null)
   execute function public.quitar_seguidas_de_cargo();
+
+-- Saving a phone ------------------------------------------------------------------------
+-- public.guardar_dispositivo as in 20261021000000, but an iglesia de baja is
+-- never followed. Same arguments, result and permissions.
+
+create or replace function public.guardar_dispositivo(token text, encendido boolean, iglesia_ids uuid[])
+returns void
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  usuario uuid := (select auth.uid());
+  ids uuid[];
+  guardado_id uuid;
+begin
+  -- The token Expo gives: ExponentPushToken[...] (or ExpoPushToken[...]).
+  if token is null or length(token) > 200 or token !~ '^Expo(nent)?PushToken\[[^]]+\]$' then
+    raise exception 'The token is not an Expo push token' using errcode = '22023';
+  end if;
+
+  if encendido is null or iglesia_ids is null or array_position(iglesia_ids, null) is not null then
+    raise exception 'The switch and the iglesias are required' using errcode = '22023';
+  end if;
+
+  select coalesce(array_agg(distinct i), array[]::uuid[]) into ids from unnest(iglesia_ids) as i;
+
+  if usuario is null or not exists (select 1 from public.cargos where cargos.usuario_id = usuario) then
+    if cardinality(ids) > 1 then
+      raise exception 'Without cargos a phone follows only its iglesia elegida' using errcode = '42501';
+    end if;
+  elsif exists (
+    select 1 from unnest(ids) as i where not public.cargos_abarcan_duenio(i, null, null)
+  ) then
+    raise exception 'The cargos do not cover every iglesia' using errcode = '42501';
+  end if;
+
+  -- An iglesia de baja is left out, not rejected: the phone saves again what
+  -- it has, and that must keep working. The checks above stay as they were.
+  select coalesce(array_agg(i), array[]::uuid[]) into ids
+  from unnest(ids) as i
+  where not exists (select 1 from public.iglesias where iglesias.id = i and iglesias.de_baja);
+
+  insert into public.dispositivos as d (token, encendido, usuario_id, actualizado_at)
+  values (guardar_dispositivo.token, guardar_dispositivo.encendido, usuario, now())
+  on conflict on constraint dispositivos_token_key do update
+    set encendido = excluded.encendido,
+        usuario_id = excluded.usuario_id,
+        actualizado_at = excluded.actualizado_at
+  returning d.id into guardado_id;
+
+  delete from public.dispositivos_iglesias where dispositivo_id = guardado_id;
+  insert into public.dispositivos_iglesias (dispositivo_id, iglesia_id)
+  select guardado_id, i from unnest(ids) as i;
+end;
+$$;

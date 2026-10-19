@@ -76,6 +76,20 @@ export function iglesiasQuePuedeSeguir(
     .map((iglesia) => iglesia.id);
 }
 
+/**
+ * The iglesia elegida a hermano follows: none when it was dada de baja. Then
+ * they choose another one, and the one de baja is not followed again when it
+ * is reactivada (issue #217).
+ */
+export function iglesiaElegidaVigente(
+  iglesiaElegidaId: string | null,
+  iglesias: readonly (IglesiaEnEstructura & { deBaja: boolean })[],
+): string | null {
+  const deBaja = iglesias.some((iglesia) => iglesia.id === iglesiaElegidaId && iglesia.deBaja);
+
+  return deBaja ? null : iglesiaElegidaId;
+}
+
 type ContextoGuardado = Contexto & {
   guardado: RegistroGuardado | null;
   /** Every iglesia with its place in the structure, to know which ones the cargos cover. */

@@ -4,12 +4,13 @@ import {
   getIglesiasEnEstructura,
   type IglesiaConEstructura,
 } from '@/features/calendario/datos/getIglesiasEnEstructura';
-import { getIglesiaElegida } from '@/features/iglesias/datos/iglesiaElegida';
+import { clearIglesiaElegida, getIglesiaElegida } from '@/features/iglesias/datos/iglesiaElegida';
 import { getCargosDelUsuario } from '@/features/sesion/datos/getCargosDelUsuario';
 import { sesionQueryOptions } from '@/features/sesion/datos/sesionQuery';
 
 import {
   cambioQuienLoUsa,
+  iglesiaElegidaVigente,
   iglesiasQuePuedeSeguir,
   mismoRegistro,
   modoDeRecordatorios,
@@ -49,7 +50,7 @@ export async function sincronizarRecordatorios(
 ): Promise<EstadoDeRecordatorios> {
   const token = await getTokenDelTelefono();
   const hasSesion = await queryClient.fetchQuery(sesionQueryOptions);
-  const [cargos, iglesiaElegidaId, iglesias, guardado] = await Promise.all([
+  const [cargos, iglesiaGuardadaId, iglesias, guardado] = await Promise.all([
     hasSesion
       ? queryClient.fetchQuery({ queryKey: ['cargos'], queryFn: getCargosDelUsuario })
       : null,
@@ -57,6 +58,13 @@ export async function sincronizarRecordatorios(
     queryClient.fetchQuery({ queryKey: ['iglesias-estructura'], queryFn: getIglesiasEnEstructura }),
     getDispositivo(token),
   ]);
+
+  // An iglesia elegida dada de baja is forgotten: the hermano chooses again.
+  const iglesiaElegidaId = iglesiaElegidaVigente(iglesiaGuardadaId, iglesias);
+  if (iglesiaElegidaId !== iglesiaGuardadaId) {
+    await clearIglesiaElegida();
+    await queryClient.invalidateQueries({ queryKey: ['iglesiaElegida'] });
+  }
 
   const deseado = registroDeseado({ cargos, iglesiaElegidaId, guardado, iglesias });
   const registro = cambio === undefined ? deseado : cambio(deseado);

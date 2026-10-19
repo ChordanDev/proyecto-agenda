@@ -1,6 +1,7 @@
 import {
   cambioQuienLoUsa,
   elegirIglesias,
+  iglesiaElegidaVigente,
   iglesiasQuePuedeSeguir,
   mismoRegistro,
   modoDeRecordatorios,
@@ -216,5 +217,24 @@ describe('cambioQuienLoUsa', () => {
     expect(cambioQuienLoUsa(encargado, guardado({ conUsuario: true, delUsuario: true }))).toBe(
       false,
     );
+  });
+});
+
+describe('iglesiaElegidaVigente', () => {
+  const conBaja = [
+    { id: 'i1', distritoId: 'd1', asociacionId: 'a1', deBaja: false },
+    { id: 'i2', distritoId: 'd1', asociacionId: 'a1', deBaja: true },
+  ];
+
+  it('keeps an active iglesia elegida', () => {
+    expect(iglesiaElegidaVigente('i1', conBaja)).toBe('i1');
+  });
+
+  it('drops an iglesia elegida dada de baja: the hermano chooses again', () => {
+    expect(iglesiaElegidaVigente('i2', conBaja)).toBeNull();
+  });
+
+  it('keeps nothing when none was chosen', () => {
+    expect(iglesiaElegidaVigente(null, conBaja)).toBeNull();
   });
 });

@@ -2,7 +2,8 @@
 -- still follow (issue #217): an iglesia dada de baja leaves every phone and
 -- does not come back when reactivada, and an iglesia the pastor stops covering
 -- (it moved to another distrito, or the pastor lost the cargo) leaves the
--- phones of that pastor. The cargos that still cover it keep it.
+-- phones of that pastor. The cargos that still cover it keep it. A phone
+-- cannot follow an iglesia de baja again by saving it.
 --
 -- Run with: npm run db:test
 
@@ -10,7 +11,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(15);
+select plan(17);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -161,6 +162,31 @@ select results_eq(
     ('hermano', 'Iglesia dos'),
     ('pastor-dos', 'Iglesia tres') $$,
   'The other iglesias stay followed'
+);
+
+-- A phone that still has it saved, such as a hermano whose app kept it as its
+-- iglesia elegida, does not follow it again by saving it.
+set local role anon;
+select public.guardar_dispositivo('ExponentPushToken[sin-sesion]', true, array['11111111-0000-4000-8000-000000000217']::uuid[]);
+reset role;
+
+select is_empty(
+  $$ select 1 from seguidas where telefono = 'sin-sesion' $$,
+  'Saving an iglesia de baja does not follow it again'
+);
+
+set local role authenticated;
+set local request.jwt.claims to '{"sub": "bbbbbbbb-0000-4000-8000-000000000001", "role": "authenticated"}';
+select public.guardar_dispositivo(
+  'ExponentPushToken[admin]', true,
+  array['11111111-0000-4000-8000-000000000217', '22222222-0000-4000-8000-000000000217']::uuid[]
+);
+reset role;
+
+select results_eq(
+  $$ select iglesia from seguidas where telefono = 'admin' $$,
+  $$ values ('Iglesia dos') $$,
+  'Saving it with active ones keeps only the active ones'
 );
 
 set local role authenticated;
