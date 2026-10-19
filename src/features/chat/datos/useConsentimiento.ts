@@ -5,6 +5,7 @@ import { useSesion } from '@/features/sesion/datos/useSesion';
 import type { ConsentimientoLeido } from '../dominio/getChatEstado';
 import { getConsentimiento } from './getConsentimiento';
 import { saveConsentimiento } from './saveConsentimiento';
+import { getUsuarioId } from './usuarioId';
 
 /** Its key; leaving the session removes it, since it belongs to the usuario. */
 export const CONSENTIMIENTO_QUERY_KEY = ['chat', 'consentimiento'] as const;
@@ -19,6 +20,9 @@ export function useConsentimiento(): {
     queryKey: CONSENTIMIENTO_QUERY_KEY,
     queryFn: getConsentimiento,
     enabled: hasSesion,
+    // Without a connection the read fails at once, so the tab offers to retry
+    // instead of waiting for a network that may not return.
+    networkMode: 'always',
   });
 
   const consentimiento: ConsentimientoLeido =
@@ -35,6 +39,12 @@ export function useAceptarConsentimiento() {
     mutationFn: saveConsentimiento,
     // A failed connection must come back as an error to show.
     networkMode: 'always',
-    onSuccess: () => queryClient.setQueryData(CONSENTIMIENTO_QUERY_KEY, true),
+    // It runs even after the screen is gone: if the session ended or changed
+    // while saving, the answer is not for whoever is signed in now.
+    onSuccess: async (usuarioId) => {
+      if ((await getUsuarioId()) === usuarioId) {
+        queryClient.setQueryData(CONSENTIMIENTO_QUERY_KEY, true);
+      }
+    },
   });
 }

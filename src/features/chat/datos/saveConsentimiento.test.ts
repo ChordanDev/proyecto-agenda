@@ -27,7 +27,7 @@ describe('saveConsentimiento', () => {
   it('counts a consentimiento already saved from another phone as saved', async () => {
     mockInsert.mockResolvedValue({ error: { code: '23505', message: 'duplicate key' } });
 
-    await expect(saveConsentimiento()).resolves.toBeUndefined();
+    await expect(saveConsentimiento()).resolves.toBe('usuario-1');
   });
 
   it('fails on any other error', async () => {

@@ -8,8 +8,9 @@ const ALREADY_SAVED = '23505';
 /**
  * Saves that the usuario signed in accepted the aviso of OpenAI. Only the
  * usuario is written: the database sets the moment and allows no other column.
+ * Returns whose consentimiento it saved.
  */
-export async function saveConsentimiento(): Promise<void> {
+export async function saveConsentimiento(): Promise<string> {
   const usuarioId = await getUsuarioId();
   if (!usuarioId) {
     throw new Error('Cannot save the consentimiento without a session');
@@ -20,4 +21,6 @@ export async function saveConsentimiento(): Promise<void> {
   if (error && error.code !== ALREADY_SAVED) {
     throw new Error(`Could not save the consentimiento: ${error.message}`);
   }
+
+  return usuarioId;
 }
