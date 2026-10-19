@@ -46,16 +46,19 @@ export function useSalir() {
 export function PantallaDeFormulario({
   titulo,
   onClose,
+  icono = 'close',
   children,
 }: {
   titulo: string;
   onClose: () => void;
+  /** `back` on a screen that is not a form, such as Usuario. */
+  icono?: 'close' | 'back';
   children: ReactNode;
 }) {
   return (
     <ScreenBackground edges={SAFE_AREA_EDGES}>
       <View style={styles.header}>
-        <BackButton icon="close" onPress={onClose} />
+        <BackButton icon={icono} onPress={onClose} />
         <AppText variant="tituloEncabezado" accessibilityRole="header">
           {titulo}
         </AppText>
@@ -149,14 +152,21 @@ export function AvisoSinConexion() {
 }
 
 /** A save that failed: what was written stays, and the button tries again. */
-export function ErrorAlGuardar() {
+export function ErrorAlGuardar({
+  mensaje = {
+    titulo: 'No se pudo guardar.',
+    texto: 'Revisá la conexión y probá de nuevo.',
+  },
+}: {
+  mensaje?: { titulo: string; texto: string };
+}) {
   return (
     <View accessibilityRole="alert" style={styles.error}>
       <AppText variant="secundario" style={styles.errorText}>
         <AppText variant="secundario" weight="bold" style={styles.errorText}>
-          No se pudo guardar.
+          {mensaje.titulo}
         </AppText>{' '}
-        Revisá la conexión y probá de nuevo.
+        {mensaje.texto}
       </AppText>
     </View>
   );

@@ -5,9 +5,11 @@ import { colors, spacing } from '@/shared/theme';
 import { AppText, Button, Card, Logo, ScreenBackground } from '@/shared/ui';
 
 import { useEstructuraDelAdmin } from '../datos/useGestionAdmin';
+import { useUsuariosDelAdmin } from '../datos/useUsuariosDelAdmin';
 import { getSubtituloDeAsociacion } from '../dominio/estructuraDelAdmin';
 import { DistritosTab } from './DistritosTab';
 import { IglesiasTab } from './IglesiasTab';
+import { UsuariosTab } from './UsuariosTab';
 
 // Layout of the approved mockup, which the theme has no tokens for. The line
 // numbers are those of diseno/pantallas/09-gestion-admin.html.
@@ -30,31 +32,37 @@ const PRESSED_OPACITY = 0.85;
 // The bottom navigation takes care of the bottom edge.
 const SAFE_AREA_EDGES = ['top', 'left', 'right'] as const;
 
-type Pestania = 'distritos' | 'iglesias';
+type Pestania = 'distritos' | 'iglesias' | 'usuarios';
 
-// Usuarios comes with the gestion of the usuarios of the asociacion.
 const PESTANIAS: { valor: Pestania; label: string }[] = [
   { valor: 'distritos', label: 'Distritos' },
   { valor: 'iglesias', label: 'Iglesias' },
+  { valor: 'usuarios', label: 'Usuarios' },
 ];
 
 /**
  * The gestion of the admin: the distritos and the iglesias of their
- * asociacion, which they create and edit.
+ * asociacion, which they create and edit, and everyone with a cargo in it.
  */
 export function GestionAdminScreen() {
   const consulta = useEstructuraDelAdmin();
   const [pestania, setPestania] = useState<Pestania>('distritos');
   const estructura = consulta.data;
+  const usuarios = useUsuariosDelAdmin(
+    pestania === 'usuarios' ? estructura?.asociacion.id : undefined,
+  );
 
   const renderContent = () => {
-    if (estructura) {
-      return pestania === 'distritos' ? (
-        <DistritosTab distritos={estructura.distritos} />
-      ) : (
-        <IglesiasTab iglesias={estructura.iglesias} />
-      );
+    if (estructura && pestania === 'distritos') {
+      return <DistritosTab distritos={estructura.distritos} />;
     }
+    if (estructura && pestania === 'iglesias') {
+      return <IglesiasTab iglesias={estructura.iglesias} />;
+    }
+    if (estructura && usuarios.data) {
+      return <UsuariosTab usuarios={usuarios.data} />;
+    }
+    const fallo = estructura ? usuarios : consulta;
 
     // States the mockup does not draw.
     return (
@@ -62,12 +70,14 @@ export function GestionAdminScreen() {
         <AppText color="textoSecundario">
           {estructura === null
             ? 'No tenés una asociación a cargo.'
-            : consulta.isError
-              ? 'No se pudieron leer los distritos y las iglesias. Revisá la conexión y probá de nuevo.'
+            : fallo.isError
+              ? estructura
+                ? 'No se pudieron leer los usuarios. Revisá la conexión y probá de nuevo.'
+                : 'No se pudieron leer los distritos y las iglesias. Revisá la conexión y probá de nuevo.'
               : 'Cargando…'}
         </AppText>
-        {consulta.isError && (
-          <Button label="Reintentar" variant="secondary" onPress={() => consulta.refetch()} />
+        {fallo.isError && (
+          <Button label="Reintentar" variant="secondary" onPress={() => fallo.refetch()} />
         )}
       </Card>
     );

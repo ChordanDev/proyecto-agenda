@@ -23,7 +23,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(54);
+select plan(58);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -319,6 +319,33 @@ select throws_ok(
   $$ select public.quitar_cargo('cccccccc-0000-4000-8000-000000000009') $$,
   '42501', 'The usuario does not manage this cargo',
   'rejected: an admin does not remove another admin'
+);
+
+-- The cargo of admin is given and removed only by the developers (#13): no call
+-- of an admin reaches it, not even made directly, without the app.
+select throws_ok(
+  $$ select public.editar_cargo('cccccccc-0000-4000-8000-000000000009', 'Otra admin', 'Admin') $$,
+  '42501', 'The usuario does not manage this cargo',
+  'rejected: an admin does not edit the cargo of another admin'
+);
+select throws_ok(
+  $$ select public.quitar_cargo('cccccccc-0000-4000-8000-000000000008') $$,
+  '42501', 'The usuario does not manage this cargo',
+  'rejected: an admin does not remove their own cargo of admin'
+);
+select throws_ok(
+  $$ insert into public.cargos (usuario_id, asociacion_id) values
+       ('bbbbbbbb-0000-4000-8000-000000000003', 'aaaaaaaa-0000-4000-8000-000000000001') $$,
+  '42501', 'permission denied for table cargos',
+  'rejected: an admin does not give the cargo of admin by writing the cargo directly'
+);
+select throws_ok(
+  $$ select public.guardar_cargo_invitado(
+       usuario_id => 'bbbbbbbb-0000-4000-8000-000000000003', nombre => 'Encargado',
+       es_secretaria => false, distrito_id => 'dddddddd-0000-4000-8000-000000000001'
+     ) $$,
+  '42501', 'permission denied for function guardar_cargo_invitado',
+  'rejected: an admin does not call the function only `invitar` calls'
 );
 
 reset role;
