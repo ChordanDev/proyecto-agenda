@@ -427,7 +427,12 @@ function Formulario({ opciones, initial, id, unaFecha, excepciones, onClose }: F
     const aviso =
       excepciones === undefined || aceptaPerdidas
         ? null
-        : getAvisoDePerdidas(excepciones, result.evento, hoy);
+        : getAvisoDePerdidas(
+            excepciones,
+            result.evento,
+            hoy,
+            initial.duenio === null ? undefined : { duenio: initial.duenio },
+          );
     if (aviso !== null) {
       setAvisoDePerdidas(aviso);
       return;

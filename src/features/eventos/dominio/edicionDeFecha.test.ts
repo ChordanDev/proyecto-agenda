@@ -257,6 +257,20 @@ describe('getAvisoDePerdidas', () => {
     );
   });
 
+  it('says a date loses its lugar when the duenio changes', () => {
+    const lugar = excepcion('2027-05-15', { cambios: { lugar: 'Salón', lugarId: 'salon' } });
+    const nueva = {
+      ...serie,
+      duenio: { alcance: 'distrito' as const, distritoId: 'distrito-norte' },
+      fechas: ['2027-05-15'],
+    };
+
+    expect(getAvisoDePerdidas([lugar], nueva, HOY, serie)?.cuales).toBe(
+      'Es el sábado 15 de mayo de 2027, que tiene un lugar del dueño anterior.',
+    );
+    expect(getAvisoDePerdidas([lugar], { ...nueva, duenio: serie.duenio }, HOY, serie)).toBeNull();
+  });
+
   it('leaves out the year of the dates of this year', () => {
     const octubre = excepcion('2026-10-24', { cambios: { hora: '20:00:00' } });
     const nueva = { ...serie, finDeSerie: '2026-10-20', fechas: ['2026-10-17'] };

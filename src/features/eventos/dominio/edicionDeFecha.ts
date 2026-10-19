@@ -1,8 +1,10 @@
 import { formatDayHeading } from '../../calendario/dominio/calendarioTexts.ts';
 import { parseLocalDate } from '../../calendario/dominio/localDate.ts';
+import { isSameDuenio } from '../../lugares/dominio/lugar.ts';
 
 import type { Evento, Repeticion } from './evento.ts';
 import {
+  cambiaSoloUnLugarDeLista,
   getExcepcionesPerdidas,
   puedeMoverFecha,
   type CamposDeFecha,
@@ -204,7 +206,8 @@ export function validarFormularioDeFecha(
   };
 }
 
-type Motivo = 'no-se-repite' | 'fuera-de-hasta' | 'fuera-de-la-serie' | 'dia-ocupado';
+type Motivo =
+  'no-se-repite' | 'fuera-de-hasta' | 'fuera-de-la-serie' | 'lugar-de-otro-duenio' | 'dia-ocupado';
 
 const MOTIVOS: Record<Motivo, [singular: string, plural: string]> = {
   'no-se-repite': ['porque el evento deja de repetirse', 'porque el evento deja de repetirse'],
@@ -212,6 +215,10 @@ const MOTIVOS: Record<Motivo, [singular: string, plural: string]> = {
   'fuera-de-la-serie': [
     'que deja de ser una fecha de la serie',
     'que dejan de ser fechas de la serie',
+  ],
+  'lugar-de-otro-duenio': [
+    'que tiene un lugar del dueño anterior',
+    'que tienen un lugar del dueño anterior',
   ],
   'dia-ocupado': [
     'que se movió a un día que ahora tiene la serie',
@@ -222,10 +229,12 @@ const MOTIVOS: Record<Motivo, [singular: string, plural: string]> = {
 function getMotivo(
   excepcion: Excepcion,
   nueva: Pick<EventoAGuardar, 'repeticion' | 'finDeSerie' | 'fechas'>,
+  cambiaDuenio: boolean,
 ): Motivo {
   if (nueva.repeticion === 'ninguna') return 'no-se-repite';
   if (nueva.finDeSerie !== null && excepcion.fecha > nueva.finDeSerie) return 'fuera-de-hasta';
   if (!nueva.fechas.includes(excepcion.fecha)) return 'fuera-de-la-serie';
+  if (cambiaDuenio && cambiaSoloUnLugarDeLista(excepcion)) return 'lugar-de-otro-duenio';
   return 'dia-ocupado';
 }
 
@@ -248,17 +257,21 @@ function formatDias(fechas: readonly string[], hoy: string): string {
 /**
  * What saving the whole series asks first when dates with changes of their
  * own would be lost (`getExcepcionesPerdidas`): how many, which ones and why.
- * Null when none is lost.
+ * `anterior` is the series as it is: a new duenio drops the lugares of the
+ * list of the old one. Null when none is lost.
  */
 export function getAvisoDePerdidas(
   excepciones: readonly Excepcion[],
-  nueva: Pick<EventoAGuardar, 'repeticion' | 'finDeSerie' | 'fechas'>,
+  nueva: Pick<EventoAGuardar, 'repeticion' | 'finDeSerie' | 'fechas' | 'duenio'>,
   hoy: string,
+  anterior?: Pick<Evento, 'duenio'>,
 ): { titulo: string; cantidad: string; cuales: string } | null {
+  const cambiaDuenio = anterior !== undefined && !isSameDuenio(anterior.duenio, nueva.duenio);
   const perdidas = getExcepcionesPerdidas(
     excepciones,
     nueva.fechas,
     nueva.repeticion !== 'ninguna',
+    { cambiaDuenio },
   );
 
   if (perdidas.length === 0) {
@@ -266,7 +279,7 @@ export function getAvisoDePerdidas(
   }
 
   const una = perdidas.length === 1;
-  const motivos = new Set(perdidas.map((excepcion) => getMotivo(excepcion, nueva)));
+  const motivos = new Set(perdidas.map((excepcion) => getMotivo(excepcion, nueva, cambiaDuenio)));
   // Lost for different reasons, they all stop being dates of the series.
   const [motivo] = motivos.size === 1 ? motivos : new Set<Motivo>(['fuera-de-la-serie']);
   const dias = formatDias(

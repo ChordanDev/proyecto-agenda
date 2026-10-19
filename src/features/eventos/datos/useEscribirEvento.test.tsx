@@ -9,7 +9,15 @@ import { useBorrarFecha, useGuardarEvento, useGuardarExcepcion } from './useEscr
 const mockRpc = jest.fn();
 
 jest.mock('@/shared/supabase', () => ({
-  supabase: { rpc: (...args: unknown[]) => mockRpc(...args) },
+  supabase: {
+    rpc: (...args: unknown[]) => mockRpc(...args),
+    // Reading the evento again after a P0002 finds it gone.
+    from: () => ({
+      select: () => ({
+        eq: () => ({ maybeSingle: () => Promise.resolve({ data: null, error: null }) }),
+      }),
+    }),
+  },
 }));
 
 const EVENTO: EventoAGuardar = {
@@ -109,7 +117,7 @@ describe('useGuardarEvento', () => {
 });
 
 describe('useGuardarExcepcion and useBorrarFecha', () => {
-  /** Renders a hook of a date and returns it with the keys its client read again. */
+  /** Renders a hook of a date and returns it with what its client marked to read again. */
   function renderDeFecha<T>(useHook: () => T) {
     const queryClient = new QueryClient({
       defaultOptions: { mutations: { retry: false, gcTime: Infinity } },
@@ -117,7 +125,9 @@ describe('useGuardarExcepcion and useBorrarFecha', () => {
     const invalidated: unknown[] = [];
     jest
       .spyOn(queryClient, 'invalidateQueries')
-      .mockImplementation(async (filters) => void invalidated.push(filters?.queryKey));
+      .mockImplementation(
+        async (filters) => void invalidated.push([filters?.queryKey, filters?.refetchType]),
+      );
     const latest: { current: T | null } = { current: null };
 
     function Detail() {
@@ -151,7 +161,45 @@ describe('useGuardarExcepcion and useBorrarFecha', () => {
       fecha: '2026-10-17',
       titulo: 'X',
     });
-    expect(invalidated).toEqual([['calendario'], ['evento', 'e1']]);
+    expect(invalidated).toEqual([
+      [['calendario'], undefined],
+      [['evento', 'e1'], undefined],
+    ]);
+  });
+
+  it('reads the evento again when the date changed meanwhile', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { code: '23514', message: 'deleted' } });
+    const { get, invalidated } = renderDeFecha(() => useGuardarExcepcion('e1'));
+
+    await act(async () => {
+      await get()
+        .mutateAsync({ fecha: '2026-10-17', fechaNueva: null, cambios: { titulo: 'X' } })
+        .catch(() => undefined);
+    });
+
+    expect(invalidated).toEqual([
+      [['calendario'], undefined],
+      [['evento', 'e1'], undefined],
+    ]);
+  });
+
+  it('reads the evento again when it was deleted while a date was deleted', async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { code: '23514', message: 'not a date of the evento' },
+    });
+    const { get, invalidated } = renderDeFecha(() => useBorrarFecha('e1'));
+
+    await act(async () => {
+      await get()
+        .mutateAsync('2026-10-17')
+        .catch(() => undefined);
+    });
+
+    expect(invalidated).toEqual([
+      [['calendario'], undefined],
+      [['evento', 'e1'], undefined],
+    ]);
   });
 
   it('deletes a date and reads the evento and the calendarios again', async () => {
@@ -163,6 +211,10 @@ describe('useGuardarExcepcion and useBorrarFecha', () => {
     });
 
     expect(mockRpc).toHaveBeenCalledWith('borrar_fecha', { evento_id: 'e1', fecha: '2026-10-17' });
-    expect(invalidated).toEqual([['calendario'], ['evento', 'e1']]);
+    // The detail leaves the screen: the evento is read again only when it is opened.
+    expect(invalidated).toEqual([
+      [['calendario'], undefined],
+      [['evento', 'e1'], 'none'],
+    ]);
   });
 });

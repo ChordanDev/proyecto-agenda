@@ -85,21 +85,46 @@ export function useGuardarExcepcion(eventoId: string) {
     networkMode: 'always',
     mutationFn: (excepcion: ExcepcionAGuardar) => guardarExcepcion(eventoId, excepcion),
     onSuccess: () => invalidar(eventoId),
+    onError: (error) => {
+      // The evento or the date changed meanwhile: what is shown is read again.
+      // Not awaited, as in `useGuardarEvento`.
+      if (cambioMientrasTanto(error)) {
+        void invalidar(eventoId);
+      }
+    },
   });
 }
 
 /**
- * Deletes a single date of a series. The evento is read again too: its
- * other dates stay.
+ * Deletes a single date of a series. The detail leaves the screen: the evento
+ * is marked to be read again when it is opened, not now, so the detail does
+ * not show another date for an instant.
  */
 export function useBorrarFecha(eventoId: string) {
+  const queryClient = useQueryClient();
   const invalidar = useInvalidarEventos();
 
   return useMutation({
     networkMode: 'always',
     mutationFn: (fecha: string) => borrarFecha(eventoId, fecha),
-    onSuccess: () => invalidar(eventoId),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['calendario'] }),
+        queryClient.invalidateQueries({ queryKey: ['evento', eventoId], refetchType: 'none' }),
+      ]),
+    onError: (error) => {
+      if (cambioMientrasTanto(error)) {
+        void invalidar(eventoId);
+      }
+    },
   });
+}
+
+/** Whether a write failed because the evento or the date changed meanwhile. */
+function cambioMientrasTanto(error: unknown): boolean {
+  const tipo = getTipoDeError(error);
+
+  return tipo === 'no-existe' || tipo === 'fecha-cambiada';
 }
 
 /** The kind of a failed write, for its message. */
