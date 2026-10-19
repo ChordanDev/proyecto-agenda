@@ -150,6 +150,12 @@ export type PuertosDeConsulta = {
     costoUsd: number;
   }): Promise<{ consultasDelDia: number }>;
   proveedor: Proveedor;
+  /**
+   * Reports why a consulta failed, for whoever runs the server. It gets the
+   * cause only (the status of the provider, the error of the database), never
+   * the mensaje or the tramo.
+   */
+  informarError(causa: string): void;
 };
 
 /** The busqueda the model can call, described for any provider. */
@@ -307,27 +313,62 @@ function leerBusqueda(argumentos: unknown): Busqueda | { error: string } {
   };
 }
 
-/** What the model reads back from a busqueda: never the eventos it should not list. */
-function describirResultado({ eventos, total }: ResultadoDeBusqueda): {
-  contenido: string;
-  decision: ReturnType<typeof decidirBusqueda>;
-} {
-  const decision = decidirBusqueda(total);
+/**
+ * The coincidencias of every busqueda of a consulta. The ambiguity rule counts
+ * them together: a consulta that found four or more, in one busqueda or adding
+ * several, asks to narrow the pregunta.
+ */
+type Coincidencias = { repreguntar: boolean; eventos: Map<string, EventoDeChat> };
 
-  if (decision === 'repreguntar') {
-    return {
-      decision,
-      contenido: JSON.stringify({
-        total,
-        eventos: [],
-        indicacion: `Hay ${total} coincidencias: no las enumeres; pedí que precise la fecha o la iglesia.`,
-      }),
-    };
-  }
-  return { decision, contenido: JSON.stringify({ total, eventos }) };
+/** A date of an evento: a series found twice on the same date is one coincidencia. */
+function getClave(evento: EventoDeChat): string {
+  return `${evento.id}|${evento.fecha}`;
 }
 
+/**
+ * Adds a busqueda to the coincidencias of the consulta and returns what the
+ * model reads back from it: never eventos it should not list.
+ */
+function sumarBusqueda(
+  coincidencias: Coincidencias,
+  { eventos, total }: ResultadoDeBusqueda,
+): string {
+  const juntas = new Map(coincidencias.eventos);
+  for (const evento of eventos) {
+    juntas.set(getClave(evento), evento);
+  }
+
+  // A busqueda of up to three returns all of them, so `juntas` holds every
+  // coincidencia found so far.
+  if (decidirBusqueda(total) === 'repreguntar' || decidirBusqueda(juntas.size) === 'repreguntar') {
+    coincidencias.repreguntar = true;
+    return JSON.stringify({
+      total,
+      eventos: [],
+      indicacion: `Hay ${Math.max(total, juntas.size)} coincidencias: no las enumeres; pedí que precise la fecha o la iglesia.`,
+    });
+  }
+
+  coincidencias.eventos = juntas;
+  return JSON.stringify({ total, eventos });
+}
+
+/** The eventos a respuesta shows, in order of fecha and hora. */
+function getEventosDeRespuesta({ repreguntar, eventos }: Coincidencias): EventoDeChat[] {
+  if (repreguntar) {
+    return [];
+  }
+  return [...eventos.values()].sort(
+    (a, b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora),
+  );
+}
+
+/** The provider failed: the consulta fails as proveedor_caido. */
 class ProveedorCaido extends Error {}
+
+function getCausa(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 /**
  * Answers a consulta of the chat. `usuarioId` is null when the call has no
@@ -370,21 +411,20 @@ export async function responderConsulta(
     ];
 
     let costoUsd = 0;
-    let ultimaBusqueda: {
-      decision: ReturnType<typeof decidirBusqueda>;
-      eventos: EventoDeChat[];
-    } | null = null;
+    const coincidencias: Coincidencias = { repreguntar: false, eventos: new Map() };
 
     for (let ronda = 0; ; ronda++) {
       const conBusqueda = ronda < MAX_BUSQUEDAS;
-      const respuesta = await puertos.proveedor.responder(mensajes, { conBusqueda }).catch(() => {
-        throw new ProveedorCaido();
-      });
+      const respuesta = await puertos.proveedor
+        .responder(mensajes, { conBusqueda })
+        .catch((error: unknown) => {
+          throw new ProveedorCaido(`The provider failed: ${getCausa(error)}`);
+        });
       costoUsd += respuesta.costoUsd;
 
       if (respuesta.tipo === 'texto') {
         if (respuesta.texto.trim() === '') {
-          throw new ProveedorCaido();
+          throw new ProveedorCaido('The provider answered with no text');
         }
 
         const { consultasDelDia } = await puertos.registrarConsulta({
@@ -393,21 +433,20 @@ export async function responderConsulta(
           mes,
           costoUsd,
         });
-        const repregunta = ultimaBusqueda?.decision === 'repreguntar';
 
         return {
           ok: true,
           respuesta: {
-            tipo: repregunta ? 'repregunta' : 'respuesta',
+            tipo: coincidencias.repreguntar ? 'repregunta' : 'respuesta',
             texto: respuesta.texto.trim(),
-            eventos: ultimaBusqueda?.decision === 'responder' ? ultimaBusqueda.eventos : [],
+            eventos: getEventosDeRespuesta(coincidencias),
             aviso: getAvisoDeConsultasRestantes(consultasDelDia),
           },
         };
       }
 
       if (!conBusqueda || respuesta.llamadas.length === 0) {
-        throw new ProveedorCaido();
+        throw new ProveedorCaido('The provider kept searching without the busqueda');
       }
 
       mensajes.push({ rol: 'pedido_de_busqueda', llamadas: respuesta.llamadas });
@@ -428,13 +467,15 @@ export async function responderConsulta(
         }
 
         const resultado = await puertos.buscarEventos(busqueda);
-        const { decision: decisionDeBusqueda, contenido } = describirResultado(resultado);
-
-        ultimaBusqueda = { decision: decisionDeBusqueda, eventos: resultado.eventos };
-        mensajes.push({ rol: 'busqueda', llamadaId: llamada.id, contenido });
+        mensajes.push({
+          rol: 'busqueda',
+          llamadaId: llamada.id,
+          contenido: sumarBusqueda(coincidencias, resultado),
+        });
       }
     }
   } catch (error) {
+    puertos.informarError(getCausa(error));
     return {
       ok: false,
       falla: error instanceof ProveedorCaido ? 'proveedor_caido' : 'error_servidor',

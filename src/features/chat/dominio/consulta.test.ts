@@ -42,12 +42,26 @@ function busqueda(argumentos: unknown, costoUsd = 0.001, id = 'llamada-1'): Resp
 
 const BUSQUEDA_VALIDA = { desde: '2026-10-24', hasta: '2026-10-24', texto: 'culto joven' };
 
+/** One round in which the model asks for `cuantas` busquedas at once. */
+function busquedas(cuantas: number, costoUsd = 0.001): RespuestaDelProveedor {
+  return {
+    tipo: 'busqueda',
+    llamadas: Array.from({ length: cuantas }, (_, i) => ({
+      id: `llamada-${i}`,
+      argumentos: BUSQUEDA_VALIDA,
+    })),
+    costoUsd,
+  };
+}
+
 type Fake = {
   puertos: PuertosDeConsulta;
   /** What the provider received on each call, and whether it could search. */
   llamadasAlProveedor: { mensajes: readonly MensajeParaProveedor[]; conBusqueda: boolean }[];
   busquedas: Busqueda[];
   registros: { usuarioId: string; dia: string; mes: string; costoUsd: number }[];
+  /** What the consulta reported about its fallas. */
+  errores: string[];
 };
 
 /**
@@ -58,6 +72,7 @@ function fake({
   respuestas = [texto('Hola')],
   estado = {},
   eventos = [],
+  resultados,
   proveedorFalla = false,
   busquedaFalla = false,
   registroFalla = false,
@@ -66,6 +81,8 @@ function fake({
   respuestas?: RespuestaDelProveedor[];
   estado?: Partial<EstadoDelChat>;
   eventos?: EventoDeChat[];
+  /** The coincidencias of each busqueda in order; without it every busqueda finds `eventos`. */
+  resultados?: EventoDeChat[][];
   proveedorFalla?: boolean;
   busquedaFalla?: boolean;
   registroFalla?: boolean;
@@ -75,7 +92,11 @@ function fake({
     llamadasAlProveedor: [],
     busquedas: [],
     registros: [],
+    errores: [],
     puertos: {
+      informarError: (causa) => {
+        result.errores.push(causa);
+      },
       ahora: () => AHORA,
       leerEstado: async () => ({
         consentimiento: true,
@@ -89,7 +110,8 @@ function fake({
         if (busquedaFalla) {
           throw new Error('database down');
         }
-        return { eventos: eventos.slice(0, 3), total: eventos.length };
+        const coincidencias = resultados ? (resultados.shift() ?? []) : eventos;
+        return { eventos: coincidencias.slice(0, 3), total: coincidencias.length };
       },
       registrarConsulta: async (registro) => {
         if (registroFalla) {
@@ -102,7 +124,7 @@ function fake({
         responder: async (mensajes, { conBusqueda }) => {
           result.llamadasAlProveedor.push({ mensajes: structuredClone(mensajes), conBusqueda });
           if (proveedorFalla) {
-            throw new Error('OpenAI is down');
+            throw new Error('OpenAI answered 429');
           }
           const respuesta = respuestas.shift();
           if (!respuesta) {
@@ -256,6 +278,44 @@ describe('responderConsulta', () => {
     });
   });
 
+  describe('what is reported about a falla', () => {
+    it('reports why the provider failed, never the mensaje', async () => {
+      const f = fake({ proveedorFalla: true });
+
+      await responderConsulta(pedido('Mensaje privado del usuario'), USUARIO, f.puertos);
+
+      expect(f.errores).toHaveLength(1);
+      expect(f.errores[0]).toContain('429');
+      expect(f.errores[0]).not.toContain('Mensaje privado');
+    });
+
+    it('reports why the busqueda failed', async () => {
+      const f = fake({ respuestas: [busqueda(BUSQUEDA_VALIDA)], busquedaFalla: true });
+
+      await responderConsulta(pedido('¿Qué hay?'), USUARIO, f.puertos);
+
+      expect(f.errores).toEqual([expect.stringContaining('database down')]);
+    });
+
+    it('reports an empty answer of the provider', async () => {
+      const f = fake({ respuestas: [texto('  ')] });
+
+      await responderConsulta(pedido('Hola'), USUARIO, f.puertos);
+
+      expect(f.errores).toHaveLength(1);
+    });
+
+    it('reports nothing about a consulta that is answered or rejected by the limits', async () => {
+      const respondida = fake();
+      const rechazada = fake({ estado: { consentimiento: false } });
+
+      await responderConsulta(pedido('Hola'), USUARIO, respondida.puertos);
+      await responderConsulta(pedido('Hola'), USUARIO, rechazada.puertos);
+
+      expect([...respondida.errores, ...rechazada.errores]).toEqual([]);
+    });
+  });
+
   describe('the ambiguity rule', () => {
     it('answers with the three eventos when three match', async () => {
       const eventos = [evento(1), evento(2), evento(3)];
@@ -316,23 +376,87 @@ describe('responderConsulta', () => {
       });
     });
 
-    it('decides by the last busqueda when the model searches more than once', async () => {
+    it('asks to narrow the pregunta when any busqueda of the consulta has four or more', async () => {
+      const f = fake({
+        respuestas: [busquedas(2), texto('¿De qué día?')],
+        resultados: [[evento(1), evento(2), evento(3), evento(4), evento(5)], [evento(6)]],
+      });
+
+      const resultado = await responderConsulta(
+        pedido('¿Qué hay el sábado y el domingo?'),
+        USUARIO,
+        f.puertos,
+      );
+
+      expect(resultado).toMatchObject({ ok: true, respuesta: { tipo: 'repregunta', eventos: [] } });
+    });
+
+    it('answers with the coincidencias of every busqueda, not only the last one', async () => {
+      const f = fake({
+        respuestas: [busquedas(2), texto('Hay dos.')],
+        resultados: [[evento(1), evento(2)], []],
+      });
+
+      const resultado = await responderConsulta(pedido('¿Qué hay?'), USUARIO, f.puertos);
+
+      expect(resultado).toMatchObject({
+        ok: true,
+        respuesta: { tipo: 'respuesta', eventos: [evento(1), evento(2)] },
+      });
+    });
+
+    it('keeps the coincidencias of an earlier round', async () => {
       const f = fake({
         respuestas: [
           busqueda(BUSQUEDA_VALIDA, 0.001, 'primera'),
-          busqueda({ ...BUSQUEDA_VALIDA, texto: 'culto joven 1' }, 0.001, 'segunda'),
-          texto('Es el sábado.'),
+          busqueda({ ...BUSQUEDA_VALIDA, texto: 'otra cosa' }, 0.001, 'segunda'),
+          texto('Hay dos.'),
         ],
-        eventos: [evento(1)],
+        resultados: [[evento(1), evento(2)], []],
       });
 
-      const resultado = await responderConsulta(pedido('¿Cuándo es?'), USUARIO, f.puertos);
+      const resultado = await responderConsulta(pedido('¿Qué hay?'), USUARIO, f.puertos);
 
-      expect(f.busquedas).toHaveLength(2);
       expect(resultado).toMatchObject({
         ok: true,
-        respuesta: { tipo: 'respuesta', eventos: [evento(1)] },
+        respuesta: { tipo: 'respuesta', eventos: [evento(1), evento(2)] },
       });
+    });
+
+    it('counts an evento found twice once, in order of fecha', async () => {
+      const f = fake({
+        respuestas: [busquedas(2), texto('Hay dos.')],
+        resultados: [[evento(3), evento(1)], [evento(1)]],
+      });
+
+      const resultado = await responderConsulta(pedido('¿Qué hay?'), USUARIO, f.puertos);
+
+      expect(resultado).toMatchObject({
+        ok: true,
+        respuesta: { tipo: 'respuesta', eventos: [evento(1), evento(3)] },
+      });
+    });
+
+    it('asks to narrow the pregunta when the busquedas add up to four or more, and hides the last ones from the model', async () => {
+      const f = fake({
+        respuestas: [busquedas(2), texto('¿De qué día?')],
+        resultados: [
+          [evento(1), evento(2)],
+          [evento(3), evento(4)],
+        ],
+      });
+
+      const resultado = await responderConsulta(
+        pedido('¿Qué hay el sábado y el domingo?'),
+        USUARIO,
+        f.puertos,
+      );
+
+      expect(resultado).toMatchObject({ ok: true, respuesta: { tipo: 'repregunta', eventos: [] } });
+      const enviados = f.llamadasAlProveedor[1].mensajes.filter((m) => m.rol === 'busqueda');
+      const segundo = JSON.parse(enviados[1].contenido);
+      expect(segundo.eventos).toEqual([]);
+      expect(segundo.indicacion).toMatch(/precise/);
     });
   });
 

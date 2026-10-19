@@ -34,6 +34,11 @@ export function crearPuertos({
     ahora: () => new Date(),
     proveedor,
 
+    // Only the cause reaches the logs of the function, never the mensaje.
+    informarError(causa) {
+      console.error('chat-consulta failed:', causa);
+    },
+
     async leerEstado() {
       const [consentimiento, zonaHoraria, consultas, gasto] = await Promise.all([
         usuario.from('chat_consentimientos').select('usuario_id').maybeSingle(),
