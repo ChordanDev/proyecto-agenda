@@ -20,10 +20,10 @@ insert into public.asociaciones (id, nombre) values
 insert into public.distritos (id, asociacion_id, nombre) values
   ('dddddddd-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000217', 'Distrito uno'),
   ('dddddddd-0000-4000-8000-000000000002', 'aaaaaaaa-0000-4000-8000-000000000217', 'Distrito dos');
-insert into public.iglesias (id, distrito_id, nombre, direccion, localidad) values
-  ('11111111-0000-4000-8000-000000000217', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia uno', 'Calle 1', 'Localidad'),
-  ('22222222-0000-4000-8000-000000000217', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia dos', 'Calle 2', 'Localidad'),
-  ('33333333-0000-4000-8000-000000000217', 'dddddddd-0000-4000-8000-000000000002', 'Iglesia tres', 'Calle 3', 'Localidad');
+insert into public.iglesias (id, distrito_id, nombre, direccion, ciudad, provincia) values
+  ('11111111-0000-4000-8000-000000000217', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia uno', 'Calle 1', 'Ciudad', 'Provincia'),
+  ('22222222-0000-4000-8000-000000000217', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia dos', 'Calle 2', 'Ciudad', 'Provincia'),
+  ('33333333-0000-4000-8000-000000000217', 'dddddddd-0000-4000-8000-000000000002', 'Iglesia tres', 'Calle 3', 'Ciudad', 'Provincia');
 
 insert into auth.users (id, aud, role, email) values
   ('bbbbbbbb-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'admin@prueba.example.com'),
