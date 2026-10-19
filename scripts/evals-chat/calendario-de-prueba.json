@@ -1,0 +1,137 @@
+{
+  "asociacion": "Asociación Evals",
+  "zonaHoraria": "America/Argentina/Buenos_Aires",
+  "distrito": "Distrito Evals",
+  "iglesias": [
+    {
+      "nombre": "Iglesia Evals Central",
+      "direccion": "Av. Siempre Viva 742",
+      "localidad": "Rosario"
+    },
+    { "nombre": "Iglesia Evals Norte", "direccion": "Calle Falsa 123", "localidad": "Rosario" }
+  ],
+  "encargadoDe": "Iglesia Evals Central",
+  "eventos": [
+    {
+      "titulo": "Culto joven",
+      "duenio": "Iglesia Evals Central",
+      "dia": 0,
+      "hora": "19:00",
+      "lugar": "Templo central",
+      "descripcion": "Alabanza y mensaje para jóvenes.",
+      "enfasis": "nuevas_generaciones"
+    },
+    {
+      "titulo": "Escuela Sabática",
+      "duenio": "Iglesia Evals Central",
+      "dia": 0,
+      "hora": "09:30",
+      "lugar": "Templo central",
+      "descripcion": null,
+      "enfasis": null,
+      "semanalHasta": 84
+    },
+    {
+      "titulo": "Culto de oración",
+      "duenio": "Iglesia Evals Central",
+      "dia": -3,
+      "hora": "20:00",
+      "lugar": "Templo central",
+      "descripcion": null,
+      "enfasis": null,
+      "semanalHasta": 81
+    },
+    {
+      "titulo": "Visitación",
+      "duenio": "Iglesia Evals Central",
+      "dia": 1,
+      "hora": "16:00",
+      "lugar": null,
+      "descripcion": "Visitamos a los hermanos que no pueden venir al templo.",
+      "enfasis": "discipulado",
+      "semanalHasta": 15
+    },
+    {
+      "titulo": "Ensayo del coro",
+      "duenio": "Iglesia Evals Central",
+      "dia": 5,
+      "hora": "19:30",
+      "lugar": "Templo central",
+      "descripcion": null,
+      "enfasis": null
+    },
+    {
+      "titulo": "Ensayo del coro",
+      "duenio": "Iglesia Evals Central",
+      "dia": 12,
+      "hora": "19:30",
+      "lugar": "Templo central",
+      "descripcion": null,
+      "enfasis": null
+    },
+    {
+      "titulo": "Reunión de ancianos",
+      "duenio": "Distrito Evals",
+      "dia": 7,
+      "hora": "18:00",
+      "lugar": null,
+      "descripcion": null,
+      "enfasis": "liderazgo"
+    },
+    {
+      "titulo": "Seminario de liderazgo",
+      "duenio": "Distrito Evals",
+      "dia": 8,
+      "hora": "10:00",
+      "lugar": "Iglesia Evals Norte",
+      "descripcion": "Formación para directores de departamento.",
+      "enfasis": "liderazgo"
+    },
+    {
+      "titulo": "Congreso de jóvenes",
+      "duenio": "Asociación Evals",
+      "dia": 14,
+      "diaFin": 16,
+      "hora": "09:00",
+      "lugar": "Campamento Los Pinos",
+      "descripcion": "Tres días de talleres, música y testimonios para los jóvenes de toda la asociación.",
+      "enfasis": "nuevas_generaciones"
+    },
+    {
+      "titulo": "Bautismo",
+      "duenio": "Iglesia Evals Central",
+      "dia": 21,
+      "hora": "11:00",
+      "lugar": "Balneario municipal del río Paraná",
+      "descripcion": null,
+      "enfasis": "discipulado"
+    },
+    {
+      "titulo": "Día de la familia",
+      "duenio": "Iglesia Evals Central",
+      "dia": 28,
+      "hora": "16:00",
+      "lugar": null,
+      "descripcion": "Juegos y merienda para toda la familia.",
+      "enfasis": "identidad"
+    },
+    {
+      "titulo": "Santa Cena",
+      "duenio": "Iglesia Evals Central",
+      "dia": 35,
+      "hora": "10:00",
+      "lugar": "Templo central",
+      "descripcion": null,
+      "enfasis": "discipulado"
+    },
+    {
+      "titulo": "Feria del libro",
+      "duenio": "Iglesia Evals Norte",
+      "dia": 2,
+      "hora": "15:00",
+      "lugar": "Salón de la Iglesia Norte",
+      "descripcion": "Libros y revistas de la editorial.",
+      "enfasis": "identidad"
+    }
+  ]
+}
