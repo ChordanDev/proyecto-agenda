@@ -2,8 +2,8 @@ import type { ColorValue } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 // The icons of the bottom navigation, redrawn from the approved mockups
-// (04a-calendario.html, lines 173 and 183, and 07-chat-ia.html, line 196): line
-// drawings on a 24 grid.
+// (04a-calendario.html, lines 173 and 183, 07-chat-ia.html, line 196, and
+// 08b-gestion-secretaria.html, line 62): line drawings on a 24 grid.
 const VIEW_BOX = '0 0 24 24';
 const STROKE_WIDTH = 2;
 
@@ -46,6 +46,26 @@ export function ChatIcon({ color, size }: TabIconProps) {
       strokeLinejoin="round"
     >
       <Path d="M21 12a8.5 8.5 0 0 1-12.4 7.6L3.5 21l1.4-4.6A8.5 8.5 0 1 1 21 12z" />
+    </Svg>
+  );
+}
+
+/** Two people. */
+export function GestionIcon({ color, size }: TabIconProps) {
+  return (
+    <Svg
+      width={size}
+      height={size}
+      viewBox={VIEW_BOX}
+      fill="none"
+      stroke={color}
+      strokeWidth={STROKE_WIDTH}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <Circle cx={9} cy={8} r={3.5} />
+      <Path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" />
+      <Path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.4c2 .8 3.5 2.7 3.5 5.6" />
     </Svg>
   );
 }

@@ -71,6 +71,10 @@ _Avoid_: Agregar usuario, dar de alta, registrar
 Aviso que recibe quien es invitado: nombra el cargo y la iglesia o el distrito, y le dice que descargue la app e ingrese con ese correo. No lleva contraseña ni enlace de invitación.
 _Avoid_: Invitación, correo de alta
 
+**Vista de gestión**:
+Lo que muestra la pestaña Gestión a quien entra: la de la secretaria de iglesia (los encargados de su iglesia), la del pastor o la del admin. Con varios cargos se ve la del más alto: admin, después pastor, después secretaria de iglesia. El hermano y el encargado común no tienen ninguna y no ven la pestaña.
+_Avoid_: Panel de administración, rol de gestión
+
 ### Eventos
 
 **Calendario**:
