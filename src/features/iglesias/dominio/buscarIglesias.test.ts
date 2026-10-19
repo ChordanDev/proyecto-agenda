@@ -69,4 +69,36 @@ describe('buscarIglesias', () => {
     buscarIglesias(iglesias, 'cordoba');
     expect(iglesias).toEqual(copy);
   });
+
+  describe('with a ubicación', () => {
+    // Plaza San Martín, Córdoba.
+    const ubicacion = { latitud: -31.4167, longitud: -64.1833 };
+    const conCoordenadas = [
+      iglesia({ nombre: 'Villa María Centro', coordenadas: { latitud: -32.41, longitud: -63.24 } }),
+      iglesia({ nombre: 'San Martín' }),
+      iglesia({ nombre: 'Córdoba Centro', coordenadas: { latitud: -31.4201, longitud: -64.1888 } }),
+      iglesia({
+        nombre: 'Centro de prueba',
+        excluidaDelBuscador: true,
+        coordenadas: { latitud: -31.4167, longitud: -64.1833 },
+      }),
+      iglesia({ nombre: 'Argüello', coordenadas: { latitud: -31.3453, longitud: -64.2564 } }),
+    ];
+
+    it('returns every church of the search from the nearest to the farthest', () => {
+      expect(nombres(buscarIglesias(conCoordenadas, '', ubicacion))).toEqual([
+        'Córdoba Centro',
+        'Argüello',
+        'Villa María Centro',
+        'San Martín',
+      ]);
+    });
+
+    it('filters by name, keeps the order by distance and still leaves out the excluded ones', () => {
+      expect(nombres(buscarIglesias(conCoordenadas, 'centro', ubicacion))).toEqual([
+        'Córdoba Centro',
+        'Villa María Centro',
+      ]);
+    });
+  });
 });
