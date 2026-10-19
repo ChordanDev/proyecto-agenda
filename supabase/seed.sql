@@ -168,3 +168,40 @@ insert into public.iglesias_sumadas (evento_id, iglesia_id) values
   -- it is what remains when an iglesia sumada moves into the distrito that owns
   -- the evento, and the calendario must show the evento only once.
   ('e0000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000005');
+
+-- Gestion of cargos ----------------------------------------------------------------
+-- A secretaria de iglesia of Córdoba Central, who logs in like the other four,
+-- with the development password. She and the encargado share the iglesia, so
+-- she reads him and he does not read her.
+
+insert into auth.users (
+  instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+  confirmation_token, recovery_token, email_change_token_new, email_change,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+) values (
+  '00000000-0000-0000-0000-000000000000', 'b0000000-0000-4000-8000-000000000005', 'authenticated', 'authenticated',
+  'secretaria@example.com', extensions.crypt('agenda-local', extensions.gen_salt('bf')), now(),
+  '', '', '', '',
+  '{"provider": "email", "providers": ["email"]}', '{}', now(), now()
+);
+
+insert into auth.identities (user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
+values (
+  'b0000000-0000-4000-8000-000000000005', 'b0000000-0000-4000-8000-000000000005', 'email',
+  '{"sub": "b0000000-0000-4000-8000-000000000005", "email": "secretaria@example.com", "email_verified": true, "phone_verified": false}',
+  now(), now(), now()
+);
+
+insert into public.cargos (id, usuario_id, iglesia_id, distrito_id, asociacion_id, es_secretaria, funcion) values
+  ('c0000000-0000-4000-8000-000000000005', 'b0000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000001', null, null, true, 'Secretaria');
+
+-- The funcion of the encargado, shown in the gestion.
+update public.cargos set funcion = 'Tesorero' where id = 'c0000000-0000-4000-8000-000000000001';
+
+-- The nombres of the usuarios. The one without cargos has none yet, as a
+-- usuario invited before the gestion existed.
+insert into public.perfiles (usuario_id, nombre) values
+  ('b0000000-0000-4000-8000-000000000001', 'Juan Pérez'),
+  ('b0000000-0000-4000-8000-000000000002', 'Daniel Gómez'),
+  ('b0000000-0000-4000-8000-000000000003', 'Marta Rodríguez'),
+  ('b0000000-0000-4000-8000-000000000005', 'Ana López');

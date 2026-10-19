@@ -11,7 +11,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(12);
+select plan(13);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -33,6 +33,11 @@ insert into public.cargos (id, usuario_id, iglesia_id, distrito_id, asociacion_i
   ('cccccccc-0000-4000-8000-000000000001', 'bbbbbbbb-0000-4000-8000-000000000001', '11111111-0000-4000-8000-000000000001', null, null),
   ('cccccccc-0000-4000-8000-000000000002', 'bbbbbbbb-0000-4000-8000-000000000001', null, 'dddddddd-0000-4000-8000-000000000001', null),
   ('cccccccc-0000-4000-8000-000000000003', 'bbbbbbbb-0000-4000-8000-000000000002', '11111111-0000-4000-8000-000000000001', null, null);
+
+-- Both have a perfil, which goes with its usuario like the cargos.
+insert into public.perfiles (usuario_id, nombre) values
+  ('bbbbbbbb-0000-4000-8000-000000000001', 'Se va'),
+  ('bbbbbbbb-0000-4000-8000-000000000002', 'Se queda');
 
 -- Without a session --------------------------------------------------------------
 
@@ -91,6 +96,13 @@ select is(
   (select count(*) from public.cargos where usuario_id = 'bbbbbbbb-0000-4000-8000-000000000001'),
   0::bigint,
   'their cargos are deleted'
+);
+
+select results_eq(
+  $$ select usuario_id from public.perfiles
+     where usuario_id in ('bbbbbbbb-0000-4000-8000-000000000001', 'bbbbbbbb-0000-4000-8000-000000000002') $$,
+  $$ values ('bbbbbbbb-0000-4000-8000-000000000002'::uuid) $$,
+  'their perfil is deleted, and only theirs'
 );
 
 select is(

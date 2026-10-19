@@ -3,13 +3,27 @@ import { supabase } from '@/shared/supabase';
 import type { Cargo } from '../dominio/cargo';
 
 /**
- * Reads the cargos of the usuario who is signed in. The database only returns
- * their own: the policy of `cargos` compares the usuario with the session.
+ * Reads the cargos of the usuario who is signed in, and no other.
+ *
+ * The filter by usuario is needed: a secretaria de iglesia, a pastor or an
+ * admin can also read the cargos they oversee, and those are not theirs.
  */
 export async function getCargosDelUsuario(): Promise<Cargo[]> {
+  const { data: sesion, error: sesionError } = await supabase.auth.getSession();
+
+  if (sesionError) {
+    throw new Error(`Could not read the session: ${sesionError.message}`);
+  }
+
+  const usuarioId = sesion.session?.user.id;
+  if (!usuarioId) {
+    return [];
+  }
+
   const { data, error } = await supabase
     .from('cargos')
-    .select('id, iglesia_id, distrito_id, asociacion_id');
+    .select('id, iglesia_id, distrito_id, asociacion_id')
+    .eq('usuario_id', usuarioId);
 
   if (error) {
     throw new Error(`Could not read the cargos: ${error.message}`);
