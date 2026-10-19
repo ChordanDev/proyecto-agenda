@@ -14,6 +14,9 @@ jest.mock('@react-native-community/netinfo', () =>
 );
 jest.mock('./signOut', () => ({ signOut: jest.fn() }));
 jest.mock('./deleteOwnUsuario', () => ({ deleteOwnUsuario: jest.fn() }));
+jest.mock('@/features/recordatorios/datos/sincronizarRecordatorios', () => ({
+  actualizarRecordatorios: jest.fn(),
+}));
 
 // Without a garbage collection timer, the clients do not keep Jest running.
 const newClient = () => new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });

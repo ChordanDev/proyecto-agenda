@@ -42,7 +42,8 @@
           "locationAlwaysPermission": false,
           "motionUsagePermission": false
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,
