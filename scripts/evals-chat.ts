@@ -117,7 +117,7 @@ async function cargarCalendario(servidor: SupabaseClient, anclaje: string) {
     'create the iglesias',
   );
 
-  for (const { fila, fechas } of getEventosParaCargar(CALENDARIO, anclaje)) {
+  for (const { fila, fechas, sumadas } of getEventosParaCargar(CALENDARIO, anclaje)) {
     const { id } = exigir(
       await servidor.from('eventos').insert(fila).select('id').single<{ id: string }>(),
       `create the evento ${fila.titulo}`,
@@ -128,6 +128,14 @@ async function cargarCalendario(servidor: SupabaseClient, anclaje: string) {
         .insert(fechas.map((fecha) => ({ evento_id: id, fecha }))),
       `create the fechas of ${fila.titulo}`,
     );
+    if (sumadas.length > 0) {
+      exigir(
+        await servidor
+          .from('iglesias_sumadas')
+          .insert(sumadas.map((iglesiaId) => ({ evento_id: id, iglesia_id: iglesiaId }))),
+        `share ${fila.titulo}`,
+      );
+    }
   }
 }
 

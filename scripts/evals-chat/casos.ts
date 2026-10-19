@@ -1,6 +1,7 @@
 // The casos of the evals of the chat, against calendario-de-prueba.json. The
 // person who asks is an encargado of Iglesia Evals Central: their calendario
-// is that iglesia, Distrito Evals and Asociación Evals, not Iglesia Evals Norte.
+// is that iglesia, Distrito Evals and Asociación Evals, not Iglesia Evals Norte,
+// except the evento Iglesia Evals Norte shares with Iglesia Evals Central.
 //
 // Dias count from the anclaje, the next sabado (dia 0). A caso of carga
 // (proponer evento) expects a `borrador`; see docs/evals-chat.md to add one.
@@ -108,6 +109,13 @@ export const CASOS: readonly Caso[] = [
     categoria: 'simple',
     mensaje: '¿Quién organiza la reunión de ancianos?',
     esperado: { tipo: 'respuesta', eventos: ['Reunión de ancianos'], contiene: ['distrito'] },
+  },
+  {
+    // Shared by Iglesia Evals Norte, so it is said with the iglesia that owns it.
+    id: 'simple-compartido',
+    categoria: 'simple',
+    mensaje: '¿Quién organiza el recital de piano?',
+    esperado: { tipo: 'respuesta', eventos: ['Recital de piano'], contiene: ['Evals Norte'] },
   },
   {
     id: 'simple-miercoles',
@@ -256,7 +264,8 @@ export const CASOS: readonly Caso[] = [
     esperado: { tipo: 'respuesta', eventos: ['Día de la familia'], contieneAlguno: SIN_EL_DATO },
   },
 
-  // Sin coincidencias: Iglesia Evals Norte is not in the calendario of this person.
+  // Sin coincidencias: the eventos Iglesia Evals Norte does not share are not in the
+  // calendario of this person.
   {
     id: 'sin-otra-iglesia',
     categoria: 'sin_coincidencias',

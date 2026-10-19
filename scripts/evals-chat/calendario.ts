@@ -19,6 +19,8 @@ export type EventoDePrueba = {
   diaFin?: number;
   /** Repeats every week until this dia, included. */
   semanalHasta?: number;
+  /** Nombres of the iglesias the evento is shared with. */
+  sumadas?: string[];
 };
 
 export type CalendarioDePrueba = {
@@ -57,7 +59,8 @@ export type FilaDeEvento = {
   fin_de_serie: string | null;
 };
 
-export type EventoParaCargar = { fila: FilaDeEvento; fechas: string[] };
+/** `sumadas` are the ids of the iglesias the evento is shared with. */
+export type EventoParaCargar = { fila: FilaDeEvento; fechas: string[]; sumadas: string[] };
 
 function getDuenio(
   calendario: CalendarioDePrueba,
@@ -113,5 +116,12 @@ export function getEventosParaCargar(
         evento.semanalHasta === undefined ? null : sumarDias(anclaje, evento.semanalHasta),
     },
     fechas: getFechas(evento, anclaje),
+    sumadas: (evento.sumadas ?? []).map((nombre) => {
+      const posicion = calendario.iglesias.findIndex((iglesia) => iglesia.nombre === nombre);
+      if (posicion === -1) {
+        throw new Error(`Unknown iglesia in the calendario de prueba: ${nombre}`);
+      }
+      return IDS.iglesia(posicion);
+    }),
   }));
 }
