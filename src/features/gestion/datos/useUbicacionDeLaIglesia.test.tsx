@@ -106,6 +106,38 @@ describe('useUbicacionDeLaIglesia', () => {
     expect(hook().coordenadas).toEqual({ latitud: -33.3, longitud: -66.34 });
   });
 
+  it('shows the search again when the admin goes back to a direccion that was not found', async () => {
+    const noEncontrada = geocodePendiente();
+    const { hook, escribir } = render(COMPLETA, GUARDADO);
+
+    escribir({ ...COMPLETA, direccion: 'Pringles 900' });
+    act(() => jest.advanceTimersByTime(ESPERA_MS));
+    await noEncontrada([]);
+    expect(hook().estimada.status).toBe('noEncontrada');
+
+    geocodePendiente();
+    escribir({ ...COMPLETA, direccion: 'Pringles 90' });
+    escribir({ ...COMPLETA, direccion: 'Pringles 900' });
+
+    expect(hook().estimada.status).toBe('buscando');
+    expect(hook().marcadorAlDia).toBe(false);
+  });
+
+  it('asks for the marker by hand after a new direccion is not found', async () => {
+    const responder = geocodePendiente();
+    const { hook, escribir } = render(COMPLETA, GUARDADO);
+    expect(hook().marcadorAlDia).toBe(true);
+
+    escribir({ ...COMPLETA, direccion: 'Calle que no existe' });
+    act(() => jest.advanceTimersByTime(ESPERA_MS));
+    await responder([]);
+    expect(hook().marcadorAlDia).toBe(false);
+
+    act(() => hook().moverMarcador(A_MANO));
+    expect(hook().marcadorAlDia).toBe(true);
+    expect(hook().coordenadas).toEqual(A_MANO);
+  });
+
   it('keeps the marker and tells it when the direccion is not found', async () => {
     const responder = geocodePendiente();
     const { hook, escribir } = render(COMPLETA, GUARDADO);

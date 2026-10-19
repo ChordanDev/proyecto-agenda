@@ -9,11 +9,11 @@ import { useOnlineStatus } from '@/shared/useOnlineStatus';
 
 import { useEstructuraDelAdmin, useGuardarIglesia } from '../datos/useGestionAdmin';
 import { useUbicacionDeLaIglesia } from '../datos/useUbicacionDeLaIglesia';
-import type { UbicacionEstimada } from '../datos/useUbicacionEstimada';
 import { getConfirmacionDeBajaDeIglesia } from '../dominio/bajaDeEstructura';
 import type { DistritoDelAdmin } from '../dominio/distritosSinPastor';
 import {
   getAvisoDeCambioDeDistrito,
+  getAyudaDelMapa,
   getDireccionParaElMapa,
   puedeGuardarIglesia,
   validarIglesia,
@@ -108,11 +108,12 @@ function Formulario({ iglesia, distritoInicial, distritos, onClose }: Formulario
     provincia: iglesia?.provincia ?? '',
     distritoId: distritoInicial ?? iglesia?.distritoId ?? null,
   }));
-  const { coordenadas, estimada, moverMarcador } = useUbicacionDeLaIglesia(
+  const { coordenadas, estimada, marcadorAlDia, moverMarcador } = useUbicacionDeLaIglesia(
     datos,
     iglesia?.coordenadas ?? null,
   );
   const direccionParaElMapa = getDireccionParaElMapa(datos);
+  const ayudaDelMapa = getAyudaDelMapa(estimada.status, coordenadas !== null);
   // The fields only show what is wrong after a first attempt to save.
   const [errores, setErrores] = useState<ErroresDeLaIglesia>({});
   const [fallo, setFallo] = useState(false);
@@ -201,9 +202,15 @@ function Formulario({ iglesia, distritoInicial, distritos, onClose }: Formulario
             ) : (
               <MapaDeLaIglesia coordenadas={coordenadas} onCambiar={moverMarcador} />
             )}
-            <AppText variant="secundario" color="textoSecundario" accessibilityLiveRegion="polite">
-              {getAyudaDelMapa(estimada, coordenadas !== null)}
-            </AppText>
+            {ayudaDelMapa !== null && (
+              <AppText
+                variant="secundario"
+                color="textoSecundario"
+                accessibilityLiveRegion="polite"
+              >
+                {ayudaDelMapa}
+              </AppText>
+            )}
           </View>
         </Campo>
 
@@ -257,7 +264,7 @@ function Formulario({ iglesia, distritoInicial, distritos, onClose }: Formulario
           !puedeGuardarIglesia({
             conConexion,
             guardando: guardar.isPending,
-            buscandoUbicacion: estimada.status === 'buscando',
+            marcadorAlDia,
           })
         }
         onPress={onGuardar}
@@ -287,20 +294,6 @@ function Formulario({ iglesia, distritoInicial, distritos, onClose }: Formulario
       />
     </>
   );
-}
-
-/** What the admin reads under the map. */
-function getAyudaDelMapa(estimada: UbicacionEstimada, conMarcador: boolean): string {
-  switch (estimada.status) {
-    case 'buscando':
-      return 'Buscando la dirección en el mapa…';
-    case 'noEncontrada':
-      return conMarcador
-        ? 'No encontramos la dirección nueva. Arrastrá el marcador hasta la iglesia.'
-        : 'No encontramos la dirección. Tocá el mapa donde está la iglesia.';
-    default:
-      return 'Mantené apretado el marcador y arrastralo hasta la iglesia.';
-  }
 }
 
 const styles = StyleSheet.create({

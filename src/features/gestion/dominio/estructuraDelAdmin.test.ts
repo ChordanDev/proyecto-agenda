@@ -2,6 +2,7 @@ import {
   buscarIglesiasDelAdmin,
   getClaveDeUbicacion,
   getDireccionABuscar,
+  getAyudaDelMapa,
   getDireccionParaElMapa,
   puedeGuardarIglesia,
   getAvisoDeCambioDeDistrito,
@@ -298,18 +299,43 @@ describe('getDireccionABuscar', () => {
 });
 
 describe('puedeGuardarIglesia', () => {
-  const listo = { conConexion: true, guardando: false, buscandoUbicacion: false };
+  const listo = { conConexion: true, guardando: false, marcadorAlDia: true };
 
-  it('saves with a connection, when nothing is pending', () => {
+  it('saves with a connection, when the marker stands for the direccion', () => {
     expect(puedeGuardarIglesia(listo)).toBe(true);
   });
 
-  it('waits while the map looks for the direccion', () => {
-    expect(puedeGuardarIglesia({ ...listo, buscandoUbicacion: true })).toBe(false);
+  it('waits until the marker stands for a new direccion, found or placed by hand', () => {
+    expect(puedeGuardarIglesia({ ...listo, marcadorAlDia: false })).toBe(false);
   });
 
   it('does not save without a connection or while saving', () => {
     expect(puedeGuardarIglesia({ ...listo, conConexion: false })).toBe(false);
     expect(puedeGuardarIglesia({ ...listo, guardando: true })).toBe(false);
+  });
+});
+
+describe('getAyudaDelMapa', () => {
+  it('tells how to move the marker when it is on the map', () => {
+    expect(getAyudaDelMapa('idle', true)).toBe(
+      'Mantené apretado el marcador y arrastralo hasta la iglesia.',
+    );
+  });
+
+  it('says nothing about a marker that is not on the map', () => {
+    expect(getAyudaDelMapa('idle', false)).toBeNull();
+  });
+
+  it('tells while it looks for the direccion', () => {
+    expect(getAyudaDelMapa('buscando', true)).toBe('Buscando la dirección en el mapa…');
+  });
+
+  it('asks for the marker by hand when the direccion is not found', () => {
+    expect(getAyudaDelMapa('noEncontrada', true)).toBe(
+      'No encontramos la dirección nueva. Arrastrá el marcador hasta la iglesia para poder guardar.',
+    );
+    expect(getAyudaDelMapa('noEncontrada', false)).toBe(
+      'No encontramos la dirección. Tocá el mapa donde está la iglesia.',
+    );
   });
 });

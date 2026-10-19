@@ -278,18 +278,36 @@ export function getDireccionABuscar(
 }
 
 /**
- * Whether "Crear iglesia" or "Guardar cambios" can be tapped. Not while the map
- * looks for a new direccion: the iglesia would be saved with the point of the
- * old one.
+ * Whether "Crear iglesia" or "Guardar cambios" can be tapped. Only when the
+ * marker stands for the direccion written (`marcadorAlDia`): not while the map
+ * looks for a new one, nor after it was not found until the admin moves the
+ * marker, so an iglesia is never saved with the point of its old direccion.
  */
 export function puedeGuardarIglesia({
   conConexion,
   guardando,
-  buscandoUbicacion,
+  marcadorAlDia,
 }: {
   conConexion: boolean;
   guardando: boolean;
-  buscandoUbicacion: boolean;
+  marcadorAlDia: boolean;
 }): boolean {
-  return conConexion && !guardando && !buscandoUbicacion;
+  return conConexion && !guardando && marcadorAlDia;
+}
+
+/** Where the map stands with the direccion it looks for (useUbicacionEstimada). */
+export type EstadoDelMapa = 'idle' | 'buscando' | 'encontrada' | 'noEncontrada';
+
+/** What the admin reads under the map; null when there is no marker to talk about. */
+export function getAyudaDelMapa(estado: EstadoDelMapa, conMarcador: boolean): string | null {
+  switch (estado) {
+    case 'buscando':
+      return 'Buscando la dirección en el mapa…';
+    case 'noEncontrada':
+      return conMarcador
+        ? 'No encontramos la dirección nueva. Arrastrá el marcador hasta la iglesia para poder guardar.'
+        : 'No encontramos la dirección. Tocá el mapa donde está la iglesia.';
+    default:
+      return conMarcador ? 'Mantené apretado el marcador y arrastralo hasta la iglesia.' : null;
+  }
 }

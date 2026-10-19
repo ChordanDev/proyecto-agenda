@@ -39,7 +39,8 @@ async function ubicarDireccion(direccion: string): Promise<Punto | null> {
 /**
  * Estimates where a direccion is (getDireccionParaElMapa), and hands the point
  * to `onEncontrada`. Null: nothing to look for. A direccion that changes while
- * it is being looked for drops the earlier answer.
+ * it is being looked for drops the earlier answer, and every new search shows
+ * as `buscando`, also for a direccion that was already answered.
  */
 export function useUbicacionEstimada(
   direccion: string | null,
@@ -50,6 +51,14 @@ export function useUbicacionEstimada(
     status: 'encontrada' | 'noEncontrada';
   } | null>(null);
   const entregar = useEffectEvent(onEncontrada);
+
+  // An answer is only for the search it came from: leaving its direccion
+  // forgets it, so coming back to it searches again.
+  const [buscada, setBuscada] = useState(direccion);
+  if (buscada !== direccion) {
+    setBuscada(direccion);
+    setRespuesta(null);
+  }
 
   useEffect(() => {
     if (direccion === null) {

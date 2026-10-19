@@ -19,6 +19,10 @@ type TextosDeUbicacion = Pick<DatosDeLaIglesia, 'direccion' | 'ciudad' | 'provin
  *   (getDireccionABuscar);
  * - the admin moves it by hand, and then it stands for the texts it was moved
  *   for: an estimate still on its way is dropped.
+ *
+ * `marcadorAlDia`: the marker stands for the direccion written. Not while the
+ * map looks for a new one, nor after it was not found, until the admin moves
+ * the marker by hand.
  */
 export function useUbicacionDeLaIglesia(
   textos: TextosDeUbicacion,
@@ -26,6 +30,7 @@ export function useUbicacionDeLaIglesia(
 ): {
   coordenadas: Punto | null;
   estimada: UbicacionEstimada;
+  marcadorAlDia: boolean;
   moverMarcador: (punto: Punto) => void;
 } {
   const [coordenadas, setCoordenadas] = useState(guardada);
@@ -46,5 +51,5 @@ export function useUbicacionDeLaIglesia(
     setUbicadaPara(getClaveDeUbicacion(textos));
   };
 
-  return { coordenadas, estimada, moverMarcador };
+  return { coordenadas, estimada, marcadorAlDia: pedido === null, moverMarcador };
 }
