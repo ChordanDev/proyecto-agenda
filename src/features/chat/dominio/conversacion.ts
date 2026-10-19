@@ -29,7 +29,8 @@ export type EstadoDePropuesta = 'pendiente' | 'guardando' | 'guardado';
  * - `propuesta`: a respuesta with the borrador of an evento, drawn as its
  *   vista previa. Its `id`, a UUID, is the id its evento is created with: a
  *   save tried again, from Confirmar or from Editar, saves that one evento.
- *   `error` is why the last Confirmar failed.
+ *   `error` is why the last Confirmar failed. `eventos` are the ones found
+ *   in the same respuesta, as "¿Qué hay el sábado? Si está libre, cargame…".
  */
 export type MensajeDeChat =
   | { tipo: 'pregunta'; id: string; texto: string }
@@ -39,6 +40,7 @@ export type MensajeDeChat =
       tipo: 'propuesta';
       id: string;
       texto: string;
+      eventos: EventoDeChat[];
       borrador: BorradorDeEvento;
       estado: EstadoDePropuesta;
       error: string | null;
@@ -168,7 +170,15 @@ export function reducirConversacion(
       const mensaje: MensajeDeChat =
         borrador === null
           ? { tipo: 'respuesta', id: accion.id, texto, eventos }
-          : { tipo: 'propuesta', id: accion.id, texto, borrador, estado: 'pendiente', error: null };
+          : {
+              tipo: 'propuesta',
+              id: accion.id,
+              texto,
+              eventos,
+              borrador,
+              estado: 'pendiente',
+              error: null,
+            };
       return {
         ...conversacion,
         mensajes: [...conversacion.mensajes, mensaje],

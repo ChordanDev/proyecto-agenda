@@ -71,14 +71,25 @@ export function MensajeDeChat({
       );
     case 'propuesta':
       return (
-        <TarjetaDePropuesta
-          tarjeta={getTarjetaDePropuesta(mensaje.borrador)}
-          estado={mensaje.estado}
-          error={mensaje.error}
-          onConfirmar={() => onConfirmar(mensaje.id)}
-          onEditar={() => onEditar(mensaje.id)}
-          onVerEvento={() => onVerEvento(mensaje.id)}
-        />
+        <>
+          {/* The eventos found in the same respuesta go first, as in any respuesta. */}
+          {mensaje.eventos.length > 0 && (
+            <View style={[styles.bubble, styles.respuesta]}>
+              <AppText style={styles.text}>{mensaje.texto}</AppText>
+              {getLineasDeEventos(mensaje.eventos).map((linea) => (
+                <EventoDeRespuesta key={linea.clave} linea={linea} />
+              ))}
+            </View>
+          )}
+          <TarjetaDePropuesta
+            tarjeta={getTarjetaDePropuesta(mensaje.borrador)}
+            estado={mensaje.estado}
+            error={mensaje.error}
+            onConfirmar={() => onConfirmar(mensaje.id)}
+            onEditar={() => onEditar(mensaje.id)}
+            onVerEvento={() => onVerEvento(mensaje.id)}
+          />
+        </>
       );
   }
 }

@@ -463,6 +463,7 @@ describe('responder with a borrador', () => {
       tipo: 'propuesta',
       id: 'r1',
       texto: 'Te preparé el evento.',
+      eventos: [],
       borrador: BORRADOR,
       estado: 'pendiente',
       error: null,
@@ -574,5 +575,19 @@ describe('fallarGuardado', () => {
     expect(
       reducirConversacion(guardada, { tipo: 'fallarGuardado', id: 'r1', error: 'Sin conexión' }),
     ).toBe(guardada);
+  });
+});
+
+describe('responder with a borrador and eventos', () => {
+  it('keeps the eventos found beside the propuesta', () => {
+    const eventos = [evento(), evento({ id: 'evento-2', titulo: 'Bautismos' })];
+    const conversacion = aplicar(preguntando(), {
+      tipo: 'responder',
+      conversacionId: 1,
+      id: 'r1',
+      respuesta: respuesta('El sábado hay dos actividades.', { borrador: BORRADOR, eventos }),
+    });
+
+    expect(getPropuesta(conversacion).eventos).toEqual(eventos);
   });
 });
