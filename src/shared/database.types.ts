@@ -122,7 +122,9 @@ isOneToOne: false
                   Update: {
                     "actualizado_at"?: string,"encendido"?: boolean,"id"?: string,"token"?: string,"usuario_id"?: string | null
                   }
-                  Relationships: []
+                  Relationships: [
+                    
+                  ]
                 },"dispositivos_iglesias": {
                   Row: {
                     "dispositivo_id": string,"iglesia_id": string
@@ -358,7 +360,7 @@ isOneToOne: false
                            },
 "get_dispositivo":
 { Args: { "token": string }; Returns: {
-              "con_usuario": boolean,"del_usuario": boolean,"encendido": boolean,"iglesia_ids": string[]
+              "con_usuario": boolean,"del_usuario": boolean,"encendido": boolean,"iglesia_ids": (string)[]
             }[]
                            },
 "get_usuario_emails":
@@ -376,7 +378,7 @@ isOneToOne: false
 { Args: { "distrito_id"?: string,"es_secretaria": boolean,"funcion"?: string,"iglesia_id"?: string,"nombre": string,"usuario_id": string }; Returns: string
                            },
 "guardar_dispositivo":
-{ Args: { "encendido": boolean,"iglesia_ids": string[],"token": string }; Returns: undefined
+{ Args: { "encendido": boolean,"iglesia_ids": (string)[],"token": string }; Returns: undefined
                            },
 "guardar_evento":
 { Args: { "alcance": Database["public"]['Enums']["alcance"],"descripcion"?: string,"duenio_asociacion_id"?: string,"duenio_distrito_id"?: string,"duenio_iglesia_id"?: string,"enfasis"?: Database["public"]['Enums']["enfasis"],"evento_id"?: string,"fecha_fin"?: string,"fechas": (string)[],"fin_de_serie"?: string,"hora": string,"iglesias_sumadas"?: (string)[],"lugar"?: string,"lugar_id"?: string,"nuevo_evento_id"?: string,"repeticion": Database["public"]['Enums']["repeticion"],"titulo": string }; Returns: string
