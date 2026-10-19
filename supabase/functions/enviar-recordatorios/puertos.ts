@@ -43,7 +43,7 @@ type DispositivoLeido = {
 /**
  * The phones of the sending of an asociacion, with the iglesias each one
  * follows there. An iglesia dada de baja already left every phone
- * (20261025300000_prune_dispositivos_iglesias.sql); it is left out here too,
+ * (20261025500000_prune_dispositivos_iglesias.sql); it is left out here too,
  * so nothing of it is recordado if a phone still had it. A phone left without
  * iglesias is not warned.
  */
