@@ -110,7 +110,7 @@ export function getAvisosDelPastor(iglesias: readonly IglesiaDelPastor[]): Aviso
 
   const avisos = sinEncargado.map((iglesia) => ({
     titulo: `${iglesia.nombre} no tiene encargado`,
-    texto: 'Nadie puede cargar sus eventos hasta que agregues uno.',
+    texto: 'Nadie de la iglesia puede cargar sus eventos. Agregá un encargado o cargalos vos.',
   }));
 
   if (sinSecretaria.length > 0) {

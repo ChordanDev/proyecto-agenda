@@ -173,7 +173,8 @@ describe('getEtiquetasDeIglesia', () => {
 });
 
 describe('getAvisosDelPastor', () => {
-  const SIN_ENCARGADO = 'Nadie puede cargar sus eventos hasta que agregues uno.';
+  const SIN_ENCARGADO =
+    'Nadie de la iglesia puede cargar sus eventos. Agregá un encargado o cargalos vos.';
 
   it('gives no notice when every iglesia has a secretaria', () => {
     expect(getAvisosDelPastor([iglesia({ nombre: 'Iglesia Central' })])).toEqual([]);
