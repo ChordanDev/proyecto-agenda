@@ -11,7 +11,7 @@
 --   Asociación de la prueba (the admin)
 --     Distrito del pastor (the pastor)
 --       Iglesia del encargado (the encargado)
---       Iglesia vecina
+--       Iglesia vecina (its encargado)
 --     Otro distrito
 --       Iglesia de otro distrito
 --   Otra asociación (in the hora of São Paulo)
@@ -24,7 +24,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(38);
+select plan(41);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -48,13 +48,15 @@ insert into auth.users (id, aud, role, email) values
   ('bbbbbbbb-0000-4000-8000-000000000002', 'authenticated', 'authenticated', 'pastor@prueba.example.com'),
   ('bbbbbbbb-0000-4000-8000-000000000003', 'authenticated', 'authenticated', 'admin@prueba.example.com'),
   ('bbbbbbbb-0000-4000-8000-000000000004', 'authenticated', 'authenticated', 'sincargo@prueba.example.com'),
-  ('bbbbbbbb-0000-4000-8000-000000000005', 'authenticated', 'authenticated', 'otra@prueba.example.com');
+  ('bbbbbbbb-0000-4000-8000-000000000005', 'authenticated', 'authenticated', 'otra@prueba.example.com'),
+  ('bbbbbbbb-0000-4000-8000-000000000006', 'authenticated', 'authenticated', 'vecina@prueba.example.com');
 
 insert into public.cargos (usuario_id, iglesia_id, distrito_id, asociacion_id) values
   ('bbbbbbbb-0000-4000-8000-000000000001', '11111111-0000-4000-8000-000000000001', null, null),
   ('bbbbbbbb-0000-4000-8000-000000000002', null, 'dddddddd-0000-4000-8000-000000000001', null),
   ('bbbbbbbb-0000-4000-8000-000000000003', null, null, 'aaaaaaaa-0000-4000-8000-000000000001'),
-  ('bbbbbbbb-0000-4000-8000-000000000005', '11111111-0000-4000-8000-000000000004', null, null);
+  ('bbbbbbbb-0000-4000-8000-000000000005', '11111111-0000-4000-8000-000000000004', null, null),
+  ('bbbbbbbb-0000-4000-8000-000000000006', '11111111-0000-4000-8000-000000000002', null, null);
 
 insert into public.eventos (id, titulo, lugar, descripcion, alcance, duenio_iglesia_id, duenio_distrito_id, duenio_asociacion_id, hora, fecha_fin) values
   ('eeeeeeee-0000-4000-8000-000000000001', 'Culto joven', 'Templo', null, 'iglesia', '11111111-0000-4000-8000-000000000001', null, null, '19:00', null),
@@ -78,6 +80,18 @@ insert into public.eventos_fechas (evento_id, fecha) values
 -- The Iglesia de otro distrito shares one evento with the Iglesia del encargado.
 insert into public.iglesias_sumadas (evento_id, iglesia_id) values
   ('eeeeeeee-0000-4000-8000-000000000005', '11111111-0000-4000-8000-000000000001');
+
+-- The Iglesia vecina shares one evento with the Iglesia del encargado: the
+-- pastor sees it both by the alcance of the Iglesia vecina and as sumado to the
+-- Iglesia del encargado.
+insert into public.eventos (id, titulo, alcance, duenio_iglesia_id, hora) values
+  ('eeeeeeee-0000-4000-8000-000000000009', 'Vigilia compartida', 'iglesia', '11111111-0000-4000-8000-000000000002', '21:00');
+
+insert into public.eventos_fechas (evento_id, fecha) values
+  ('eeeeeeee-0000-4000-8000-000000000009', '2026-11-17');
+
+insert into public.iglesias_sumadas (evento_id, iglesia_id) values
+  ('eeeeeeee-0000-4000-8000-000000000009', '11111111-0000-4000-8000-000000000001');
 
 -- A weekly series of the Iglesia del encargado with an excepcion on each of its
 -- dates but 2026-11-28: one with a lugar of the list, one with its lugar
@@ -162,6 +176,11 @@ select results_eq(
      from public.buscar_eventos('2026-11-14', '2026-11-14') $$,
   $$ values (3, 4, 4) $$,
   'by default it returns the first three, each with the total of coincidencias'
+);
+select results_eq(
+  $$ select duenio from public.buscar_eventos('2026-11-14', '2026-11-14', 'compartido') $$,
+  $$ values ('Iglesia de otro distrito') $$,
+  'the encargado of an iglesia sumada finds the evento shared with it, which says the iglesia that owns it'
 );
 select results_eq(
   $$ select duenio, lugar from public.buscar_eventos('2026-11-14', '2026-11-14', 'culto joven') $$,
@@ -288,6 +307,23 @@ select results_eq(
        ('eeeeeeee-0000-4000-8000-000000000001'),
        ('eeeeeeee-0000-4000-8000-000000000005') $$,
   'the pastor finds the calendarios of the iglesias of their distrito, and not those of another distrito'
+);
+
+select results_eq(
+  $$ select evento_id::text, duenio, total::integer
+     from public.buscar_eventos('2026-11-17', '2026-11-17', null, 20) $$,
+  $$ values ('eeeeeeee-0000-4000-8000-000000000009', 'Iglesia vecina', 1) $$,
+  'an evento the pastor sees both by its alcance and as sumado is found once'
+);
+
+-- The encargado of the Iglesia vecina -----------------------------------------------
+
+set local request.jwt.claims to '{"sub": "bbbbbbbb-0000-4000-8000-000000000006", "role": "authenticated"}';
+
+select is_empty(
+  $$ select 1 from public.buscar_eventos('2026-11-14', '2026-11-14', null, 20)
+     where evento_id = 'eeeeeeee-0000-4000-8000-000000000005' $$,
+  'an iglesia that neither owns an evento nor is sumada to it does not find it, though it shares their asociacion'
 );
 
 -- The admin -------------------------------------------------------------------------

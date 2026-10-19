@@ -69,11 +69,11 @@ Como el modelo no siempre responde igual, un caso que falla una vez no prueba na
 
 ## El calendario de prueba
 
-Está en `scripts/evals-chat/calendario-de-prueba.json`: una asociación, un distrito, dos iglesias y sus eventos. Quien pregunta es encargado de la Iglesia Evals Central, así que su calendario es esa iglesia, el distrito y la asociación. Los eventos de la Iglesia Evals Norte no le corresponden y sirven para probar que el chat no los encuentra.
+Está en `scripts/evals-chat/calendario-de-prueba.json`: una asociación, un distrito, dos iglesias y sus eventos. Quien pregunta es encargado de la Iglesia Evals Central, así que su calendario es esa iglesia, el distrito y la asociación. Los eventos de la Iglesia Evals Norte no le corresponden y sirven para probar que el chat no los encuentra, salvo el que esa iglesia comparte con la Iglesia Evals Central: ese sí lo encuentra, con la Iglesia Evals Norte como dueña.
 
 Las fechas se cuentan en días desde el **anclaje**: el próximo sábado (si hoy es sábado, el de la semana siguiente). `"dia": 0` es ese sábado, `-3` el miércoles anterior. Así "el sábado que viene" señala el mismo evento cualquier día que se corran los evals. El anclaje se calcula al empezar: una corrida que cruza la medianoche del viernes al sábado mezcla dos anclajes, así que no conviene correrlos a esa hora.
 
-Cada evento lleva título, dueño (el nombre de la asociación, del distrito o de una iglesia), `dia`, `hora`, `lugar`, `descripcion` y `enfasis` (o `null` para una actividad regular). Opcionales: `diaFin` para un evento de varios días y `semanalHasta` para una serie semanal.
+Cada evento lleva título, dueño (el nombre de la asociación, del distrito o de una iglesia), `dia`, `hora`, `lugar`, `descripcion` y `enfasis` (o `null` para una actividad regular). Opcionales: `diaFin` para un evento de varios días, `semanalHasta` para una serie semanal y `sumadas` con los nombres de las iglesias con que se comparte.
 
 Ojo con las coincidencias: el chat responde con todas cuando son 3 o menos y repregunta cuando son más. Un evento de varios días cuenta una vez por cada día, y una serie una vez por cada fecha. Al sumar un evento, revisar que los casos que lo rozan sigan esperando lo mismo.
 

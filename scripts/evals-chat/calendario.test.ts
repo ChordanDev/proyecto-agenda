@@ -20,7 +20,10 @@ function calendario(eventos: EventoDePrueba[]): CalendarioDePrueba {
     asociacion: 'Asociación Evals',
     zonaHoraria: 'America/Argentina/Buenos_Aires',
     distrito: 'Distrito Evals',
-    iglesias: [{ nombre: 'Iglesia Evals Central', direccion: 'x', localidad: 'y' }],
+    iglesias: [
+      { nombre: 'Iglesia Evals Central', direccion: 'x', localidad: 'y' },
+      { nombre: 'Iglesia Evals Norte', direccion: 'x', localidad: 'y' },
+    ],
     encargadoDe: 'Iglesia Evals Central',
     eventos,
   };
@@ -55,6 +58,7 @@ describe('getEventosParaCargar', () => {
           fin_de_serie: null,
         },
         fechas: ['2026-10-24'],
+        sumadas: [],
       },
     ]);
   });
@@ -98,6 +102,24 @@ describe('getEventosParaCargar', () => {
       duenio_asociacion_id: IDS.asociacion,
       duenio_iglesia_id: null,
     });
+  });
+
+  it('shares an evento with the iglesias sumadas', () => {
+    const [{ fila, sumadas }] = getEventosParaCargar(
+      calendario([
+        { ...EVENTO, duenio: 'Iglesia Evals Norte', sumadas: ['Iglesia Evals Central'] },
+      ]),
+      ANCLAJE,
+    );
+
+    expect(fila.duenio_iglesia_id).toBe(IDS.iglesia(1));
+    expect(sumadas).toEqual([IDS.iglesia(0)]);
+  });
+
+  it('rejects an iglesia sumada that is not in the calendario', () => {
+    expect(() =>
+      getEventosParaCargar(calendario([{ ...EVENTO, sumadas: ['Otra iglesia'] }]), ANCLAJE),
+    ).toThrow('Unknown iglesia in the calendario de prueba: Otra iglesia');
   });
 
   it('rejects a duenio that is not in the calendario', () => {

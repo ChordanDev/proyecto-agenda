@@ -132,6 +132,16 @@
       "lugar": "Salón de la Iglesia Norte",
       "descripcion": "Libros y revistas de la editorial.",
       "enfasis": "identidad"
+    },
+    {
+      "titulo": "Concierto de coros",
+      "duenio": "Iglesia Evals Norte",
+      "dia": 13,
+      "hora": "20:00",
+      "lugar": "Salón de la Iglesia Norte",
+      "descripcion": null,
+      "enfasis": null,
+      "sumadas": ["Iglesia Evals Central"]
     }
   ]
 }
