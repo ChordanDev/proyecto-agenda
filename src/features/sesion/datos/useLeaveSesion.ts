@@ -15,6 +15,8 @@ export function forgetSesion(queryClient: QueryClient) {
   queryClient.removeQueries({ queryKey: ['cargos'] });
   // Its key does not say whose cargos it was read with.
   queryClient.removeQueries({ queryKey: ['calendario', 'usuario'] });
+  // Everything of the chat belongs to the usuario, such as their consentimiento.
+  queryClient.removeQueries({ queryKey: ['chat'] });
 }
 
 /** Signs out on this phone. */

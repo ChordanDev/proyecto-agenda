@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { choosePassword, sendCode, verifyCode } from './passwordRecovery';
 import { discardUnfinishedRecovery } from './unfinishedRecovery';
 import { forgetSesion } from './useLeaveSesion';
+import { rememberSesion } from './rememberSesion';
 
 // Out of the app since #126: the sign-in is only with a code by email, with no
 // password. Kept, with no screen using it, in case the password comes back.
@@ -28,11 +29,7 @@ export function useChoosePassword() {
   return useMutation({
     mutationFn: choosePassword,
     networkMode: 'always',
-    onSuccess: async () => {
-      queryClient.setQueryData(['sesion'], true);
-      // The cargos of whoever was signed in before are not these ones.
-      await queryClient.invalidateQueries({ queryKey: ['cargos'] });
-    },
+    onSuccess: () => rememberSesion(queryClient),
   });
 }
 

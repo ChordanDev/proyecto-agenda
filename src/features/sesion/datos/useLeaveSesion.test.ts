@@ -55,6 +55,15 @@ describe('forgetSesion', () => {
     expect(queryClient.getQueryData(IGLESIA_MES)).toEqual({ fechas: [] });
   });
 
+  it('forgets the consentimiento of the chat, which belongs to the usuario', () => {
+    const queryClient = newClient();
+    queryClient.setQueryData(['chat', 'consentimiento'], true);
+
+    forgetSesion(queryClient);
+
+    expect(queryClient.getQueryData(['chat', 'consentimiento'])).toBeUndefined();
+  });
+
   it('drops the calendario of the usuario from the copy saved on the phone', async () => {
     jest.useFakeTimers();
     const queryClient = newClient();
