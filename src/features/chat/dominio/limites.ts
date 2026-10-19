@@ -1,4 +1,4 @@
-import { getPeriodo } from './periodo';
+import { getPeriodo } from './periodo.ts';
 
 /** Consultas a usuario can make in a dia of the asociacion. */
 export const LIMITE_DIARIO = 50;

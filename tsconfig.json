@@ -3,6 +3,9 @@
   "compilerOptions": {
     "strict": true,
     "types": ["jest", "node"],
+    // The domain the Edge Functions import names its files with their `.ts`
+    // extension, which the Edge Runtime needs.
+    "allowImportingTsExtensions": true,
     "paths": {
       "@/*": ["./src/*"],
       "@/assets/*": ["./assets/*"]
