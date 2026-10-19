@@ -166,7 +166,3 @@ $$;
 -- Only a usuario with a sesion: the hermano has no chat.
 revoke execute on function public.buscar_eventos(date, date, text, integer) from public, anon;
 grant execute on function public.buscar_eventos(date, date, text, integer) to authenticated;
-
--- Only a usuario with a sesion: the hermano has no chat.
-revoke execute on function public.buscar_eventos(date, date, text, integer) from public, anon;
-grant execute on function public.buscar_eventos(date, date, text, integer) to authenticated;
