@@ -126,9 +126,10 @@ create trigger iglesias_en_distrito_activo
   before insert or update of distrito_id, de_baja on public.iglesias
   for each row execute function public.check_iglesia_en_distrito_activo();
 
--- Nobody gets a cargo on an iglesia or a distrito de baja. Locked for share,
--- like the distrito above, so a cargo cannot land on an iglesia or a distrito
--- while it is being given de baja.
+-- Nobody gets a cargo on an iglesia or a distrito de baja. The row is locked
+-- for share, like the distrito above, so a baja running at the same time waits
+-- for the cargo and then removes it. The mark is read, not filtered on: a
+-- filter on it would leave an active row unmatched, and unlocked.
 create function public.check_cargo_en_estructura_activa()
 returns trigger
 language plpgsql
@@ -136,12 +137,12 @@ security definer
 set search_path = ''
 as $$
 begin
-  if exists (
-    select 1 from public.iglesias where iglesias.id = new.iglesia_id and iglesias.de_baja
-    for share
-  ) or exists (
-    select 1 from public.distritos where distritos.id = new.distrito_id and distritos.de_baja
-    for share
+  if coalesce(
+    (select iglesias.de_baja from public.iglesias where iglesias.id = new.iglesia_id for share),
+    false
+  ) or coalesce(
+    (select distritos.de_baja from public.distritos where distritos.id = new.distrito_id for share),
+    false
   ) then
     raise exception 'A cargo cannot be on an iglesia or a distrito de baja'
       using errcode = '23514';

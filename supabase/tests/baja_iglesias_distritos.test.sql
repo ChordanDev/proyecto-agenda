@@ -19,8 +19,10 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
+-- To see which locks the triggers take on a row.
+create extension if not exists pgrowlocks with schema extensions;
 
-select plan(48);
+select plan(50);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -383,6 +385,33 @@ select is(
   (select count(*)::int from public.cargos where distrito_id = 'dddddddd-0000-4000-8000-000000000003'),
   0,
   'reactivado, the cargo of its pastor does not come back on its own'
+);
+
+-- A cargo locks the iglesia or the distrito it is on for share, so a baja
+-- running at the same time waits for it and then removes it: a key share
+-- lock, the one of the foreign key, does not make the baja wait.
+reset role;
+insert into public.cargos (usuario_id, iglesia_id)
+  values ('bbbbbbbb-0000-4000-8000-000000000003', '11111111-0000-4000-8000-000000000002');
+select ok(
+  exists (
+    select 1
+    from extensions.pgrowlocks('public.iglesias')
+    where locked_row = (select ctid from public.iglesias where id = '11111111-0000-4000-8000-000000000002')
+      and 'For Share' = any (modes)
+  ),
+  'a new cargo on an iglesia locks it for share'
+);
+insert into public.cargos (usuario_id, distrito_id)
+  values ('bbbbbbbb-0000-4000-8000-000000000006', 'dddddddd-0000-4000-8000-000000000003');
+select ok(
+  exists (
+    select 1
+    from extensions.pgrowlocks('public.distritos')
+    where locked_row = (select ctid from public.distritos where id = 'dddddddd-0000-4000-8000-000000000003')
+      and 'For Share' = any (modes)
+  ),
+  'a new cargo on a distrito locks it for share'
 );
 
 select * from finish();
