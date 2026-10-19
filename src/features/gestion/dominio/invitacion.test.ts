@@ -197,6 +197,14 @@ describe('leerPedidoDeInvitacion', () => {
         esSecretaria: true,
       },
     ],
+    [
+      'the cargo of admin, on an asociacion',
+      {
+        nombre: 'Ana',
+        correo: 'ana@example.com',
+        asociacionId: 'a0000000-0000-4000-8000-000000000001',
+      },
+    ],
     ['a funcion that is not text', { ...ENCARGADO_EN_CENTRAL, funcion: 3 }],
     ['a nombre too long', { ...ENCARGADO_EN_CENTRAL, nombre: 'a'.repeat(101) }],
     ['an iglesia that is not a UUID', { ...ENCARGADO_EN_CENTRAL, iglesiaId: 'x' }],
