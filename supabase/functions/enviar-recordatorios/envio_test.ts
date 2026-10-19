@@ -66,7 +66,8 @@ Deno.test({
               nombre,
               distrito_id: distrito.id,
               direccion: 'Calle 1',
-              localidad: 'Ciudad',
+              ciudad: 'Ciudad',
+              provincia: 'Provincia',
             })),
           )
           .select('id, nombre')

@@ -95,9 +95,9 @@ insert into public.asociaciones (id, nombre) values
   ('aaaaaaaa-0000-4000-8000-000000000163', 'Asociación de la prueba');
 insert into public.distritos (id, asociacion_id, nombre) values
   ('dddddddd-0000-4000-8000-000000000163', 'aaaaaaaa-0000-4000-8000-000000000163', 'Distrito');
-insert into public.iglesias (id, distrito_id, nombre, direccion, localidad) values
-  ('11111111-0000-4000-8000-000000000163', 'dddddddd-0000-4000-8000-000000000163', 'Iglesia central', 'Calle 1', 'Localidad'),
-  ('22222222-0000-4000-8000-000000000163', 'dddddddd-0000-4000-8000-000000000163', 'Iglesia norte', 'Calle 2', 'Localidad');
+insert into public.iglesias (id, distrito_id, nombre, direccion, ciudad, provincia) values
+  ('11111111-0000-4000-8000-000000000163', 'dddddddd-0000-4000-8000-000000000163', 'Iglesia central', 'Calle 1', 'Ciudad', 'Provincia'),
+  ('22222222-0000-4000-8000-000000000163', 'dddddddd-0000-4000-8000-000000000163', 'Iglesia norte', 'Calle 2', 'Ciudad', 'Provincia');
 
 -- Two phones that follow different iglesias, and one turned off.
 insert into public.dispositivos (id, token, encendido) values

@@ -271,14 +271,14 @@ isOneToOne: false
                   ]
                 },"iglesias": {
                   Row: {
-                    "de_baja": boolean,"direccion": string,"distrito_id": string,"excluida_del_buscador": boolean,"id": string,"latitud": number | null,"localidad": string,"longitud": number | null,"nombre": string
+                    "ciudad": string,"de_baja": boolean,"direccion": string,"distrito_id": string,"excluida_del_buscador": boolean,"id": string,"latitud": number | null,"longitud": number | null,"nombre": string,"provincia": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "de_baja"?: boolean,"direccion": string,"distrito_id": string,"excluida_del_buscador"?: boolean,"id"?: string,"latitud"?: number | null,"localidad": string,"longitud"?: number | null,"nombre": string
+                    "ciudad": string,"de_baja"?: boolean,"direccion": string,"distrito_id": string,"excluida_del_buscador"?: boolean,"id"?: string,"latitud"?: number | null,"longitud"?: number | null,"nombre": string,"provincia"?: string | null
                   }
                   Update: {
-                    "de_baja"?: boolean,"direccion"?: string,"distrito_id"?: string,"excluida_del_buscador"?: boolean,"id"?: string,"latitud"?: number | null,"localidad"?: string,"longitud"?: number | null,"nombre"?: string
+                    "ciudad"?: string,"de_baja"?: boolean,"direccion"?: string,"distrito_id"?: string,"excluida_del_buscador"?: boolean,"id"?: string,"latitud"?: number | null,"longitud"?: number | null,"nombre"?: string,"provincia"?: string | null
                   }
                   Relationships: [
                     {

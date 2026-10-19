@@ -34,8 +34,10 @@ const DUPLICADO = { code: '23505', message: 'duplicate key value violates unique
 const IGLESIA = {
   nombre: 'Iglesia Juana Koslay',
   direccion: 'Av. Los Fresnos 1450',
-  localidad: 'Juana Koslay',
+  ciudad: 'Juana Koslay',
+  provincia: 'San Luis',
   distritoId: 'd1',
+  coordenadas: { latitud: -33.2885, longitud: -66.2459 },
 };
 
 beforeEach(() => {
@@ -91,7 +93,16 @@ describe('guardarIglesia', () => {
     expect(mockInsert).toHaveBeenCalledTimes(2);
     for (const [tabla, fila] of mockInsert.mock.calls) {
       expect(tabla).toBe('iglesias');
-      expect(fila).toMatchObject({ id: 'nuevo', distrito_id: 'd1' });
+      expect(fila).toEqual({
+        id: 'nuevo',
+        nombre: 'Iglesia Juana Koslay',
+        direccion: 'Av. Los Fresnos 1450',
+        ciudad: 'Juana Koslay',
+        provincia: 'San Luis',
+        latitud: -33.2885,
+        longitud: -66.2459,
+        distrito_id: 'd1',
+      });
     }
   });
 
@@ -104,7 +115,10 @@ describe('guardarIglesia', () => {
     expect(mockUpdate).toHaveBeenCalledWith('iglesias', {
       nombre: 'Iglesia Juana Koslay',
       direccion: 'Av. Los Fresnos 1450',
-      localidad: 'Juana Koslay',
+      ciudad: 'Juana Koslay',
+      provincia: 'San Luis',
+      latitud: -33.2885,
+      longitud: -66.2459,
       distrito_id: 'd1',
     });
   });

@@ -10,6 +10,14 @@ Calendario compartido de la Iglesia Adventista, organizado por niveles, que reem
 Congregación local con lugar de reunión y calendario propios. Incluye por igual a las iglesias organizadas y a los grupos.
 _Avoid_: Grupo, filial, congregación, templo
 
+**Ciudad y provincia**:
+Dónde queda una iglesia, como se muestra en el buscador y en la gestión: "Villa Mercedes, San Luis". Junto con la dirección, sirven para estimar su lugar en el mapa.
+_Avoid_: Localidad
+
+**Coordenadas**:
+Punto del mapa donde está una iglesia, que el admin fija moviendo el marcador en "Nueva iglesia" o "Editar iglesia". Con ellas se mide la distancia en "Usar mi ubicación".
+_Avoid_: Ubicación de la iglesia, posición
+
 **Distrito**:
 Agrupamiento de iglesias definido por la asociación, que existe con independencia de quién lo pastorea. Toda iglesia pertenece a exactamente un distrito.
 _Avoid_: Zona, región, circuito
@@ -166,7 +174,7 @@ Posición del teléfono de quien usa la app. No es un lugar ni la dirección de 
 _Avoid_: Lugar, dirección, posición
 
 **Distancia**:
-Separación en línea recta entre la ubicación, o una iglesia, y otra iglesia. Se calcula en el teléfono, con las coordenadas que los desarrolladores cargan para cada iglesia.
+Separación en línea recta entre la ubicación, o una iglesia, y otra iglesia. Se calcula en el teléfono, con las coordenadas de cada iglesia.
 _Avoid_: Recorrido, trayecto
 
 ### Recordatorios

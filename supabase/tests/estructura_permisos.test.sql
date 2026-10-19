@@ -36,8 +36,8 @@ insert into public.asociaciones (id, nombre) values
 insert into public.distritos (id, asociacion_id, nombre) values
   ('dddddddd-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'Distrito de la prueba');
 
-insert into public.iglesias (id, distrito_id, nombre, direccion, localidad) values
-  ('11111111-0000-4000-8000-000000000001', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia de la prueba', 'Calle 1', 'Localidad');
+insert into public.iglesias (id, distrito_id, nombre, direccion, ciudad, provincia) values
+  ('11111111-0000-4000-8000-000000000001', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia de la prueba', 'Calle 1', 'Ciudad', 'Provincia');
 
 -- The policies themselves ---------------------------------------------------------
 -- `policies_are` fails if someone adds a policy (for example, a write policy)
@@ -89,8 +89,8 @@ select throws_ok(
   '42501', null, 'anon cannot insert distritos'
 );
 select throws_ok(
-  $$ insert into public.iglesias (distrito_id, nombre, direccion, localidad)
-     values ('dddddddd-0000-4000-8000-000000000001', 'Otra', 'Calle 2', 'Localidad') $$,
+  $$ insert into public.iglesias (distrito_id, nombre, direccion, ciudad, provincia)
+     values ('dddddddd-0000-4000-8000-000000000001', 'Otra', 'Calle 2', 'Ciudad', 'Provincia') $$,
   '42501', null, 'anon cannot insert iglesias'
 );
 
@@ -146,8 +146,8 @@ select throws_ok(
   '42501', null, 'authenticated cannot insert distritos'
 );
 select throws_ok(
-  $$ insert into public.iglesias (distrito_id, nombre, direccion, localidad)
-     values ('dddddddd-0000-4000-8000-000000000001', 'Otra', 'Calle 2', 'Localidad') $$,
+  $$ insert into public.iglesias (distrito_id, nombre, direccion, ciudad, provincia)
+     values ('dddddddd-0000-4000-8000-000000000001', 'Otra', 'Calle 2', 'Ciudad', 'Provincia') $$,
   '42501', null, 'authenticated cannot insert iglesias'
 );
 

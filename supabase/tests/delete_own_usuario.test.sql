@@ -21,8 +21,8 @@ insert into public.asociaciones (id, nombre) values
 insert into public.distritos (id, asociacion_id, nombre) values
   ('dddddddd-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'Distrito de la prueba');
 
-insert into public.iglesias (id, distrito_id, nombre, direccion, localidad) values
-  ('11111111-0000-4000-8000-000000000001', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia de la prueba', 'Calle 1', 'Localidad');
+insert into public.iglesias (id, distrito_id, nombre, direccion, ciudad, provincia) values
+  ('11111111-0000-4000-8000-000000000001', 'dddddddd-0000-4000-8000-000000000001', 'Iglesia de la prueba', 'Calle 1', 'Ciudad', 'Provincia');
 
 insert into auth.users (id, aud, role, email) values
   ('bbbbbbbb-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'se-va@prueba.example.com'),

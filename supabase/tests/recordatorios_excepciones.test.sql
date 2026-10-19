@@ -18,10 +18,10 @@ insert into public.asociaciones (id, nombre) values
 insert into public.distritos (id, asociacion_id, nombre) values
   ('dddddddd-0000-4000-8000-000000000216', 'aaaaaaaa-0000-4000-8000-000000000216', 'Distrito'),
   ('dddddddd-0000-4000-8000-000000000217', 'aaaaaaaa-0000-4000-8000-000000000216', 'Distrito de baja');
-insert into public.iglesias (id, distrito_id, nombre, direccion, localidad) values
-  ('11111111-0000-4000-8000-000000000216', 'dddddddd-0000-4000-8000-000000000216', 'Iglesia central', 'Calle 1', 'Localidad'),
-  ('22222222-0000-4000-8000-000000000216', 'dddddddd-0000-4000-8000-000000000216', 'Iglesia sumada', 'Calle 2', 'Localidad'),
-  ('33333333-0000-4000-8000-000000000216', 'dddddddd-0000-4000-8000-000000000216', 'Iglesia de baja', 'Calle 3', 'Localidad');
+insert into public.iglesias (id, distrito_id, nombre, direccion, ciudad, provincia) values
+  ('11111111-0000-4000-8000-000000000216', 'dddddddd-0000-4000-8000-000000000216', 'Iglesia central', 'Calle 1', 'Ciudad', 'Provincia'),
+  ('22222222-0000-4000-8000-000000000216', 'dddddddd-0000-4000-8000-000000000216', 'Iglesia sumada', 'Calle 2', 'Ciudad', 'Provincia'),
+  ('33333333-0000-4000-8000-000000000216', 'dddddddd-0000-4000-8000-000000000216', 'Iglesia de baja', 'Calle 3', 'Ciudad', 'Provincia');
 
 -- Weekly series on Saturdays (7, 14, 21 and 28 November), all with an enfasis.
 insert into public.eventos (id, titulo, alcance, duenio_iglesia_id, duenio_distrito_id, hora, lugar, enfasis, repeticion, fin_de_serie) values

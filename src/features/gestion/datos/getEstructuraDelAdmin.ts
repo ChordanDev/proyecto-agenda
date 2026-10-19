@@ -72,7 +72,9 @@ export async function getEstructuraDelAdmin(): Promise<EstructuraDelAdmin | null
     // cargos themselves would stop at the max_rows of a response.
     supabase
       .from('iglesias')
-      .select('id, nombre, direccion, localidad, distrito_id, de_baja, cargos (count)')
+      .select(
+        'id, nombre, direccion, ciudad, provincia, latitud, longitud, distrito_id, de_baja, cargos (count)',
+      )
       .in('distrito_id', distritoIds),
     supabase.from('cargos').select('usuario_id, distrito_id').in('distrito_id', distritoIds),
     supabase.rpc('get_usuario_emails'),
@@ -128,7 +130,12 @@ export async function getEstructuraDelAdmin(): Promise<EstructuraDelAdmin | null
         id: iglesia.id,
         nombre: iglesia.nombre,
         direccion: iglesia.direccion,
-        localidad: iglesia.localidad,
+        ciudad: iglesia.ciudad,
+        provincia: iglesia.provincia,
+        coordenadas:
+          iglesia.latitud !== null && iglesia.longitud !== null
+            ? { latitud: iglesia.latitud, longitud: iglesia.longitud }
+            : null,
         distritoId: iglesia.distrito_id,
         distritoNombre: distritoDe.get(iglesia.distrito_id)?.nombre ?? '',
         cantidadDeEncargados: iglesia.cargos[0]?.count ?? 0,
