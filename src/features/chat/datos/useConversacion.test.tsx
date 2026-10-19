@@ -13,6 +13,13 @@ jest.mock('./enviarConsulta', () => ({
 }));
 jest.mock('@/shared/supabase', () => ({ supabase: {} }));
 
+// The save of a reporte, under the control of each test.
+const mockSaveReporte = jest.fn();
+
+jest.mock('./saveReporte', () => ({
+  saveReporte: (reporte: unknown) => mockSaveReporte(reporte),
+}));
+
 // The save of an evento, under the control of each test.
 const mockGuardarEvento = jest.fn();
 
@@ -62,6 +69,7 @@ beforeEach(() => {
   mockNextId = 0;
   mockEnviarConsulta.mockReset();
   mockGuardarEvento.mockReset();
+  mockSaveReporte.mockReset();
   onlineManager.setOnline(true);
 });
 
@@ -298,5 +306,80 @@ describe('useConversacion: forms precargados', () => {
     act(() => chat().nueva());
 
     expect(getFormularioPrecargado(id)).toBeUndefined();
+  });
+});
+
+describe('useConversacion: Reportar respuesta', () => {
+  /** A conversacion with one respuesta; gives its id. */
+  async function renderRespondida() {
+    mockEnviarConsulta.mockResolvedValue({ ok: true, respuesta });
+    const chat = renderConversacion();
+    act(() => chat().enviar('¿Qué hay el sábado?'));
+    await settle();
+    const id = chat().conversacion.mensajes[1]!.id;
+    return { chat, id };
+  }
+
+  function getReporteDe(chat: () => ConversacionEnCurso, id: string) {
+    const mensaje = chat().conversacion.mensajes.find((m) => m.id === id);
+    return mensaje?.tipo === 'respuesta' ? mensaje.reporte : null;
+  }
+
+  it('saves a single reporte, with its motivo, when sent twice, and shows it was sent', async () => {
+    let saved: (value: unknown) => void = () => undefined;
+    const { chat, id } = await renderRespondida();
+    mockSaveReporte.mockReturnValue(new Promise((resolve) => (saved = resolve)));
+
+    const { reportar } = chat();
+    act(() => {
+      reportar(id, 'incorrecta');
+      reportar(id, 'incorrecta');
+    });
+    saved(undefined);
+    await settle();
+
+    expect(mockSaveReporte).toHaveBeenCalledTimes(1);
+    expect(mockSaveReporte).toHaveBeenCalledWith({ id: expect.any(String), motivo: 'incorrecta' });
+    expect(getReporteDe(chat, id)).toMatchObject({ estado: 'enviado', error: null });
+  });
+
+  it('does not count as a consulta', async () => {
+    const { chat, id } = await renderRespondida();
+    mockSaveReporte.mockResolvedValue(undefined);
+
+    act(() => chat().reportar(id, 'ofensiva'));
+    await settle();
+
+    expect(mockEnviarConsulta).toHaveBeenCalledTimes(1);
+  });
+
+  it('without conexion says so and lets it be reported again', async () => {
+    const { chat, id } = await renderRespondida();
+    onlineManager.setOnline(false);
+
+    act(() => chat().reportar(id, 'otro'));
+    await settle();
+
+    expect(mockSaveReporte).not.toHaveBeenCalled();
+    expect(getReporteDe(chat, id)).toMatchObject({
+      estado: 'sin-reportar',
+      error: 'No se pudo enviar el reporte. Revisá la conexión y probá de nuevo.',
+    });
+  });
+
+  it('when the save fails, sends it again with the same id', async () => {
+    const { chat, id } = await renderRespondida();
+    mockSaveReporte.mockRejectedValueOnce(new Error('lost')).mockResolvedValueOnce(undefined);
+
+    act(() => chat().reportar(id, 'otro'));
+    await settle();
+    expect(getReporteDe(chat, id)).toMatchObject({ estado: 'sin-reportar' });
+
+    act(() => chat().reportar(id, 'otro'));
+    await settle();
+
+    const [primero, segundo] = mockSaveReporte.mock.calls.map(([reporte]) => reporte);
+    expect(segundo.id).toBe(primero.id);
+    expect(getReporteDe(chat, id)).toMatchObject({ estado: 'enviado', error: null });
   });
 });

@@ -14,6 +14,7 @@ import {
   type RespuestaDeConsulta,
 } from './consulta';
 import { getEstadoDeFalla, type Falla } from './fallas';
+import { REPORTE_INICIAL, type Reporte } from './reporte';
 
 /**
  * Where the vista previa of a borrador stands: waiting for Confirmar or
@@ -31,10 +32,11 @@ export type EstadoDePropuesta = 'pendiente' | 'guardando' | 'guardado';
  *   save tried again, from Confirmar or from Editar, saves that one evento.
  *   `error` is why the last Confirmar failed. `eventos` are the ones found
  *   in the same respuesta, as "¿Qué hay el sábado? Si está libre, cargame…".
+ * Both kinds of respuesta carry their `reporte`: either can be reported once.
  */
 export type MensajeDeChat =
   | { tipo: 'pregunta'; id: string; texto: string }
-  | { tipo: 'respuesta'; id: string; texto: string; eventos: EventoDeChat[] }
+  | { tipo: 'respuesta'; id: string; texto: string; eventos: EventoDeChat[]; reporte: Reporte }
   | { tipo: 'falla'; id: string; falla: 'sin-conexion' | 'caido' }
   | {
       tipo: 'propuesta';
@@ -44,6 +46,7 @@ export type MensajeDeChat =
       borrador: BorradorDeEvento;
       estado: EstadoDePropuesta;
       error: string | null;
+      reporte: Reporte;
     };
 
 /**
@@ -85,7 +88,16 @@ export type AccionDeConversacion =
   /** The evento of the propuesta `id` was saved, from Confirmar or from Editar. */
   | { tipo: 'guardar'; id: string }
   /** Confirmar on the propuesta `id` failed: the card keeps its buttons with `error`. */
-  | { tipo: 'fallarGuardado'; id: string; error: string };
+  | { tipo: 'fallarGuardado'; id: string; error: string }
+  /**
+   * "Enviar reporte" on the respuesta `id`: it starts sending, with
+   * `reporteId` unless an earlier try already chose one.
+   */
+  | { tipo: 'reportar'; id: string; reporteId: string }
+  /** The reporte of the respuesta `id` was saved: it cannot be reported again. */
+  | { tipo: 'reporteEnviado'; id: string }
+  /** The reporte of the respuesta `id` failed: it can be sent again. */
+  | { tipo: 'fallarReporte'; id: string; error: string };
 
 /** What the app sends to the server function: the mensaje and the tramo before it. */
 export type PedidoDeConsulta = { mensaje: string; tramo: MensajeDelTramo[] };
@@ -169,7 +181,7 @@ export function reducirConversacion(
       const { texto, eventos, aviso, borrador } = accion.respuesta;
       const mensaje: MensajeDeChat =
         borrador === null
-          ? { tipo: 'respuesta', id: accion.id, texto, eventos }
+          ? { tipo: 'respuesta', id: accion.id, texto, eventos, reporte: REPORTE_INICIAL }
           : {
               tipo: 'propuesta',
               id: accion.id,
@@ -178,6 +190,7 @@ export function reducirConversacion(
               borrador,
               estado: 'pendiente',
               error: null,
+              reporte: REPORTE_INICIAL,
             };
       return {
         ...conversacion,
@@ -247,7 +260,55 @@ export function reducirConversacion(
         estado: 'pendiente',
         error: accion.error,
       });
+
+    // A tap while it is sent, or once it was, changes nothing: one reporte.
+    case 'reportar':
+      return cambiarReporte(conversacion, accion.id, 'sin-reportar', (reporte) => ({
+        estado: 'enviando',
+        id: reporte.id ?? accion.reporteId,
+        error: null,
+      }));
+
+    case 'reporteEnviado':
+      return cambiarReporte(conversacion, accion.id, 'enviando', (reporte) => ({
+        ...reporte,
+        estado: 'enviado',
+      }));
+
+    case 'fallarReporte':
+      return cambiarReporte(conversacion, accion.id, 'enviando', (reporte) => ({
+        ...reporte,
+        estado: 'sin-reportar',
+        error: accion.error,
+      }));
   }
+}
+
+/**
+ * Changes the reporte of the respuesta `id` when it is in the estado `desde`.
+ * Any other case, such as a respuesta of a conversacion started again, is
+ * left as it is.
+ */
+function cambiarReporte(
+  conversacion: Conversacion,
+  id: string,
+  desde: Reporte['estado'],
+  cambiar: (reporte: Reporte) => Reporte,
+): Conversacion {
+  const indice = conversacion.mensajes.findIndex(
+    (mensaje) =>
+      mensaje.id === id &&
+      (mensaje.tipo === 'respuesta' || mensaje.tipo === 'propuesta') &&
+      mensaje.reporte.estado === desde,
+  );
+  const respuesta = conversacion.mensajes[indice];
+  if (respuesta?.tipo !== 'respuesta' && respuesta?.tipo !== 'propuesta') {
+    return conversacion;
+  }
+
+  const mensajes = [...conversacion.mensajes];
+  mensajes[indice] = { ...respuesta, reporte: cambiar(respuesta.reporte) };
+  return { ...conversacion, mensajes };
 }
 
 /**

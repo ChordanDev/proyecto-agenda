@@ -12,6 +12,7 @@ import {
   type AccionDeConversacion,
   type Conversacion,
 } from './conversacion';
+import { REPORTE_INICIAL } from './reporte';
 
 function respuesta(texto: string, extra: Partial<RespuestaDeConsulta> = {}): RespuestaDeConsulta {
   return { tipo: 'respuesta', texto, eventos: [], aviso: null, borrador: null, ...extra };
@@ -119,6 +120,7 @@ describe('responder', () => {
       id: 'r1',
       texto: 'El sábado hay 1 actividad:',
       eventos,
+      reporte: REPORTE_INICIAL,
     });
     expect(conversacion.enviando).toBe(false);
     expect(puedeEnviar(conversacion, 'Otra')).toBe(true);
@@ -467,6 +469,7 @@ describe('responder with a borrador', () => {
       borrador: BORRADOR,
       estado: 'pendiente',
       error: null,
+      reporte: REPORTE_INICIAL,
     });
     expect(conversacion.enviando).toBe(false);
   });

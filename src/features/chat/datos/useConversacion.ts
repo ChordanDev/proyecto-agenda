@@ -25,7 +25,9 @@ import {
 } from '../dominio/conversacion';
 import { formatVuelta, getDiaDeVuelta, getHoy } from '../dominio/fallas';
 import { formularioDesdeBorrador, getEventoDelBorrador } from '../dominio/propuesta';
+import { ERROR_DE_REPORTE, getReporte, type MotivoDeReporte } from '../dominio/reporte';
 import { enviarConsulta } from './enviarConsulta';
+import { saveReporte } from './saveReporte';
 import { CONSENTIMIENTO_QUERY_KEY } from './useConsentimiento';
 import { getZonaHoraria } from './zonaHoraria';
 
@@ -62,6 +64,11 @@ export type ConversacionEnCurso = {
    * propuesta cannot be edited now.
    */
   editar: (id: string) => string | null;
+  /**
+   * Reports the respuesta `id` with its motivo. It is not a consulta, and a
+   * respuesta is reported once: nothing while it is sent or once it was.
+   */
+  reportar: (id: string, motivo: MotivoDeReporte) => void;
 };
 
 /**
@@ -199,6 +206,24 @@ export function useConversacion(): ConversacionEnCurso {
     });
   };
 
+  const reportar = (id: string, motivo: MotivoDeReporte) => {
+    const antes = actual.current;
+    const siguiente = dispatch({ tipo: 'reportar', id, reporteId: newId() });
+    const reporte = getReporte(siguiente, id);
+    if (siguiente === antes || reporte?.id == null) {
+      return;
+    }
+    const fallar = () => dispatch({ tipo: 'fallarReporte', id, error: ERROR_DE_REPORTE });
+
+    if (!hasConexion()) {
+      fallar();
+      return;
+    }
+    saveReporte({ id: reporte.id, motivo })
+      .then(() => dispatch({ tipo: 'reporteEnviado', id }))
+      .catch(fallar);
+  };
+
   // A chat closed by the presupuesto opens again by itself once its dia of
   // vuelta arrives, even if the app stayed open since then.
   const sinPresupuesto = conversacion.bloqueo === 'presupuesto-agotado';
@@ -217,5 +242,5 @@ export function useConversacion(): ConversacionEnCurso {
   const vuelta =
     sinPresupuesto && conversacion.vuelta !== null ? formatVuelta(conversacion.vuelta) : null;
 
-  return { conversacion, vuelta, enviar, reintentar, nueva, confirmar, editar };
+  return { conversacion, vuelta, enviar, reintentar, nueva, confirmar, editar, reportar };
 }
