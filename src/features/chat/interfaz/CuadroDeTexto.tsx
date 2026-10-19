@@ -5,7 +5,7 @@ import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '@/shared/theme';
 import { AppText } from '@/shared/ui';
 
-import { MAX_LARGO_DE_MENSAJE } from '../dominio/consulta';
+import { recortarMensaje } from '../dominio/conversacion';
 
 // Layout of the approved mockup, which the theme has no tokens for. The line
 // numbers are those of diseno/pantallas/07-chat-ia.html.
@@ -55,8 +55,8 @@ export function CuadroDeTexto({ puedeEnviar, onEnviar, aviso }: CuadroDeTextoPro
           placeholder="Escribí tu pregunta"
           placeholderTextColor={colors.textoTenue}
           value={texto}
-          onChangeText={setTexto}
-          maxLength={MAX_LARGO_DE_MENSAJE}
+          // Not maxLength: it counts UTF-16 units and would stop at 250 emoji.
+          onChangeText={(nuevo) => setTexto(recortarMensaje(nuevo))}
           returnKeyType="send"
           submitBehavior="submit"
           onSubmitEditing={enviar}

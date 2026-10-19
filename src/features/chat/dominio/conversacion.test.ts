@@ -6,6 +6,7 @@ import {
   getPreguntaAReintentar,
   hasMensajes,
   puedeEnviar,
+  recortarMensaje,
   reducirConversacion,
   type AccionDeConversacion,
   type Conversacion,
@@ -146,6 +147,33 @@ describe('responder', () => {
     );
 
     expect(conversacion).toEqual(crearConversacion(2));
+  });
+
+  it('ignores a respuesta or a falla when no pregunta is waiting for one', () => {
+    const respondida = aplicar(preguntando(), {
+      tipo: 'responder',
+      conversacionId: 1,
+      id: 'r1',
+      respuesta: respuesta('Primera'),
+    });
+    const conversacion = aplicar(
+      respondida,
+      { tipo: 'responder', conversacionId: 1, id: 'r2', respuesta: respuesta('Duplicada') },
+      { tipo: 'fallar', conversacionId: 1, id: 'f1', falla: 'proveedor_caido' },
+    );
+
+    expect(conversacion).toEqual(respondida);
+  });
+});
+
+describe('recortarMensaje', () => {
+  it('keeps a texto of up to 500 characters as it is', () => {
+    expect(recortarMensaje('¿Qué hay el sábado?')).toBe('¿Qué hay el sábado?');
+  });
+
+  it('cuts a longer texto at 500 characters, counting an emoji as one', () => {
+    expect(recortarMensaje('🙂'.repeat(600))).toBe('🙂'.repeat(500));
+    expect(recortarMensaje('a'.repeat(501))).toBe('a'.repeat(500));
   });
 });
 

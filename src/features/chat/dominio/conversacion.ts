@@ -66,6 +66,17 @@ function getLargo(texto: string): number {
   return [...texto].length;
 }
 
+/**
+ * The texto the cuadro de texto keeps: at most 500 characters, counted as the
+ * server counts them. The `maxLength` of a TextInput counts UTF-16 units, so
+ * it would stop at 250 emoji.
+ */
+export function recortarMensaje(texto: string): string {
+  return getLargo(texto) <= MAX_LARGO_DE_MENSAJE
+    ? texto
+    : [...texto].slice(0, MAX_LARGO_DE_MENSAJE).join('');
+}
+
 /** Whether the usuario can send this texto now. */
 export function puedeEnviar(conversacion: Conversacion, texto: string): boolean {
   const limpio = texto.trim();
@@ -114,7 +125,8 @@ export function reducirConversacion(
     }
 
     case 'responder': {
-      if (accion.conversacionId !== conversacion.id) {
+      // Only the pregunta waiting gets an answer: a late one, or a second one, is dropped.
+      if (accion.conversacionId !== conversacion.id || !conversacion.enviando) {
         return conversacion;
       }
       const { texto, eventos, aviso } = accion.respuesta;
@@ -127,7 +139,8 @@ export function reducirConversacion(
     }
 
     case 'fallar': {
-      if (accion.conversacionId !== conversacion.id) {
+      // Only the pregunta waiting gets an answer: a late one, or a second one, is dropped.
+      if (accion.conversacionId !== conversacion.id || !conversacion.enviando) {
         return conversacion;
       }
       const estado = getEstadoDeFalla(accion.falla);

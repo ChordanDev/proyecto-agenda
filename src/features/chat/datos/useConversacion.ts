@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useSesion } from '@/features/sesion/datos/useSesion';
 import { newId } from '@/shared/newId';
@@ -10,6 +10,7 @@ import {
   getPedido,
   getPreguntaAReintentar,
   reducirConversacion,
+  type AccionDeConversacion,
   type Conversacion,
   type PedidoDeConsulta,
 } from '../dominio/conversacion';
@@ -39,13 +40,23 @@ export function useConversacion(): ConversacionEnCurso {
   const hasSesion = useSesion() === true;
   const isOnline = useOnlineStatus();
   const queryClient = useQueryClient();
-  const [conversacion, dispatch] = useReducer(reducirConversacion, 1, crearConversacion);
+  const [conversacion, setConversacion] = useState(() => crearConversacion(1));
+  // The conversacion as it is now, ahead of the render: a second tap before
+  // the screen updates must see the pregunta already in flight.
+  const actual = useRef(conversacion);
   // Each new conversacion gets the next id: a respuesta to an older one is dropped.
   const proximoId = useRef(2);
 
+  const dispatch = useCallback((accion: AccionDeConversacion): Conversacion => {
+    const siguiente = reducirConversacion(actual.current, accion);
+    actual.current = siguiente;
+    setConversacion(siguiente);
+    return siguiente;
+  }, []);
+
   const nueva = useCallback(() => {
     dispatch({ tipo: 'nueva', id: proximoId.current++ });
-  }, []);
+  }, [dispatch]);
 
   // The conversacion belongs to the usuario: another one signing in on this
   // phone must not see it.
@@ -72,27 +83,28 @@ export function useConversacion(): ConversacionEnCurso {
   };
 
   const enviar = (texto: string) => {
-    const accion = { tipo: 'preguntar', id: newId(), texto } as const;
-    const siguiente = reducirConversacion(conversacion, accion);
-    const pedido = getPedido(siguiente, accion.id);
-    if (siguiente === conversacion || pedido === null) {
+    const antes = actual.current;
+    const id = newId();
+    const siguiente = dispatch({ tipo: 'preguntar', id, texto });
+    const pedido = getPedido(siguiente, id);
+    if (siguiente === antes || pedido === null) {
       return;
     }
-    dispatch(accion);
-    void consultar(conversacion.id, pedido);
+    void consultar(siguiente.id, pedido);
   };
 
-  const preguntaAReintentar = getPreguntaAReintentar(conversacion);
   const reintentar =
-    preguntaAReintentar === null
+    getPreguntaAReintentar(conversacion) === null
       ? null
       : () => {
-          const pedido = getPedido(conversacion, preguntaAReintentar);
+          // Read now, not at the render: a second tap finds nothing to retry.
+          const preguntaId = getPreguntaAReintentar(actual.current);
+          const pedido = preguntaId === null ? null : getPedido(actual.current, preguntaId);
           if (pedido === null) {
             return;
           }
-          dispatch({ tipo: 'reintentar' });
-          void consultar(conversacion.id, pedido);
+          const siguiente = dispatch({ tipo: 'reintentar' });
+          void consultar(siguiente.id, pedido);
         };
 
   const sinPresupuesto = conversacion.bloqueo === 'presupuesto-agotado';
