@@ -31,6 +31,8 @@ import {
   type ResultadoDeGestion,
 } from '../datos/useGestionarEncargado';
 import {
+  getDatosIniciales,
+  getDatosTrasFalla,
   getMensajeDeError,
   getTextosDelFormulario,
   getTextosDeQuitar,
@@ -178,11 +180,8 @@ function Formulario({ iglesia, encargado, onClose }: FormularioProps) {
   const quitar = useQuitarEncargado(iglesia.id, encargado?.cargoId ?? '');
   const guardar = modo === 'agregar' ? agregar : editar;
 
-  const [datos, setDatos] = useState<DatosDelEncargado>({
-    nombre: encargado?.nombre ?? '',
-    correo: encargado?.correo ?? '',
-    funcion: encargado?.funcion ?? '',
-  });
+  const [iniciales] = useState(() => getDatosIniciales(encargado));
+  const [datos, setDatos] = useState<DatosDelEncargado>(iniciales);
   // The fields only show what is wrong after a first attempt to save.
   const [errores, setErrores] = useState<ErroresDelEncargado>({});
   const [falla, setFalla] = useState<{
@@ -202,6 +201,7 @@ function Formulario({ iglesia, encargado, onClose }: FormularioProps) {
       onClose();
     } else {
       setFalla({ accion, falla: resultado.falla });
+      setDatos((escritos) => getDatosTrasFalla(escritos, iniciales, resultado.falla));
     }
   };
 

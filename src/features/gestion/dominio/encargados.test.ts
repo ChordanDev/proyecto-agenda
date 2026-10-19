@@ -1,4 +1,6 @@
 import {
+  getDatosIniciales,
+  getDatosTrasFalla,
   getIniciales,
   getMensajeDeError,
   getSubtituloDeIglesia,
@@ -15,6 +17,7 @@ function encargado(datos: Partial<Encargado> & Pick<Encargado, 'nombre'>): Encar
   return {
     cargoId: `cargo-${datos.nombre}`,
     usuarioId: `usuario-${datos.nombre}`,
+    nombreDelPerfil: datos.nombre,
     correo: null,
     funcion: null,
     esSecretaria: false,
@@ -52,6 +55,57 @@ describe('nombreDeEncargado', () => {
 
   it('is a placeholder when neither is known', () => {
     expect(nombreDeEncargado(null, null)).toBe('Sin nombre');
+  });
+});
+
+describe('getDatosIniciales', () => {
+  it('starts adding with every field empty', () => {
+    expect(getDatosIniciales(null)).toEqual({ nombre: '', correo: '', funcion: '' });
+  });
+
+  it('starts editing with the nombre of the perfil, the correo and the funcion', () => {
+    expect(
+      getDatosIniciales(
+        encargado({ nombre: 'Raúl Fernández', correo: 'raul@example.com', funcion: 'Tesorero' }),
+      ),
+    ).toEqual({ nombre: 'Raúl Fernández', correo: 'raul@example.com', funcion: 'Tesorero' });
+  });
+
+  it('leaves the nombre empty when the usuario has no perfil, never the correo the list shows', () => {
+    expect(
+      getDatosIniciales(
+        encargado({
+          nombre: 'raul@example.com',
+          nombreDelPerfil: null,
+          correo: 'raul@example.com',
+          funcion: null,
+        }),
+      ),
+    ).toEqual({ nombre: '', correo: 'raul@example.com', funcion: '' });
+  });
+
+  it('leaves the nombre empty when neither the perfil nor the correo is known', () => {
+    expect(
+      getDatosIniciales(encargado({ nombre: 'Sin nombre', nombreDelPerfil: null })).nombre,
+    ).toBe('');
+  });
+});
+
+describe('getDatosTrasFalla', () => {
+  const iniciales = { nombre: 'Raúl Fernández', correo: 'raul@example.com', funcion: 'Tesorero' };
+  const escritos = { nombre: 'Raúl F.', correo: 'raul@example.com', funcion: 'Anciano' };
+
+  it('puts the nombre back when it could not change, and keeps the funcion written', () => {
+    expect(getDatosTrasFalla(escritos, iniciales, 'nombre_compartido')).toEqual({
+      nombre: 'Raúl Fernández',
+      correo: 'raul@example.com',
+      funcion: 'Anciano',
+    });
+  });
+
+  it('keeps everything written after any other falla', () => {
+    expect(getDatosTrasFalla(escritos, iniciales, 'error_servidor')).toBe(escritos);
+    expect(getDatosTrasFalla(escritos, iniciales, 'sin_permiso')).toBe(escritos);
   });
 });
 
@@ -208,7 +262,8 @@ describe('getMensajeDeError', () => {
   it('says the nombre is shared when it cannot change', () => {
     expect(getMensajeDeError('editar', 'nombre_compartido')).toEqual({
       titulo: 'No se pudo cambiar el nombre.',
-      texto: 'Esta persona también tiene un cargo en otro lugar. Podés cambiar su función.',
+      texto:
+        'Esta persona también tiene un cargo en otro lugar, así que su nombre no se puede cambiar desde acá. Volvimos a poner el nombre que tenía: tocá "Probar de nuevo" para guardar la función.',
     });
   });
 });

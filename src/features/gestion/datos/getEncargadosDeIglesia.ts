@@ -55,10 +55,12 @@ export async function getEncargadosDeIglesia(
     iglesia: iglesia.data,
     encargados: cargos.data.map((cargo): Encargado => {
       const correo = correoDe.get(cargo.usuario_id) ?? null;
+      const nombreDelPerfil = nombres.get(cargo.usuario_id) ?? null;
       return {
         cargoId: cargo.id,
         usuarioId: cargo.usuario_id,
-        nombre: nombreDeEncargado(nombres.get(cargo.usuario_id) ?? null, correo),
+        nombre: nombreDeEncargado(nombreDelPerfil, correo),
+        nombreDelPerfil,
         correo,
         funcion: cargo.funcion,
         esSecretaria: cargo.es_secretaria,

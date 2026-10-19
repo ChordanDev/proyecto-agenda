@@ -8,7 +8,13 @@ import { leerCorreo, MAX_LARGO_DE_FUNCION, MAX_LARGO_DE_NOMBRE } from './invitac
 export type Encargado = {
   cargoId: string;
   usuarioId: string;
+  /** What the gestion shows: the nombre of the perfil, or a stand-in without one. */
   nombre: string;
+  /**
+   * The nombre of their perfil; null when they have none yet. Editing starts
+   * from it, never from the stand-in: saving would store it as their nombre.
+   */
+  nombreDelPerfil: string | null;
   /** Null when it cannot be read. */
   correo: string | null;
   funcion: string | null;
@@ -123,6 +129,31 @@ export function validarEncargado(
   return { ok: true, valores: { nombre, correo, funcion: funcion.length > 0 ? funcion : null } };
 }
 
+/**
+ * What the form starts with: empty to add one; to edit one, their data, with
+ * the nombre of their perfil (empty when they have none).
+ */
+export function getDatosIniciales(encargado: Encargado | null): DatosDelEncargado {
+  return {
+    nombre: encargado?.nombreDelPerfil ?? '',
+    correo: encargado?.correo ?? '',
+    funcion: encargado?.funcion ?? '',
+  };
+}
+
+/**
+ * What the form keeps after a failed write: everything written, except a
+ * nombre that could not change (`nombre_compartido`), which goes back to the
+ * one it had. Otherwise "Probar de nuevo" would fail the same way again.
+ */
+export function getDatosTrasFalla(
+  escritos: DatosDelEncargado,
+  iniciales: DatosDelEncargado,
+  falla: FallaDeGestion,
+): DatosDelEncargado {
+  return falla === 'nombre_compartido' ? { ...escritos, nombre: iniciales.nombre } : escritos;
+}
+
 /** The title, the main button and the notice without connection of the form. */
 export function getTextosDelFormulario(
   modo: ModoDelFormulario,
@@ -181,7 +212,8 @@ export function getMensajeDeError(
     case 'nombre_compartido':
       return {
         titulo: 'No se pudo cambiar el nombre.',
-        texto: 'Esta persona también tiene un cargo en otro lugar. Podés cambiar su función.',
+        texto:
+          'Esta persona también tiene un cargo en otro lugar, así que su nombre no se puede cambiar desde acá. Volvimos a poner el nombre que tenía: tocá "Probar de nuevo" para guardar la función.',
       };
   }
 
