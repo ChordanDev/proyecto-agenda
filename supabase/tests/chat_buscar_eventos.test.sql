@@ -24,7 +24,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(41);
+select plan(42);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -320,6 +320,11 @@ select results_eq(
 
 set local request.jwt.claims to '{"sub": "bbbbbbbb-0000-4000-8000-000000000006", "role": "authenticated"}';
 
+select results_eq(
+  $$ select evento_id::text from public.buscar_eventos('2026-11-17', '2026-11-17', null, 20) $$,
+  $$ values ('eeeeeeee-0000-4000-8000-000000000009') $$,
+  'the encargado of the Iglesia vecina finds the eventos of their own iglesia'
+);
 select is_empty(
   $$ select 1 from public.buscar_eventos('2026-11-14', '2026-11-14', null, 20)
      where evento_id = 'eeeeeeee-0000-4000-8000-000000000005' $$,
