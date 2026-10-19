@@ -9,6 +9,9 @@ export async function rememberSesion(queryClient: QueryClient) {
   // Whatever the chat kept, such as the consentimiento, belonged to the usuario
   // before: a session the server ended never went through forgetSesion.
   queryClient.removeQueries({ queryKey: ['chat'] });
-  // The cargos of whoever was signed in before are not these ones.
-  await queryClient.invalidateQueries({ queryKey: ['cargos'] });
+  // The cargos of whoever was signed in before are not these ones, and under
+  // ['cargos'] the Gestión tab keeps names and correos of encargados. Resetting
+  // drops that data at once, also from the copy saved on the phone, and reads
+  // again the queries on screen.
+  await queryClient.resetQueries({ queryKey: ['cargos'] });
 }
