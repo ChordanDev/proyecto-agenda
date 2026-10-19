@@ -10,6 +10,8 @@ import {
   getEnfasisDelDetalle,
 } from '@/features/eventos/dominio/detalleDeEvento';
 import {
+  getPreguntaDeHoraPocoComun,
+  isHoraPocoComun,
   validarFormulario,
   type EventoAGuardar,
   type FormularioDeEvento,
@@ -54,6 +56,14 @@ export function getEventoDelBorrador(
   return resultado.ok
     ? resultado
     : { ok: false, error: Object.values(resultado.errores).join(' ') };
+}
+
+/**
+ * What Confirmar asks before saving a hora of the madrugada, as Guardar of the
+ * form does: "¿Es a las 3:00 de la madrugada?". Null when it asks nothing.
+ */
+export function getPreguntaDeHora(borrador: BorradorDeEvento): string | null {
+  return isHoraPocoComun(borrador.hora) ? getPreguntaDeHoraPocoComun(borrador.hora) : null;
 }
 
 /** The card of a propuesta (diseno/capturas/7 · Chat IA.png), with the words of the detail. */

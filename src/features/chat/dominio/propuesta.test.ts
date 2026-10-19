@@ -1,5 +1,10 @@
 import type { BorradorDeEvento } from './borrador';
-import { formularioDesdeBorrador, getEventoDelBorrador, getTarjetaDePropuesta } from './propuesta';
+import {
+  formularioDesdeBorrador,
+  getEventoDelBorrador,
+  getPreguntaDeHora,
+  getTarjetaDePropuesta,
+} from './propuesta';
 
 const HOY = '2026-10-17';
 
@@ -139,5 +144,18 @@ describe('getTarjetaDePropuesta', () => {
     expect(tarjeta.categoria).toBe('R');
     expect(tarjeta.enfasis).toBeNull();
     expect(tarjeta.lugar).toBeNull();
+  });
+});
+
+describe('getPreguntaDeHora', () => {
+  it('asks, as the form does, about a hora of the madrugada', () => {
+    expect(getPreguntaDeHora(borrador({ hora: '03:00:00' }))).toBe(
+      '¿Es a las 3:00 de la madrugada?',
+    );
+  });
+
+  it('asks nothing about a hora from 06:00 on', () => {
+    expect(getPreguntaDeHora(borrador({ hora: '06:00:00' }))).toBeNull();
+    expect(getPreguntaDeHora(borrador())).toBeNull();
   });
 });

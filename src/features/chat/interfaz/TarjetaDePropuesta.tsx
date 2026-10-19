@@ -1,9 +1,9 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { categorias, colors, radius } from '@/shared/theme';
-import { AppText, Button, FormaDeEnfasis } from '@/shared/ui';
+import { AppText, Button, ConfirmDialog, DialogText, FormaDeEnfasis } from '@/shared/ui';
 
 import type { EstadoDePropuesta } from '../dominio/conversacion';
 import type { TarjetaDePropuesta as Tarjeta } from '../dominio/propuesta';
@@ -52,6 +52,8 @@ type TarjetaDePropuestaProps = {
   estado: EstadoDePropuesta;
   /** Why the last Confirmar failed; null when it did not. */
   error: string | null;
+  /** What Confirmar asks first about a hora of the madrugada; null when nothing. */
+  preguntaDeHora: string | null;
   onConfirmar: () => void;
   onEditar: () => void;
   onVerEvento: () => void;
@@ -66,12 +68,24 @@ export function TarjetaDePropuesta({
   tarjeta,
   estado,
   error,
+  preguntaDeHora,
   onConfirmar,
   onEditar,
   onVerEvento,
 }: TarjetaDePropuestaProps) {
   const pendiente = estado !== 'guardado';
   const guardando = estado === 'guardando';
+  // As in the form, the hora is asked about once: "Reintentar" does not ask again.
+  const [horaAceptada, setHoraAceptada] = useState(false);
+  const [preguntando, setPreguntando] = useState(false);
+
+  const confirmar = () => {
+    if (preguntaDeHora !== null && !horaAceptada) {
+      setPreguntando(true);
+      return;
+    }
+    onConfirmar();
+  };
 
   return (
     <View style={styles.container}>
@@ -141,7 +155,7 @@ export function TarjetaDePropuesta({
             <Button
               label={guardando ? 'Guardando…' : error === null ? 'Confirmar' : 'Reintentar'}
               disabled={guardando}
-              onPress={onConfirmar}
+              onPress={confirmar}
               style={[styles.button, styles.confirmar]}
             />
           </View>
@@ -165,6 +179,30 @@ export function TarjetaDePropuesta({
           </View>
         )}
       </View>
+
+      {preguntando && preguntaDeHora !== null && (
+        <ConfirmDialog
+          title={preguntaDeHora}
+          confirmLabel="Sí"
+          cancelLabel="Cambiar"
+          tone="primary"
+          busy={false}
+          onConfirm={() => {
+            setPreguntando(false);
+            setHoraAceptada(true);
+            onConfirmar();
+          }}
+          onCancel={() => {
+            // The hora is changed in the form, as any other dato of the card.
+            setPreguntando(false);
+            onEditar();
+          }}
+        >
+          <DialogText>
+            Es una hora poco común. Si querías una hora de la tarde, tocá Cambiar.
+          </DialogText>
+        </ConfirmDialog>
+      )}
 
       {pendiente && (
         <AppText color="textoSecundario" style={styles.foot}>

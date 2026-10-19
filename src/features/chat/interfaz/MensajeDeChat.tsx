@@ -4,7 +4,7 @@ import { colors } from '@/shared/theme';
 import { AppText } from '@/shared/ui';
 
 import { getLineasDeEventos, type MensajeDeChat as Mensaje } from '../dominio/conversacion';
-import { getTarjetaDePropuesta } from '../dominio/propuesta';
+import { getPreguntaDeHora, getTarjetaDePropuesta } from '../dominio/propuesta';
 import { FallaDeMensaje } from './EstadoDeFalla';
 import { EventoDeRespuesta } from './EventoDeRespuesta';
 import { TarjetaDePropuesta } from './TarjetaDePropuesta';
@@ -85,6 +85,7 @@ export function MensajeDeChat({
             tarjeta={getTarjetaDePropuesta(mensaje.borrador)}
             estado={mensaje.estado}
             error={mensaje.error}
+            preguntaDeHora={getPreguntaDeHora(mensaje.borrador)}
             onConfirmar={() => onConfirmar(mensaje.id)}
             onEditar={() => onEditar(mensaje.id)}
             onVerEvento={() => onVerEvento(mensaje.id)}
