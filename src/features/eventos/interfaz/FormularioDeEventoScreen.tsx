@@ -28,6 +28,7 @@ import {
 } from '@/shared/ui';
 
 import { useEvento } from '../datos/useEvento';
+import { getFormularioPrecargado, type FormularioPrecargado } from '../datos/formularioPrecargado';
 import {
   getTipoDeError,
   hasConexion,
@@ -126,8 +127,11 @@ const PARAGRAPH_LINE_HEIGHT = 1.45;
 const SAFE_AREA_EDGES = ['top', 'left', 'right', 'bottom'] as const;
 
 export type ModoDelFormulario =
-  /** `fecha` is the day selected in the calendario, if any. */
-  | { tipo: 'nuevo'; fecha: string | undefined }
+  /**
+   * `fecha` is the day selected in the calendario, if any. `precargado` is
+   * the clave of a form kept already filled in (see `precargarFormulario`).
+   */
+  | { tipo: 'nuevo'; fecha: string | undefined; precargado?: string }
   /**
    * `fecha` is a date of the series to change on its own, the one of the series
    * it comes from; without it, the whole evento is edited.
@@ -143,6 +147,12 @@ export function FormularioDeEventoScreen({ modo }: { modo: ModoDelFormulario }) 
   const opciones = useOpcionesDeDuenio();
   const evento = useEvento(modo.tipo === 'editar' ? modo.id : '', modo.tipo === 'editar');
   const title = modo.tipo === 'nuevo' ? 'Nuevo evento' : 'Editar evento';
+  // Read once: the form keeps what is written from then on.
+  const [precargado] = useState(() =>
+    modo.tipo === 'nuevo' && modo.precargado !== undefined
+      ? getFormularioPrecargado(modo.precargado)
+      : undefined,
+  );
 
   const leave = () => {
     if (router.canGoBack()) {
@@ -190,10 +200,11 @@ export function FormularioDeEventoScreen({ modo }: { modo: ModoDelFormulario }) 
     if (opciones.data && (modo.tipo === 'nuevo' || evento.data)) {
       const initial =
         modo.tipo === 'nuevo' || !evento.data
-          ? formularioVacio(
+          ? (precargado?.formulario ??
+            formularioVacio(
               getDuenioInicial(opciones.data),
               modo.tipo === 'nuevo' ? (modo.fecha ?? null) : null,
-            )
+            ))
           : formularioDesdeEvento(evento.data.evento, evento.data.fechas);
 
       return (
@@ -201,6 +212,7 @@ export function FormularioDeEventoScreen({ modo }: { modo: ModoDelFormulario }) 
           opciones={opciones.data}
           initial={initial}
           id={modo.tipo === 'editar' ? modo.id : undefined}
+          precargado={precargado}
           excepciones={evento.data?.excepciones}
           onClose={leave}
         />
@@ -276,6 +288,8 @@ type FormularioProps = {
   initial: FormularioDeEvento;
   /** The evento being edited; undefined for a new one. */
   id: string | undefined;
+  /** A new evento opened already filled in: its id, and who is told once it is saved. */
+  precargado?: FormularioPrecargado;
   /** A single date of the series being changed on its own, without the fields of the series. */
   unaFecha?: EdicionDeFecha;
   /** What single dates of the series being edited changed: saving it can lose some. */
@@ -284,7 +298,15 @@ type FormularioProps = {
   onClose: () => void;
 };
 
-function Formulario({ opciones, initial, id, unaFecha, excepciones, onClose }: FormularioProps) {
+function Formulario({
+  opciones,
+  initial,
+  id,
+  precargado,
+  unaFecha,
+  excepciones,
+  onClose,
+}: FormularioProps) {
   const [formulario, setFormulario] = useState(initial);
   // The fields only show what is missing after a first attempt to save.
   const [triedToSave, setTriedToSave] = useState(false);
@@ -304,7 +326,7 @@ function Formulario({ opciones, initial, id, unaFecha, excepciones, onClose }: F
   // Counts the times "Cambiar fecha" was tapped: each one moves the focus to the fecha.
   const [focusFechaRequests, setFocusFechaRequests] = useState(0);
   const fechaButton = useRef<View>(null);
-  const guardar = useGuardarEvento(id);
+  const guardar = useGuardarEvento(id, precargado);
   const guardarFecha = useGuardarExcepcion(id ?? '');
   const guardando = unaFecha === undefined ? guardar.isPending : guardarFecha.isPending;
   // What saving the whole series asks first when it loses dates with changes of their own.

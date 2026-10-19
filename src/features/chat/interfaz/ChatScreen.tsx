@@ -83,7 +83,7 @@ export function ChatScreen() {
   const { consentimiento, retry } = useConsentimiento();
   const aceptar = useAceptarConsentimiento();
   const [avisoRechazado, setAvisoRechazado] = useState(false);
-  const { conversacion, vuelta, enviar, reintentar, nueva } = useConversacion();
+  const { conversacion, vuelta, enviar, reintentar, nueva, confirmar, editar } = useConversacion();
   const [confirmandoNueva, setConfirmandoNueva] = useState(false);
 
   // Opening the tab again asks again.
@@ -100,6 +100,15 @@ export function ChatScreen() {
 
   const estado = getChatEstado({ consentimiento, avisoRechazado });
   const irAlFormulario = () => router.push(FORMULARIO);
+  // The form loaded with the propuesta; saving it there leaves the card saved.
+  const editarPropuesta = (id: string) => {
+    const precargado = editar(id);
+    if (precargado !== null) {
+      router.push({ pathname: FORMULARIO, params: { precargado } });
+    }
+  };
+  // A propuesta saved is the evento of its id.
+  const verEvento = (id: string) => router.push({ pathname: '/evento/[id]', params: { id } });
 
   const rechazar = () => {
     aceptar.reset();
@@ -126,7 +135,10 @@ export function ChatScreen() {
             conversacion={conversacion}
             enviar={enviar}
             reintentar={reintentar}
+            confirmar={confirmar}
             onIrAlFormulario={irAlFormulario}
+            onEditar={editarPropuesta}
+            onVerEvento={verEvento}
           />
         ) : (
           <ChatSinPresupuesto vuelta={vuelta} onIrAlFormulario={irAlFormulario} />

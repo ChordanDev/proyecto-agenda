@@ -1,3 +1,4 @@
+import type { BorradorDeEvento } from './borrador';
 import type { EventoDeChat, RespuestaDeConsulta } from './consulta';
 import {
   crearConversacion,
@@ -419,5 +420,174 @@ describe('getLineasDeEventos', () => {
       { clave: 'a|2026-10-10', categoria: 'R', cuando: 'Sábado 10 de octubre · 09:30' },
       { clave: 'a|2026-10-17', categoria: 'I', cuando: 'Sábado 17 de octubre · 09:30' },
     ]);
+  });
+});
+
+const BORRADOR: BorradorDeEvento = {
+  titulo: 'Culto joven',
+  fecha: '2026-10-24',
+  hora: '19:00:00',
+  fechaFin: null,
+  lugar: 'Templo',
+  descripcion: null,
+  enfasis: 'nuevas_generaciones',
+  duenio: { alcance: 'iglesia', iglesiaId: 'i1' },
+  duenioNombre: 'Iglesia Central',
+  repeticion: 'ninguna',
+  finDeSerie: null,
+};
+
+/** A conversacion whose last mensaje is the propuesta `r1` of BORRADOR. */
+function conPropuesta(): Conversacion {
+  return aplicar(preguntando('Cargame un culto joven el sábado 24 a las 19 h'), {
+    tipo: 'responder',
+    conversacionId: 1,
+    id: 'r1',
+    respuesta: respuesta('Te preparé el evento.', { borrador: BORRADOR }),
+  });
+}
+
+function getPropuesta(conversacion: Conversacion) {
+  const mensaje = conversacion.mensajes.find(({ id }) => id === 'r1');
+  if (mensaje?.tipo !== 'propuesta') {
+    throw new Error('No propuesta r1');
+  }
+  return mensaje;
+}
+
+describe('responder with a borrador', () => {
+  it('adds the propuesta, pending, pending', () => {
+    const conversacion = conPropuesta();
+
+    expect(conversacion.mensajes.at(-1)).toEqual({
+      tipo: 'propuesta',
+      id: 'r1',
+      texto: 'Te preparé el evento.',
+      eventos: [],
+      borrador: BORRADOR,
+      estado: 'pendiente',
+      error: null,
+    });
+    expect(conversacion.enviando).toBe(false);
+  });
+
+  it('sends the texto of the propuesta as what the asistente said', () => {
+    const conversacion = aplicar(conPropuesta(), {
+      tipo: 'preguntar',
+      id: 'p2',
+      texto: '¿Y el lugar?',
+    });
+
+    expect(getPedido(conversacion, 'p2')?.tramo).toEqual([
+      { autor: 'usuario', texto: 'Cargame un culto joven el sábado 24 a las 19 h' },
+      { autor: 'asistente', texto: 'Te preparé el evento.' },
+    ]);
+  });
+});
+
+describe('confirmar', () => {
+  it('starts saving a pending propuesta', () => {
+    const conversacion = aplicar(conPropuesta(), { tipo: 'confirmar', id: 'r1' });
+
+    expect(getPropuesta(conversacion).estado).toBe('guardando');
+  });
+
+  it('ignores a second tap while the propuesta is being saved', () => {
+    const guardando = aplicar(conPropuesta(), { tipo: 'confirmar', id: 'r1' });
+
+    expect(reducirConversacion(guardando, { tipo: 'confirmar', id: 'r1' })).toBe(guardando);
+  });
+
+  it('ignores a propuesta already saved', () => {
+    const guardada = aplicar(conPropuesta(), { tipo: 'guardar', id: 'r1' });
+
+    expect(reducirConversacion(guardada, { tipo: 'confirmar', id: 'r1' })).toBe(guardada);
+  });
+
+  it('ignores a mensaje that is not a propuesta', () => {
+    const conversacion = conPropuesta();
+
+    expect(reducirConversacion(conversacion, { tipo: 'confirmar', id: 'p1' })).toBe(conversacion);
+  });
+
+  it('clears the error of the try before', () => {
+    const conversacion = aplicar(
+      conPropuesta(),
+      { tipo: 'confirmar', id: 'r1' },
+      { tipo: 'fallarGuardado', id: 'r1', error: 'Sin conexión' },
+      { tipo: 'confirmar', id: 'r1' },
+    );
+
+    expect(getPropuesta(conversacion)).toMatchObject({ estado: 'guardando', error: null });
+  });
+});
+
+describe('guardar', () => {
+  it('leaves the propuesta saved after Confirmar', () => {
+    const conversacion = aplicar(
+      conPropuesta(),
+      { tipo: 'confirmar', id: 'r1' },
+      { tipo: 'guardar', id: 'r1' },
+    );
+
+    expect(getPropuesta(conversacion)).toMatchObject({ estado: 'guardado', error: null });
+  });
+
+  it('leaves a pending propuesta saved, after saving it from Editar', () => {
+    const conversacion = aplicar(
+      conPropuesta(),
+      { tipo: 'confirmar', id: 'r1' },
+      { tipo: 'fallarGuardado', id: 'r1', error: 'Sin conexión' },
+      { tipo: 'guardar', id: 'r1' },
+    );
+
+    expect(getPropuesta(conversacion)).toMatchObject({ estado: 'guardado', error: null });
+  });
+
+  it('ignores a propuesta of a conversacion that was started again', () => {
+    const nueva = aplicar(conPropuesta(), { tipo: 'nueva', id: 2 });
+
+    expect(reducirConversacion(nueva, { tipo: 'guardar', id: 'r1' })).toBe(nueva);
+  });
+});
+
+describe('fallarGuardado', () => {
+  it('keeps the buttons with the error of the form', () => {
+    const conversacion = aplicar(
+      conPropuesta(),
+      { tipo: 'confirmar', id: 'r1' },
+      { tipo: 'fallarGuardado', id: 'r1', error: 'Hace falta conexión a internet.' },
+    );
+
+    expect(getPropuesta(conversacion)).toMatchObject({
+      estado: 'pendiente',
+      error: 'Hace falta conexión a internet.',
+    });
+  });
+
+  it('does not undo a propuesta already saved from Editar', () => {
+    const guardada = aplicar(
+      conPropuesta(),
+      { tipo: 'confirmar', id: 'r1' },
+      { tipo: 'guardar', id: 'r1' },
+    );
+
+    expect(
+      reducirConversacion(guardada, { tipo: 'fallarGuardado', id: 'r1', error: 'Sin conexión' }),
+    ).toBe(guardada);
+  });
+});
+
+describe('responder with a borrador and eventos', () => {
+  it('keeps the eventos found beside the propuesta', () => {
+    const eventos = [evento(), evento({ id: 'evento-2', titulo: 'Bautismos' })];
+    const conversacion = aplicar(preguntando(), {
+      tipo: 'responder',
+      conversacionId: 1,
+      id: 'r1',
+      respuesta: respuesta('El sábado hay dos actividades.', { borrador: BORRADOR, eventos }),
+    });
+
+    expect(getPropuesta(conversacion).eventos).toEqual(eventos);
   });
 });

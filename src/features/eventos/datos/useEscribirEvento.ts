@@ -5,6 +5,7 @@ import { newId } from '@/shared/newId';
 
 import type { ExcepcionAGuardar } from '../dominio/edicionDeFecha';
 import type { EventoAGuardar } from '../dominio/formularioDeEvento';
+import { olvidarFormularioPrecargado, type FormularioPrecargado } from './formularioPrecargado';
 import {
   borrarEvento,
   borrarFecha,
@@ -38,10 +39,16 @@ function useInvalidarEventos() {
  * the form opens: tapping Guardar again after an answer that never came saves
  * that same evento instead of a second one. When the evento was deleted
  * meanwhile, the calendarios and the evento are read again so it disappears.
+ * A new evento opened `precargado` is created with the id chosen for it, and
+ * whoever opened it is told once it is saved. That is done here, not by the
+ * form: the form can be closed before the answer arrives.
  */
-export function useGuardarEvento(id: string | undefined) {
+export function useGuardarEvento(
+  id: string | undefined,
+  precargado?: Pick<FormularioPrecargado, 'eventoId' | 'onGuardado'>,
+) {
   const invalidar = useInvalidarEventos();
-  const [nuevoId] = useState(newId);
+  const [nuevoId] = useState(() => precargado?.eventoId ?? newId());
   const destino: EventoDestino = id === undefined ? { crear: nuevoId } : { editar: id };
 
   return useMutation({
@@ -49,7 +56,13 @@ export function useGuardarEvento(id: string | undefined) {
     // the form keeps what was written.
     networkMode: 'always',
     mutationFn: (evento: EventoAGuardar) => guardarEvento(evento, destino),
-    onSuccess: (savedId) => invalidar(savedId),
+    onSuccess: (savedId) => {
+      if (precargado !== undefined) {
+        olvidarFormularioPrecargado(precargado.eventoId);
+        precargado.onGuardado(savedId);
+      }
+      return invalidar(savedId);
+    },
     onError: (error) => {
       // Not awaited: reading the evento again finds it gone and unmounts the
       // form, which would drop the warning and the close of `mutate`.
