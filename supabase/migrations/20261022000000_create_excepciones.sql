@@ -183,7 +183,19 @@ begin
   if tg_table_name = 'excepciones' then
     dias := array_remove(array[new.fecha, new.fecha_nueva, old.fecha], null);
   else
-    dias := array[new.fecha];
+    -- A date written again also brings back the move its excepcion kept.
+    dias := array_remove(
+      array[
+        new.fecha,
+        (
+          select excepciones.fecha_nueva
+          from public.excepciones
+          where excepciones.evento_id = serie_id
+            and excepciones.fecha = new.fecha
+        )
+      ],
+      null
+    );
   end if;
 
   -- Each day is looked up by the keys of both tables, not by reading the

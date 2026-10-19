@@ -12,7 +12,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(66);
+select plan(67);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -596,6 +596,37 @@ select lives_ok(
   'a series of six years of weekly dates is saved'
 );
 set constraints all immediate;
+set constraints all deferred;
+
+-- Written to the tables, past the functions: a date deleted and written again
+-- comes back to its own day while its old move still sits on another day.
+insert into public.eventos (id, titulo, alcance, duenio_iglesia_id, hora, repeticion, fin_de_serie) values
+  ('eeeeeeee-0000-4000-8000-000000000006', 'Serie escrita a mano', 'iglesia', '11111111-0000-4000-8000-000000000001', '19:00', 'semanal', '2026-11-14');
+insert into public.eventos_fechas (evento_id, fecha) values
+  ('eeeeeeee-0000-4000-8000-000000000006', '2026-11-07'),
+  ('eeeeeeee-0000-4000-8000-000000000006', '2026-11-14');
+select public.guardar_excepcion(
+  evento_id => 'eeeeeeee-0000-4000-8000-000000000006',
+  fecha => '2026-11-07',
+  fecha_nueva => '2026-11-10');
+set constraints all immediate;
+set constraints all deferred;
+
+-- Each write is checked on its own, as when each is a request of its own.
+delete from public.eventos_fechas
+where evento_id = 'eeeeeeee-0000-4000-8000-000000000006' and fecha = '2026-11-07';
+set constraints all immediate;
+set constraints all deferred;
+insert into public.eventos_fechas (evento_id, fecha) values
+  ('eeeeeeee-0000-4000-8000-000000000006', '2026-11-10');
+set constraints all immediate;
+set constraints all deferred;
+insert into public.eventos_fechas (evento_id, fecha) values
+  ('eeeeeeee-0000-4000-8000-000000000006', '2026-11-07');
+select throws_ok(
+  $$ set constraints all immediate $$,
+  '23514', null, 'a date written back onto the series cannot bring its old move onto a taken day'
+);
 set constraints all deferred;
 
 reset role;
