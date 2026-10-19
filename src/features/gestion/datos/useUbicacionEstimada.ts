@@ -3,6 +3,8 @@ import { useEffect, useEffectEvent, useState } from 'react';
 
 import type { Punto } from '@/features/iglesias/dominio/distancia';
 
+import type { EstadoDelMapa } from '../dominio/estructuraDelAdmin';
+
 /**
  * Where the map of "Nueva iglesia" and "Editar iglesia" stands with the
  * direccion it looks for:
@@ -11,26 +13,23 @@ import type { Punto } from '@/features/iglesias/dominio/distancia';
  * - `encontrada`: the estimated location, already handed to `onEncontrada`.
  * - `noEncontrada`: the phone could not find it; the admin places the marker.
  */
-export type UbicacionEstimada =
-  | { status: 'idle' }
-  | { status: 'buscando' }
-  | { status: 'encontrada' }
-  | { status: 'noEncontrada' };
+export type UbicacionEstimada = { status: EstadoDelMapa };
 
 // Looks for the direccion once the admin stops typing, not on every letter:
 // the geocoder of the phone rejects too many requests.
-const ESPERA_MS = 800;
+export const ESPERA_MS = 800;
 // A phone without a connection would otherwise leave "Buscando…" with no end.
-const TIMEOUT_MS = 15_000;
+export const TIMEOUT_MS = 15_000;
 
 /** The point of a direccion, with the geocoder of the phone; null when it is not found. */
 async function ubicarDireccion(direccion: string): Promise<Punto | null> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   const resultado = await Promise.race([
     Location.geocodeAsync(direccion),
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Geocoding timed out')), TIMEOUT_MS),
-    ),
-  ]);
+    new Promise<never>((_, reject) => {
+      timeout = setTimeout(() => reject(new Error('Geocoding timed out')), TIMEOUT_MS);
+    }),
+  ]).finally(() => clearTimeout(timeout));
   const [primero] = resultado;
 
   return primero ? { latitud: primero.latitude, longitud: primero.longitude } : null;

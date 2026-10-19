@@ -191,7 +191,7 @@ function Formulario({ iglesia, distritoInicial, distritos, onClose }: Formulario
         </Campo>
 
         <Campo error={errores.coordenadas}>
-          <View style={styles.select}>
+          <View style={styles.fieldColumn}>
             <AppText variant="label">Ubicación</AppText>
             {direccionParaElMapa === null && coordenadas === null ? (
               <View style={styles.sinMapa}>
@@ -215,7 +215,7 @@ function Formulario({ iglesia, distritoInicial, distritos, onClose }: Formulario
         </Campo>
 
         <Campo error={errores.distritoId}>
-          <View style={styles.select}>
+          <View style={styles.fieldColumn}>
             <AppText variant="label">Distrito</AppText>
             <Pressable
               accessibilityRole="button"
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     gap: CARD_GAP,
     paddingVertical: CARD_PADDING_VERTICAL,
   },
-  select: {
+  fieldColumn: {
     gap: SELECT_LABEL_GAP,
   },
   selectBox: {
