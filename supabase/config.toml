@@ -437,3 +437,13 @@ enabled = true
 # function rejects a JWT that is not of a usuario.
 [functions.chat-consulta]
 verify_jwt = true
+
+# The server functions of the gestion of cargos (issue #154): `invitar` gives a
+# cargo and sends the correo de bienvenida, `cambiar-correo` is for the admin.
+# Like chat-consulta, the gateway rejects a call without a JWT, and each
+# function rejects a JWT that is not of a usuario.
+[functions.invitar]
+verify_jwt = true
+
+[functions.cambiar-correo]
+verify_jwt = true
