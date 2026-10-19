@@ -17,7 +17,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(37);
+select plan(41);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -52,6 +52,9 @@ insert into public.eventos (id, titulo, alcance, duenio_iglesia_id, duenio_distr
   ('eeeeeeee-0000-4000-8000-000000000001', 'Culto joven', 'iglesia', '11111111-0000-4000-8000-000000000001', null, '19:00'),
   ('eeeeeeee-0000-4000-8000-000000000002', 'Congreso del Norte', 'distrito', null, 'dddddddd-0000-4000-8000-000000000001', '10:00'),
   ('eeeeeeee-0000-4000-8000-000000000003', 'Congreso del Sur', 'distrito', null, 'dddddddd-0000-4000-8000-000000000002', '10:00');
+
+insert into public.lugares (nombre, duenio_iglesia_id) values
+  ('Salón de jóvenes', '11111111-0000-4000-8000-000000000001');
 
 -- The policies themselves -------------------------------------------------------
 
@@ -334,6 +337,12 @@ select ok(
 select ok(
   public.iglesia_ve_evento_por_alcance('eeeeeeee-0000-4000-8000-000000000001', '11111111-0000-4000-8000-000000000001'),
   'after the move, the iglesia keeps its own eventos'
+);
+
+select is(
+  (select count(*) from public.lugares where duenio_iglesia_id = '11111111-0000-4000-8000-000000000001'),
+  1::bigint,
+  'after the move, the iglesia keeps its lugares'
 );
 
 select * from finish();
