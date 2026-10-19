@@ -6,13 +6,21 @@
 //   auth.uid() decide what it reads: their consentimiento, their zona horaria
 //   and, above all, the busqueda of eventos.
 // - `servidor` is service_role, only for the counters (chat_consultas and
-//   chat_gastos), which no usuario can read or write.
+//   chat_gastos), which no usuario can read or write: it reserves a consulta
+//   before the model is called, then confirms or frees it.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '../../../src/shared/database.types.ts';
 import { MAX_COINCIDENCIAS } from '../../../src/features/chat/dominio/ambiguedad.ts';
-import type { PuertosDeConsulta } from '../../../src/features/chat/dominio/consulta.ts';
+import type {
+  PuertosDeConsulta,
+  ResultadoDeReserva,
+} from '../../../src/features/chat/dominio/consulta.ts';
+import {
+  LIMITE_DIARIO,
+  PRESUPUESTO_MENSUAL_USD,
+} from '../../../src/features/chat/dominio/limites.ts';
 
 /** The default of asociaciones.zona_horaria, for a usuario without cargos. */
 const ZONA_HORARIA_POR_DEFECTO = 'America/Argentina/Buenos_Aires';
@@ -103,15 +111,38 @@ export function crearPuertos({
       };
     },
 
-    async registrarConsulta({ dia, mes, costoUsd }) {
+    async reservarConsulta({ dia, mes }) {
+      const { data, error } = await servidor.rpc('reservar_consulta', {
+        usuario_id: usuarioId,
+        dia,
+        mes,
+        limite_diario: LIMITE_DIARIO,
+        presupuesto_usd: PRESUPUESTO_MENSUAL_USD,
+      });
+
+      if (error) {
+        throw new Error(`Could not reserve the consulta: ${error.message}`);
+      }
+      return data as ResultadoDeReserva;
+    },
+
+    async confirmarConsulta({ dia, mes, costoUsd }) {
       const { data, error } = await servidor
-        .rpc('registrar_consulta', { usuario_id: usuarioId, dia, mes, costo_usd: costoUsd })
+        .rpc('confirmar_consulta', { usuario_id: usuarioId, dia, mes, costo_usd: costoUsd })
         .single();
 
       if (error) {
-        throw new Error(`Could not register the consulta: ${error.message}`);
+        throw new Error(`Could not confirm the consulta: ${error.message}`);
       }
       return { consultasDelDia: data.consultas_del_dia };
+    },
+
+    async liberarConsulta({ dia }) {
+      const { error } = await servidor.rpc('liberar_consulta', { usuario_id: usuarioId, dia });
+
+      if (error) {
+        throw new Error(`Could not free the consulta: ${error.message}`);
+      }
     },
   };
 }

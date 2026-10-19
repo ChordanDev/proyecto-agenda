@@ -136,19 +136,34 @@ export type Proveedor = {
   ): Promise<RespuestaDelProveedor>;
 };
 
+/**
+ * What the database answers to a reserva: `reservada`, or why not. It counts
+ * the consulta at once, so consultas sent at the same time cannot all pass the
+ * limite diario.
+ */
+export type ResultadoDeReserva = 'reservada' | 'limite_diario' | 'presupuesto_agotado';
+
 /** Everything a consulta reaches outside the domain, bound to the usuario who asks. */
 export type PuertosDeConsulta = {
   ahora(): Date;
   leerEstado(): Promise<EstadoDelChat>;
   /** Runs with the identity of the usuario: it only finds what their calendario shows. */
   buscarEventos(busqueda: Busqueda): Promise<ResultadoDeBusqueda>;
-  /** Adds the consulta to the counters and returns the consultas of the dia after it. */
-  registrarConsulta(registro: {
+  /** Counts the consulta before the model is called, unless the limits are reached. */
+  reservarConsulta(reserva: {
+    usuarioId: string;
+    dia: string;
+    mes: string;
+  }): Promise<ResultadoDeReserva>;
+  /** Adds the costo of an answered consulta and returns the consultas of the dia. */
+  confirmarConsulta(registro: {
     usuarioId: string;
     dia: string;
     mes: string;
     costoUsd: number;
   }): Promise<{ consultasDelDia: number }>;
+  /** Takes back the reserva of a consulta whose respuesta failed. */
+  liberarConsulta(reserva: { usuarioId: string; dia: string }): Promise<void>;
   proveedor: Proveedor;
   /**
    * Reports why a consulta failed, for whoever runs the server. It gets the
@@ -370,10 +385,69 @@ function getCausa(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/** What the model answered, with what all its calls cost and what its busquedas found. */
+type Conversacion = { texto: string; costoUsd: number; coincidencias: Coincidencias };
+
+/** Talks with the model, running the busquedas it asks for, until it answers. */
+async function conversar(
+  mensajes: MensajeParaProveedor[],
+  puertos: PuertosDeConsulta,
+): Promise<Conversacion> {
+  let costoUsd = 0;
+  const coincidencias: Coincidencias = { repreguntar: false, eventos: new Map() };
+
+  for (let ronda = 0; ; ronda++) {
+    const conBusqueda = ronda < MAX_BUSQUEDAS;
+    const respuesta = await puertos.proveedor
+      .responder(mensajes, { conBusqueda })
+      .catch((error: unknown) => {
+        throw new ProveedorCaido(`The provider failed: ${getCausa(error)}`);
+      });
+    costoUsd += respuesta.costoUsd;
+
+    if (respuesta.tipo === 'texto') {
+      if (respuesta.texto.trim() === '') {
+        throw new ProveedorCaido('The provider answered with no text');
+      }
+      return { texto: respuesta.texto.trim(), costoUsd, coincidencias };
+    }
+
+    if (!conBusqueda || respuesta.llamadas.length === 0) {
+      throw new ProveedorCaido('The provider kept searching without the busqueda');
+    }
+
+    mensajes.push({ rol: 'pedido_de_busqueda', llamadas: respuesta.llamadas });
+    for (const [indice, llamada] of respuesta.llamadas.entries()) {
+      // Every llamada needs its result, so the extra ones get an error.
+      const busqueda =
+        indice < MAX_LLAMADAS_POR_RONDA
+          ? leerBusqueda(llamada.argumentos)
+          : { error: `Solo se hacen ${MAX_LLAMADAS_POR_RONDA} búsquedas a la vez.` };
+
+      if ('error' in busqueda) {
+        mensajes.push({
+          rol: 'busqueda',
+          llamadaId: llamada.id,
+          contenido: JSON.stringify(busqueda),
+        });
+        continue;
+      }
+
+      const resultado = await puertos.buscarEventos(busqueda);
+      mensajes.push({
+        rol: 'busqueda',
+        llamadaId: llamada.id,
+        contenido: sumarBusqueda(coincidencias, resultado),
+      });
+    }
+  }
+}
+
 /**
  * Answers a consulta of the chat. `usuarioId` is null when the call has no
  * valid sesion. The order matters: nothing reaches the model before the limits
- * allow it, and only a respuesta is registered.
+ * allow it and the consulta is reserved, and a reserva whose respuesta fails is
+ * freed, so it counts nothing.
  */
 export async function responderConsulta(
   body: unknown,
@@ -403,76 +477,44 @@ export async function responderConsulta(
       return { ok: false, falla: fallas[decision] };
     }
 
+    // The counters read above can be already old: the reserva is what holds
+    // the limits when consultas arrive at the same time.
     const { dia, mes } = getPeriodo(ahora, estado.zonaHoraria);
-    const mensajes: MensajeParaProveedor[] = [
-      { rol: 'sistema', texto: getInstrucciones(dia, estado.zonaHoraria) },
-      ...pedido.tramo.map(({ autor, texto }) => ({ rol: autor, texto })),
-      { rol: 'usuario', texto: pedido.mensaje },
-    ];
+    const reserva = await puertos.reservarConsulta({ usuarioId, dia, mes });
+    if (reserva !== 'reservada') {
+      return { ok: false, falla: reserva };
+    }
 
-    let costoUsd = 0;
-    const coincidencias: Coincidencias = { repreguntar: false, eventos: new Map() };
+    try {
+      const { texto, costoUsd, coincidencias } = await conversar(
+        [
+          { rol: 'sistema', texto: getInstrucciones(dia, estado.zonaHoraria) },
+          ...pedido.tramo.map(({ autor, texto: contenido }) => ({ rol: autor, texto: contenido })),
+          { rol: 'usuario', texto: pedido.mensaje },
+        ],
+        puertos,
+      );
+      const { consultasDelDia } = await puertos.confirmarConsulta({
+        usuarioId,
+        dia,
+        mes,
+        costoUsd,
+      });
 
-    for (let ronda = 0; ; ronda++) {
-      const conBusqueda = ronda < MAX_BUSQUEDAS;
-      const respuesta = await puertos.proveedor
-        .responder(mensajes, { conBusqueda })
-        .catch((error: unknown) => {
-          throw new ProveedorCaido(`The provider failed: ${getCausa(error)}`);
-        });
-      costoUsd += respuesta.costoUsd;
-
-      if (respuesta.tipo === 'texto') {
-        if (respuesta.texto.trim() === '') {
-          throw new ProveedorCaido('The provider answered with no text');
-        }
-
-        const { consultasDelDia } = await puertos.registrarConsulta({
-          usuarioId,
-          dia,
-          mes,
-          costoUsd,
-        });
-
-        return {
-          ok: true,
-          respuesta: {
-            tipo: coincidencias.repreguntar ? 'repregunta' : 'respuesta',
-            texto: respuesta.texto.trim(),
-            eventos: getEventosDeRespuesta(coincidencias),
-            aviso: getAvisoDeConsultasRestantes(consultasDelDia),
-          },
-        };
-      }
-
-      if (!conBusqueda || respuesta.llamadas.length === 0) {
-        throw new ProveedorCaido('The provider kept searching without the busqueda');
-      }
-
-      mensajes.push({ rol: 'pedido_de_busqueda', llamadas: respuesta.llamadas });
-      for (const [indice, llamada] of respuesta.llamadas.entries()) {
-        // Every llamada needs its result, so the extra ones get an error.
-        const busqueda =
-          indice < MAX_LLAMADAS_POR_RONDA
-            ? leerBusqueda(llamada.argumentos)
-            : { error: `Solo se hacen ${MAX_LLAMADAS_POR_RONDA} búsquedas a la vez.` };
-
-        if ('error' in busqueda) {
-          mensajes.push({
-            rol: 'busqueda',
-            llamadaId: llamada.id,
-            contenido: JSON.stringify(busqueda),
-          });
-          continue;
-        }
-
-        const resultado = await puertos.buscarEventos(busqueda);
-        mensajes.push({
-          rol: 'busqueda',
-          llamadaId: llamada.id,
-          contenido: sumarBusqueda(coincidencias, resultado),
-        });
-      }
+      return {
+        ok: true,
+        respuesta: {
+          tipo: coincidencias.repreguntar ? 'repregunta' : 'respuesta',
+          texto,
+          eventos: getEventosDeRespuesta(coincidencias),
+          aviso: getAvisoDeConsultasRestantes(consultasDelDia),
+        },
+      };
+    } catch (error) {
+      await puertos.liberarConsulta({ usuarioId, dia }).catch((causa: unknown) => {
+        puertos.informarError(`Could not free the reserva: ${getCausa(causa)}`);
+      });
+      throw error;
     }
   } catch (error) {
     puertos.informarError(getCausa(error));

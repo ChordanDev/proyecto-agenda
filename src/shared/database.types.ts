@@ -301,6 +301,11 @@ isOneToOne: false
 "cargos_abarcan_duenio":
 { Args: { "duenio_asociacion_id": string,"duenio_distrito_id": string,"duenio_iglesia_id": string }; Returns: boolean
                            },
+"confirmar_consulta":
+{ Args: { "costo_usd": number,"dia": string,"mes": string,"usuario_id": string }; Returns: {
+              "consultas_del_dia": number,"gasto_del_mes": number
+            }[]
+                           },
 "delete_own_usuario":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
@@ -332,6 +337,9 @@ isOneToOne: false
 "iglesia_ve_evento_por_alcance":
 { Args: { "evento_id": string,"iglesia_id": string }; Returns: boolean
                            },
+"liberar_consulta":
+{ Args: { "dia": string,"usuario_id": string }; Returns: undefined
+                           },
 "lugar_nombre_key":
 { Args: { "nombre": string }; Returns: string
                            },
@@ -342,6 +350,9 @@ isOneToOne: false
 { Args: { "costo_usd": number,"dia": string,"mes": string,"usuario_id": string }; Returns: {
               "consultas_del_dia": number,"gasto_del_mes": number
             }[]
+                           },
+"reservar_consulta":
+{ Args: { "dia": string,"limite_diario": number,"mes": string,"presupuesto_usd": number,"usuario_id": string }; Returns: string
                            }
           }
           Enums: {

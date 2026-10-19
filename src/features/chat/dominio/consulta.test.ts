@@ -10,6 +10,7 @@ import {
   type MensajeParaProveedor,
   type PuertosDeConsulta,
   type RespuestaDelProveedor,
+  type ResultadoDeReserva,
 } from './consulta';
 
 const USUARIO = 'usuario-1';
@@ -59,7 +60,12 @@ type Fake = {
   /** What the provider received on each call, and whether it could search. */
   llamadasAlProveedor: { mensajes: readonly MensajeParaProveedor[]; conBusqueda: boolean }[];
   busquedas: Busqueda[];
+  /** The consultas confirmed with their costo. */
   registros: { usuarioId: string; dia: string; mes: string; costoUsd: number }[];
+  /** The consultas freed because their respuesta failed. */
+  liberaciones: { usuarioId: string; dia: string }[];
+  /** The order in which the consulta reached the database and the provider. */
+  orden: string[];
   /** What the consulta reported about its fallas. */
   errores: string[];
 };
@@ -77,6 +83,7 @@ function fake({
   busquedaFalla = false,
   registroFalla = false,
   consultasDelDia = 1,
+  reservar = async () => 'reservada',
 }: {
   respuestas?: RespuestaDelProveedor[];
   estado?: Partial<EstadoDelChat>;
@@ -87,11 +94,15 @@ function fake({
   busquedaFalla?: boolean;
   registroFalla?: boolean;
   consultasDelDia?: number;
+  /** What the database answers to a reserva; it reserves every consulta unless told otherwise. */
+  reservar?: () => Promise<ResultadoDeReserva>;
 } = {}): Fake {
   const result: Fake = {
     llamadasAlProveedor: [],
     busquedas: [],
     registros: [],
+    liberaciones: [],
+    orden: [],
     errores: [],
     puertos: {
       informarError: (causa) => {
@@ -113,15 +124,25 @@ function fake({
         const coincidencias = resultados ? (resultados.shift() ?? []) : eventos;
         return { eventos: coincidencias.slice(0, 3), total: coincidencias.length };
       },
-      registrarConsulta: async (registro) => {
+      reservarConsulta: async () => {
+        result.orden.push('reservar');
+        return reservar();
+      },
+      confirmarConsulta: async (registro) => {
+        result.orden.push('confirmar');
         if (registroFalla) {
           throw new Error('database down');
         }
         result.registros.push(registro);
         return { consultasDelDia };
       },
+      liberarConsulta: async (liberacion) => {
+        result.orden.push('liberar');
+        result.liberaciones.push(liberacion);
+      },
       proveedor: {
         responder: async (mensajes, { conBusqueda }) => {
+          result.orden.push('proveedor');
           result.llamadasAlProveedor.push({ mensajes: structuredClone(mensajes), conBusqueda });
           if (proveedorFalla) {
             throw new Error('OpenAI answered 429');
@@ -275,6 +296,112 @@ describe('responderConsulta', () => {
         ok: false,
         falla: 'error_servidor',
       });
+    });
+  });
+
+  describe('the reserva of the consulta', () => {
+    it('reserves the consulta before calling the model, and confirms it with its costo', async () => {
+      const f = fake();
+
+      await responderConsulta(pedido('Hola'), USUARIO, f.puertos);
+
+      expect(f.orden).toEqual(['reservar', 'proveedor', 'confirmar']);
+      expect(f.liberaciones).toEqual([]);
+    });
+
+    it('rejects the consulta when the reserva finds the limite diario reached', async () => {
+      const f = fake({ reservar: async () => 'limite_diario' });
+
+      expect(await responderConsulta(pedido('Hola'), USUARIO, f.puertos)).toEqual({
+        ok: false,
+        falla: 'limite_diario',
+      });
+      expect(f.orden).toEqual(['reservar']);
+    });
+
+    it('rejects the consulta when the reserva finds the presupuesto spent', async () => {
+      const f = fake({ reservar: async () => 'presupuesto_agotado' });
+
+      expect(await responderConsulta(pedido('Hola'), USUARIO, f.puertos)).toEqual({
+        ok: false,
+        falla: 'presupuesto_agotado',
+      });
+      expect(f.orden).toEqual(['reservar']);
+    });
+
+    it('reserves nothing when the limits already reject the consulta', async () => {
+      const f = fake({ estado: { consultas: { dia: '2026-10-17', cantidad: 50 } } });
+
+      await responderConsulta(pedido('Hola'), USUARIO, f.puertos);
+
+      expect(f.orden).toEqual([]);
+    });
+
+    it('frees the reserva when the provider fails', async () => {
+      const f = fake({ proveedorFalla: true });
+
+      await responderConsulta(pedido('Hola'), USUARIO, f.puertos);
+
+      expect(f.orden).toEqual(['reservar', 'proveedor', 'liberar']);
+      expect(f.liberaciones).toEqual([{ usuarioId: USUARIO, dia: '2026-10-17' }]);
+    });
+
+    it('frees the reserva when the busqueda fails', async () => {
+      const f = fake({ respuestas: [busqueda(BUSQUEDA_VALIDA)], busquedaFalla: true });
+
+      await responderConsulta(pedido('¿Qué hay?'), USUARIO, f.puertos);
+
+      expect(f.liberaciones).toHaveLength(1);
+      expect(f.registros).toHaveLength(0);
+    });
+
+    it('frees the reserva when the consulta cannot be confirmed', async () => {
+      const f = fake({ registroFalla: true });
+
+      expect(await responderConsulta(pedido('Hola'), USUARIO, f.puertos)).toEqual({
+        ok: false,
+        falla: 'error_servidor',
+      });
+      expect(f.orden).toEqual(['reservar', 'proveedor', 'confirmar', 'liberar']);
+    });
+
+    it('lets one consulta through when five arrive at once with one left today', async () => {
+      // The counters every consulta reads before reserving: 49 of 50.
+      const estado = { consultas: { dia: '2026-10-17', cantidad: 49 } };
+      // The database reserves one at a time, as the reserva does.
+      let reservadas = 49;
+      const reservar = async (): Promise<ResultadoDeReserva> => {
+        if (reservadas >= 50) {
+          return 'limite_diario';
+        }
+        reservadas++;
+        return 'reservada';
+      };
+      // The model answers only once every consulta got that far.
+      let soltar = () => {};
+      const barrera = new Promise<void>((resolve) => {
+        soltar = resolve;
+      });
+      const consultas = Array.from({ length: 5 }, () => {
+        const f = fake({ estado, reservar });
+        const responder = f.puertos.proveedor.responder;
+        f.puertos.proveedor = {
+          responder: async (...args) => {
+            await barrera;
+            return responder(...args);
+          },
+        };
+        return responderConsulta(pedido('Hola'), USUARIO, f.puertos);
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      soltar();
+
+      const resultados = await Promise.all(consultas);
+
+      expect(resultados.filter((resultado) => resultado.ok)).toHaveLength(1);
+      expect(resultados.filter((resultado) => !resultado.ok)).toEqual(
+        Array.from({ length: 4 }, () => ({ ok: false, falla: 'limite_diario' })),
+      );
     });
   });
 
