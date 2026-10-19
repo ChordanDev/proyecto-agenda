@@ -5,6 +5,7 @@ import { isSameDuenio, type LugarElegido } from '@/features/lugares/dominio/luga
 import { getCategoria, type Categoria } from './categoria';
 import { isFechaPasada } from './fechaPasada';
 import type { Duenio, Enfasis, Evento, Repeticion } from './evento';
+import { getIglesiasParaSumar, type IglesiaParaSumar } from './iglesiasParaSumar';
 import { getFechasDeSerie, getTopeDeHasta } from './repeticion';
 
 /**
@@ -30,6 +31,8 @@ export type FormularioDeEvento = {
   descripcion: string;
   /** One of the four enfasis or `R` for the actividad regular; null until one is chosen. */
   categoria: Categoria | null;
+  /** Ids of the iglesias to share the evento with, in the order they were chosen. */
+  iglesiasSumadas: readonly string[];
 };
 
 export type CampoDelFormulario =
@@ -41,6 +44,17 @@ export type ContextoDelFormulario = {
   hoy: string;
   /** Whether an existing evento is being edited: editing renews a series. */
   editando: boolean;
+  /**
+   * The iglesias of the asociacion, once they are read: with them, the sumadas
+   * that see the evento by its alcance are left out after the duenio changes.
+   */
+  iglesias?: readonly IglesiaParaSumar[];
+  /**
+   * The form as it was opened. While neither its duenio nor its sumadas
+   * change, the sumadas are not sent: the ones loaded can be old, and sending
+   * them would undo what was shared, or what an iglesia quito, meanwhile.
+   */
+  inicial?: FormularioDeEvento;
 };
 
 /** An evento ready to be saved, with every date it has. */
@@ -49,8 +63,8 @@ export type EventoAGuardar = Omit<Evento, 'id' | 'iglesiasSumadas'> & {
   fechas: string[];
   /**
    * Ids of the iglesias to share the evento with, replacing the ones it has.
-   * Left out, the evento keeps its iglesias sumadas: a form that does not show
-   * them must not undo what was shared, or what an iglesia quito.
+   * Left out, the evento keeps its iglesias sumadas: a writer that does not
+   * show them must not undo what was shared, or what an iglesia quito.
    */
   iglesiasSumadas?: readonly string[];
 };
@@ -139,6 +153,42 @@ export function getNombreDelLugar(lugar: LugarElegido | null): string | null {
   }
 
   return lugar.tipo === 'guardado' ? lugar.lugar.nombre : lugar.nombre;
+}
+
+/**
+ * The iglesias sumadas that can be saved: none for an evento of asociacion,
+ * and never one that sees the evento by its alcance, which the database
+ * rejects. The iglesias of a distrito are only known once they are read.
+ */
+function getSumadasAGuardar(
+  duenio: Duenio,
+  sumadas: readonly string[],
+  iglesias: readonly IglesiaParaSumar[] | undefined,
+): string[] {
+  if (iglesias === undefined) {
+    return sumadas.filter((id) =>
+      duenio.alcance === 'iglesia' ? id !== duenio.iglesiaId : duenio.alcance === 'distrito',
+    );
+  }
+
+  const ofrecibles = new Set(getIglesiasParaSumar(duenio, iglesias).map((iglesia) => iglesia.id));
+
+  return sumadas.filter((id) => ofrecibles.has(id));
+}
+
+/** Whether the duenio and the sumadas are the ones the form was opened with. */
+function sumadasSinCambios(formulario: FormularioDeEvento, inicial: FormularioDeEvento): boolean {
+  const mismoDuenio =
+    formulario.duenio !== null &&
+    inicial.duenio !== null &&
+    isSameDuenio(formulario.duenio, inicial.duenio);
+  const { iglesiasSumadas } = formulario;
+
+  return (
+    mismoDuenio &&
+    iglesiasSumadas.length === inicial.iglesiasSumadas.length &&
+    iglesiasSumadas.every((id) => inicial.iglesiasSumadas.includes(id))
+  );
 }
 
 /** An optional text: trimmed, and missing when nothing is left. */
@@ -233,6 +283,15 @@ export function validarFormulario(
       finDeSerie,
       // A series is saved with each of its dates, one row each.
       fechas: getFechasDeSerie(formulario.fecha, formulario.repeticion, finDeSerie),
+      // Sharing applies to the whole series. Left out when untouched, the
+      // evento keeps the sumadas it has.
+      ...((contexto.inicial === undefined || !sumadasSinCambios(formulario, contexto.inicial)) && {
+        iglesiasSumadas: getSumadasAGuardar(
+          formulario.duenio,
+          formulario.iglesiasSumadas,
+          contexto.iglesias,
+        ),
+      }),
     },
   };
 }
@@ -254,6 +313,7 @@ export function formularioVacio(duenio: Duenio | null, fecha: string | null): Fo
     lugar: null,
     descripcion: '',
     categoria: null,
+    iglesiasSumadas: [],
   };
 }
 
@@ -324,6 +384,8 @@ export function formularioDesdeEvento(
     lugar: getLugarElegido(evento),
     descripcion: evento.descripcion ?? '',
     categoria: getCategoria(evento.enfasis),
+    // `?? []`: an evento saved on the phone before sharing existed has none at all.
+    iglesiasSumadas: evento.iglesiasSumadas ?? [],
   };
 }
 

@@ -29,6 +29,7 @@ import {
 
 import { useEvento } from '../datos/useEvento';
 import { getTipoDeError, hasConexion, useGuardarEvento } from '../datos/useEscribirEvento';
+import { useIglesiasParaCompartir } from '../datos/useIglesiasParaCompartir';
 import { useOpcionesDeDuenio } from '../datos/useOpcionesDeDuenio';
 import { getDuenioDelDetalle } from '../dominio/detalleDeEvento';
 import { getMensajeDeError } from '../dominio/errorDeEscritura';
@@ -63,6 +64,7 @@ import { getHastaSugerido } from '../dominio/repeticion';
 import { HojaDeFecha } from './HojaDeFecha';
 import { HojaDeLugar } from './HojaDeLugar';
 import { SelectorDeEnfasis } from './SelectorDeEnfasis';
+import { SelectorDeIglesiasSumadas } from './SelectorDeIglesiasSumadas';
 import { SelectorDeRepeticion } from './SelectorDeRepeticion';
 
 // Layout of the approved mockup, which the theme has no tokens for. The line
@@ -240,13 +242,19 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
   const [focusFechaRequests, setFocusFechaRequests] = useState(0);
   const fechaButton = useRef<View>(null);
   const guardar = useGuardarEvento(id);
+  const iglesias = useIglesiasParaCompartir();
   const hoy = useToday();
   const editando = id !== undefined;
   // Editing an evento that already passed does not ask, unless its fecha is changed.
   const [fechaOriginal] = useState(editando ? initial.fecha : null);
   const seRepite = formulario.repeticion !== 'ninguna';
 
-  const result = validarFormulario(formulario, { hoy, editando });
+  const result = validarFormulario(formulario, {
+    hoy,
+    editando,
+    iglesias: iglesias.data,
+    inicial: initial,
+  });
   const errores = triedToSave && !result.ok ? result.errores : {};
   const opcionDeDuenio = getOpcionDeDuenio(opciones, formulario.duenio);
   const severalDuenios = countOpciones(opciones) > 1;
@@ -561,6 +569,19 @@ function Formulario({ opciones, initial, id, onClose }: FormularioProps) {
         }
         onOpenHasta={() => setOpenSheet('finDeSerie')}
       />
+
+      {/* An evento of asociacion is seen by every iglesia: it is not shared. */}
+      {opcionDeDuenio && opcionDeDuenio.duenio.alcance !== 'asociacion' && (
+        <SelectorDeIglesiasSumadas
+          duenio={opcionDeDuenio.duenio}
+          nombreDelDuenio={opcionDeDuenio.nombre}
+          elegidas={formulario.iglesiasSumadas}
+          iglesias={iglesias.data}
+          isError={iglesias.isError}
+          onRetry={() => void iglesias.refetch()}
+          onChange={(iglesiasSumadas) => update({ iglesiasSumadas })}
+        />
+      )}
 
       {(saveError !== null || (triedToSave && !result.ok)) && (
         <View accessibilityRole="alert" style={styles.banner}>

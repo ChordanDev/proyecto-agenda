@@ -14,7 +14,7 @@ export type Iglesia = {
 };
 
 /** Lower case, without accents or diaeresis, so "CÓRDOBA" and "cordoba" are equal. */
-function normalize(text: string): string {
+export function normalize(text: string): string {
   return text
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
