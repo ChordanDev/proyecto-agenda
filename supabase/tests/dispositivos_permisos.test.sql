@@ -2,7 +2,8 @@
 -- (public.guardar_dispositivo and public.get_dispositivo). A phone registers
 -- and changes its own row by its token, with or without a session; it neither
 -- reads nor changes the row of another token, and the tables are not read
--- directly. With cargos, a phone only follows iglesias its cargos cover.
+-- directly. With cargos, a phone only follows iglesias its cargos cover, and
+-- deleting the usuario deletes the phones they saved.
 --
 -- Acting as a usuario works as in cargos_permisos.test.sql: the `authenticated`
 -- role and the claims of the session, which is where auth.uid() reads from.
@@ -22,7 +23,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(30);
+select plan(31);
 
 -- Fixtures ---------------------------------------------------------------------
 
@@ -236,6 +237,22 @@ select throws_ok(
   $$ select public.guardar_dispositivo('ExponentPushToken[telefono-sin-cargos]', true, array['11111111-0000-4000-8000-000000000001', '11111111-0000-4000-8000-000000000003']::uuid[]) $$,
   '42501', 'Without cargos a phone follows only its iglesia elegida',
   'a usuario without cargos cannot follow two iglesias'
+);
+
+reset role;
+
+-- Eliminar mi cuenta ---------------------------------------------------------------------------
+-- The phones the usuario saved go with them, so the app saves the phone again
+-- with the initial values of a hermano, as on signing out.
+
+delete from auth.users where id = 'bbbbbbbb-0000-4000-8000-000000000001';
+
+reset request.jwt.claims;
+set local role anon;
+
+select is_empty(
+  $$ select * from public.get_dispositivo('ExponentPushToken[telefono-encargado]') $$,
+  'deleting the usuario deletes the phones they saved'
 );
 
 reset role;

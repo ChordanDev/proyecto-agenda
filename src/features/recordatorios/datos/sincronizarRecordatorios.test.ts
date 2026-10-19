@@ -58,6 +58,19 @@ describe('actualizarRecordatorios', () => {
     });
   });
 
+  it('saves the phone on, with the iglesia elegida, once the cuenta was deleted', async () => {
+    // Deleting the usuario deleted the phones they saved.
+    mockedGetDispositivo.mockResolvedValue(null);
+    mockedGuardar.mockResolvedValue(undefined);
+
+    await actualizarRecordatorios(newClient());
+
+    expect(mockedGuardar).toHaveBeenCalledWith('ExponentPushToken[telefono]', {
+      encendido: true,
+      iglesiaIds: ['i1'],
+    });
+  });
+
   it('tries again when the connection comes back, if saving failed', async () => {
     mockedGuardar.mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined);
 

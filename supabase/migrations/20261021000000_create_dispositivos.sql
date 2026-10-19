@@ -17,9 +17,9 @@ create table public.dispositivos (
   token text not null unique,
   encendido boolean not null,
   -- Whoever saved it last with a session; null when it was saved without one.
-  -- Deleting the usuario keeps the phone, which follows its iglesia elegida
-  -- again the next time the app saves it.
-  usuario_id uuid references auth.users (id) on delete set null,
+  -- Deleting the usuario ("Eliminar mi cuenta") deletes it: the app saves the
+  -- phone again with the initial values of a hermano, as on signing out.
+  usuario_id uuid references auth.users (id) on delete cascade,
   actualizado_at timestamptz not null default now()
 );
 
