@@ -80,7 +80,7 @@ select results_eq(
   'an encargado reads the coordinates of their iglesia'
 );
 -- Only the admin of the asociacion places an iglesia on the map
--- (20261025200000_ciudad_y_provincia_de_iglesias.sql).
+-- (20261025400000_ciudad_y_provincia_de_iglesias.sql).
 select is_empty(
   $$ update public.iglesias set latitud = 0, longitud = 0
      where id = '11111111-0000-4000-8000-000000000001' returning id $$,
