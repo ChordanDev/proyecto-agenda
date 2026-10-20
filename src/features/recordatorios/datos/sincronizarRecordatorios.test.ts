@@ -5,7 +5,7 @@ import { getCargosDelUsuario } from '@/features/sesion/datos/getCargosDelUsuario
 
 import { elegirIglesias, type RegistroGuardado } from '../dominio/recordatorios';
 import { guardarDispositivo, getDispositivo } from './dispositivo';
-import { actualizarRecordatorios } from './actualizarRecordatorios';
+import { actualizarRecordatorios, RETRY_DELAYS_MS } from './actualizarRecordatorios';
 import { sincronizarRecordatorios } from './sincronizarRecordatorios';
 import { getTokenDelTelefono } from './telefono';
 
@@ -415,6 +415,60 @@ describe('actualizarRecordatorios', () => {
 
     expect(subscribe).toHaveBeenCalledTimes(1);
     subscribe.mockRestore();
+  });
+
+  it('tries again on its own when the token never came and the phone stays online', async () => {
+    jest.useFakeTimers();
+    const queryClient = newClient();
+    // The phone never answers the first time it is asked for its token.
+    jest.mocked(Notifications.getExpoPushTokenAsync).mockReturnValueOnce(new Promise(() => {}));
+    const { getTokenDelTelefono: realGetToken, TOKEN_TIMEOUT_MS } =
+      jest.requireActual<typeof import('./telefono')>('./telefono');
+    mockedGetToken.mockImplementationOnce(realGetToken);
+
+    try {
+      const primera = actualizarRecordatorios(queryClient);
+      const pedidos = jest.mocked(Notifications.getExpoPushTokenAsync).mock.calls;
+      for (let vuelta = 0; vuelta < 100 && pedidos.length === 0; vuelta++) {
+        await Promise.resolve();
+      }
+      expect(pedidos).toHaveLength(1);
+      await jest.advanceTimersByTimeAsync(TOKEN_TIMEOUT_MS);
+      await primera;
+      expect(mockedGuardar).not.toHaveBeenCalled();
+
+      // The connection never changes: only waiting brings the second sync.
+      await jest.advanceTimersByTimeAsync(RETRY_DELAYS_MS[0]);
+      await jest.runAllTimersAsync();
+
+      expect(mockedGetToken).toHaveBeenCalledTimes(2);
+      expect(mockedGuardar).toHaveBeenCalledTimes(1);
+      expect(mockedGuardar).toHaveBeenCalledWith('ExponentPushToken[telefono]', {
+        encendido: true,
+        iglesiaIds: ['i1'],
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('stops trying on its own once every wait is used up', async () => {
+    jest.useFakeTimers();
+    mockedGuardar.mockRejectedValue(sinConexion());
+
+    try {
+      await actualizarRecordatorios(newClient());
+      for (const delay of RETRY_DELAYS_MS) {
+        await jest.advanceTimersByTimeAsync(delay);
+      }
+      await jest.runAllTimersAsync();
+
+      // The first try and one more per wait, and nothing after the last.
+      expect(mockedGuardar).toHaveBeenCalledTimes(1 + RETRY_DELAYS_MS.length);
+      expect(jest.getTimerCount()).toBe(0);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('lets Ajustes read the registro again, whatever the failure', async () => {

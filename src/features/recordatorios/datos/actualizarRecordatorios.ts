@@ -10,10 +10,24 @@ import type * as Telefono from './telefono';
  * when it already has the permiso. Never asks for it. A failure of the
  * connection, such as signing out offline, tries again once the connection
  * comes back: until then the phone would keep the iglesias of whoever used it.
+ * A phone that still looks online, such as one whose push token never came,
+ * also tries again after each of the RETRY_DELAYS_MS, since its connection
+ * may never change.
  * Any other failure (no EAS projectId, a policy that rejects the phone) is not
  * fixed by the connection: Ajustes shows it when it reads the registro again.
  */
-export async function actualizarRecordatorios(queryClient: QueryClient): Promise<void> {
+export function actualizarRecordatorios(queryClient: QueryClient): Promise<void> {
+  return actualizar(queryClient, 0);
+}
+
+/**
+ * How long a phone that looks online waits before each new try, longer each
+ * time. Once they are used up, only the connection coming back or another
+ * change tries again.
+ */
+export const RETRY_DELAYS_MS: readonly number[] = [30_000, 60_000, 120_000, 240_000];
+
+async function actualizar(queryClient: QueryClient, retries: number): Promise<void> {
   // Only the latest change is worth trying again.
   stopWaitingForConnection?.();
   stopWaitingForConnection = null;
@@ -25,7 +39,7 @@ export async function actualizarRecordatorios(queryClient: QueryClient): Promise
     }
   } catch (error) {
     if (esFallaDeConexion(error)) {
-      waitForConnection(queryClient);
+      waitForConnection(queryClient, retries);
     }
   }
   await queryClient.invalidateQueries({ queryKey: registroQueryKey });
@@ -50,12 +64,27 @@ function loadSincronizacion() {
 
 let stopWaitingForConnection: (() => void) | null = null;
 
-function waitForConnection(queryClient: QueryClient) {
+function waitForConnection(queryClient: QueryClient, retries: number) {
   const unsubscribe = onlineManager.subscribe((online) => {
     if (!online) return;
-    unsubscribe();
-    stopWaitingForConnection = null;
+    stop();
     void actualizarRecordatorios(queryClient);
   });
-  stopWaitingForConnection = unsubscribe;
+
+  // The online event only comes when the connection changes.
+  const delay = onlineManager.isOnline() ? RETRY_DELAYS_MS[retries] : undefined;
+  const timer =
+    delay === undefined
+      ? undefined
+      : setTimeout(() => {
+          stop();
+          void actualizar(queryClient, retries + 1);
+        }, delay);
+
+  function stop() {
+    unsubscribe();
+    clearTimeout(timer);
+    stopWaitingForConnection = null;
+  }
+  stopWaitingForConnection = stop;
 }
