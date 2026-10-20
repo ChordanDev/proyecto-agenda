@@ -361,6 +361,26 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"recibos_pendientes": {
+                  Row: {
+                    "enviado_at": string,"ticket": string,"token": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "enviado_at"?: string,"ticket": string,"token": string
+                  }
+                  Update: {
+                    "enviado_at"?: string,"ticket"?: string,"token"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "recibos_pendientes_token_fkey"
+      columns: ["token"]
+isOneToOne: false
+      referencedRelation: "dispositivos"
+      referencedColumns: ["token"]
+    }
+                  ]
                 }
           }
           Views: {
