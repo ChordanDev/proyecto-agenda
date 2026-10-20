@@ -42,8 +42,17 @@ function toPermiso({ granted, canAskAgain }: { granted: boolean; canAskAgain: bo
 }
 
 /**
+ * How long the phone can take to give its push token. Getting one goes through
+ * the push service of the phone and the Expo servers; past half a minute,
+ * nothing is coming, as with a request to Supabase.
+ */
+export const TOKEN_TIMEOUT_MS = 30_000;
+
+/**
  * The Expo push token of this phone, which identifies it and works as its
- * secret. It needs the permiso and the EAS project of the app.
+ * secret. It needs the permiso and the EAS project of the app. A token that
+ * never comes fails as a lost connection does, so the syncs waiting behind
+ * this one can run and the phone tries again once the connection comes back.
  */
 export async function getTokenDelTelefono(): Promise<string> {
   const projectId: unknown =
@@ -53,6 +62,24 @@ export async function getTokenDelTelefono(): Promise<string> {
     throw new Error('The app has no EAS projectId: run `eas init` to get a push token.');
   }
 
-  const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
-  return data;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      reject(
+        new TypeError(
+          `Network request failed: no push token in ${TOKEN_TIMEOUT_MS / 1000} seconds`,
+        ),
+      );
+    }, TOKEN_TIMEOUT_MS);
+  });
+
+  try {
+    const { data } = await Promise.race([
+      Notifications.getExpoPushTokenAsync({ projectId }),
+      timeout,
+    ]);
+    return data;
+  } finally {
+    clearTimeout(timer);
+  }
 }

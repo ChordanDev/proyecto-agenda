@@ -1,17 +1,19 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-import { getPermiso, pedirPermiso } from './telefono';
+import { esFallaDeConexion } from '../dominio/recordatorios';
+import { getPermiso, getTokenDelTelefono, pedirPermiso, TOKEN_TIMEOUT_MS } from './telefono';
 
 jest.mock('expo-notifications', () => ({
   AndroidImportance: { DEFAULT: 3 },
   getPermissionsAsync: jest.fn(),
   requestPermissionsAsync: jest.fn(),
   setNotificationChannelAsync: jest.fn(),
+  getExpoPushTokenAsync: jest.fn(),
 }));
 
 jest.mock('react-native', () => ({ Platform: { OS: 'android' } }));
-jest.mock('expo-constants', () => ({}));
+jest.mock('expo-constants', () => ({ easConfig: { projectId: 'proyecto' } }));
 
 const mocked = jest.mocked(Notifications);
 
@@ -78,5 +80,56 @@ describe('pedirPermiso', () => {
     await expect(pedirPermiso()).resolves.toBe('denegado');
 
     expect(mocked.setNotificationChannelAsync).not.toHaveBeenCalled();
+  });
+});
+
+describe('getTokenDelTelefono', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('returns the token of the phone', async () => {
+    mocked.getExpoPushTokenAsync.mockResolvedValue({
+      type: 'expo',
+      data: 'ExponentPushToken[telefono]',
+    });
+
+    await expect(getTokenDelTelefono()).resolves.toBe('ExponentPushToken[telefono]');
+    expect(mocked.getExpoPushTokenAsync).toHaveBeenCalledWith({ projectId: 'proyecto' });
+  });
+
+  it('fails for lack of connection when the token never comes', async () => {
+    jest.useFakeTimers();
+    mocked.getExpoPushTokenAsync.mockReturnValue(new Promise(() => {}));
+
+    const token = getTokenDelTelefono();
+    const error = token.catch((caught: unknown) => caught);
+    await jest.advanceTimersByTimeAsync(TOKEN_TIMEOUT_MS);
+
+    expect(esFallaDeConexion(await error)).toBe(true);
+  });
+
+  it('keeps waiting until the time is up', async () => {
+    jest.useFakeTimers();
+    let settled = false;
+    mocked.getExpoPushTokenAsync.mockReturnValue(new Promise(() => {}));
+
+    getTokenDelTelefono()
+      .catch(() => undefined)
+      .finally(() => {
+        settled = true;
+      });
+    await jest.advanceTimersByTimeAsync(TOKEN_TIMEOUT_MS - 1);
+
+    expect(settled).toBe(false);
+  });
+
+  it('leaves no timer behind once the token came', async () => {
+    jest.useFakeTimers();
+    mocked.getExpoPushTokenAsync.mockResolvedValue({ type: 'expo', data: 'ExponentPushToken[t]' });
+
+    await getTokenDelTelefono();
+
+    expect(jest.getTimerCount()).toBe(0);
   });
 });
