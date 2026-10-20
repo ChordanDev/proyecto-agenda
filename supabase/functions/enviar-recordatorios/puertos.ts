@@ -180,6 +180,7 @@ export function crearPuertos({
             .select(
               'token, dispositivos_iglesias (iglesias (id, distrito_id, de_baja, distritos (asociacion_id)))',
             )
+            .eq('encendido', true)
             .order('id')
             .range(desde, hasta),
         'dispositivos',
