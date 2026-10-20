@@ -471,6 +471,30 @@ describe('actualizarRecordatorios', () => {
     }
   });
 
+  it('tries again only the latest of two changes that failed together', async () => {
+    jest.useFakeTimers();
+    mockedGuardar
+      .mockRejectedValueOnce(sinConexion())
+      .mockRejectedValueOnce(sinConexion())
+      .mockResolvedValue(undefined);
+
+    try {
+      const queryClient = newClient();
+      // The second change comes while the first is still saving.
+      await Promise.all([
+        actualizarRecordatorios(queryClient),
+        actualizarRecordatorios(queryClient),
+      ]);
+      expect(mockedGuardar).toHaveBeenCalledTimes(2);
+      await jest.advanceTimersByTimeAsync(RETRY_DELAYS_MS[0]);
+      await jest.runAllTimersAsync();
+
+      expect(mockedGuardar).toHaveBeenCalledTimes(3);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('lets Ajustes read the registro again, whatever the failure', async () => {
     mockedGuardar.mockRejectedValueOnce(new Error('The app has no EAS projectId'));
     const queryClient = newClient();

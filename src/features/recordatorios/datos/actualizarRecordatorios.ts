@@ -65,6 +65,9 @@ function loadSincronizacion() {
 let stopWaitingForConnection: (() => void) | null = null;
 
 function waitForConnection(queryClient: QueryClient, retries: number) {
+  // One wait at a time: trying again syncs whatever changed, so it covers the change that failed before this one.
+  stopWaitingForConnection?.();
+
   const unsubscribe = onlineManager.subscribe((online) => {
     if (!online) return;
     stop();
