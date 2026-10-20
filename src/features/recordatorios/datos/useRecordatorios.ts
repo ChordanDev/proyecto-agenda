@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { AppState, Linking } from 'react-native';
 
+import { sesionQueryOptions } from '@/features/sesion/datos/sesionQuery';
 import { useSesion } from '@/features/sesion/datos/useSesion';
 
 import {
@@ -46,8 +47,20 @@ export function useRecordatorios() {
   });
 
   const guardar = useMutation({
-    mutationFn: (cambio: CambioDeRegistro) => sincronizarRecordatorios(queryClient, cambio),
-    onSuccess: (estado) => queryClient.setQueryData([...registroQueryKey, hasSesion], estado),
+    mutationFn: async (cambio: CambioDeRegistro) => {
+      const sesion = queryClient.getQueryData(sesionQueryOptions.queryKey);
+      return { sesion, estado: await sincronizarRecordatorios(queryClient, cambio) };
+    },
+    // The estado was read with the session there was when saving started. If
+    // the session changed meanwhile, it belongs to whoever left: read the
+    // registro again for the session there is now.
+    onSuccess: ({ sesion, estado }) => {
+      if (queryClient.getQueryData(sesionQueryOptions.queryKey) === sesion) {
+        queryClient.setQueryData([...registroQueryKey, sesion], estado);
+      } else {
+        void queryClient.invalidateQueries({ queryKey: registroQueryKey });
+      }
+    },
   });
 
   // Asks for the permiso; once given, the registro is read and saved with its
