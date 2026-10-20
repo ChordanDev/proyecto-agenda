@@ -46,8 +46,8 @@ Resumen de lo decidido en el issue #15.
 - Arreglos urgentes: son un pull request más a `main` y se publican etiquetando `main`.
 
 ### Integración continua
-- Las verificaciones corren solo en los pull requests a `main` que no son borrador; los pull requests hacia una rama de funcionalidad no las corren, para ahorrar minutos de GitHub Actions.
-- En cada pull request a `main` corren cuatro verificaciones, todas obligatorias: tipos (`tsc`), estilo (ESLint y Prettier), pruebas del dominio y pruebas de permisos sobre un Supabase local con las migraciones aplicadas desde cero.
+- Las verificaciones corren en todo pull request que no es borrador, sea cual sea su rama de destino.
+- En cada pull request corren cuatro verificaciones, todas obligatorias: tipos (`tsc`), estilo (ESLint y Prettier), pruebas del dominio y pruebas de permisos sobre un Supabase local con las migraciones aplicadas desde cero.
 - Las migraciones se aplican solas al Supabase de desarrollo al fusionar a `main`. A producción se aplican a mano, como paso de la publicación de cada versión.
 - Los secretos van en GitHub y en EAS, nunca en un archivo versionado.
 

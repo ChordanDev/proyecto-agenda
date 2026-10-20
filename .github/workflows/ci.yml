@@ -2,12 +2,10 @@ name: CI
 
 # The four checks below are required to merge a pull request into main.
 # Their names are referenced by the branch protection rule: do not rename them.
-# They run only on pull requests to main, the integration branch: pull requests
-# into a feature branch are not checked, the feature's pull request to main is.
-# Draft pull requests are skipped until they are marked ready for review.
+# They run on every pull request, whatever its base, so stacked pull requests
+# get checked before their parent is merged. Draft pull requests are skipped until they are marked ready for review.
 on:
   pull_request:
-    branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
