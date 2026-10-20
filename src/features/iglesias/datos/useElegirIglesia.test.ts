@@ -4,7 +4,7 @@ import { createElement } from 'react';
 // this test to renderHook from @testing-library/react-native.
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
-import { actualizarRecordatorios } from '@/features/recordatorios/datos/sincronizarRecordatorios';
+import * as trigger from '@/features/recordatorios/datos/actualizarRecordatorios';
 
 import { getIglesiaElegida } from './iglesiaElegida';
 import { useElegirIglesia } from './useElegirIglesia';
@@ -12,11 +12,9 @@ import { useElegirIglesia } from './useElegirIglesia';
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
-jest.mock('@/features/recordatorios/datos/sincronizarRecordatorios', () => ({
-  actualizarRecordatorios: jest.fn(),
-}));
-
-const mockedActualizar = jest.mocked(actualizarRecordatorios);
+// The recordatorios are not mocked as a module: loading the hook must not load
+// the native modules of the notifications. Each test replaces the trigger.
+const mockedActualizar = jest.spyOn(trigger, 'actualizarRecordatorios');
 
 const renderers: ReactTestRenderer[] = [];
 
@@ -45,6 +43,7 @@ const newClient = () =>
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockedActualizar.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -52,6 +51,18 @@ afterEach(() => {
 });
 
 describe('useElegirIglesia', () => {
+  it('loads none of the native modules of the notifications', async () => {
+    const elegir = renderHook(newClient(), useElegirIglesia);
+
+    await act(async () => {
+      await elegir().mutateAsync('iglesia-2');
+    });
+
+    const loaded = Object.keys(require.cache);
+    expect(loaded.filter((path) => /expo-notifications|expo-constants/.test(path))).toEqual([]);
+    expect(mockedActualizar).toHaveBeenCalledTimes(1);
+  });
+
   it('lets the recordatorios follow the new iglesia elegida', async () => {
     const queryClient = newClient();
     let elegidaAlActualizar: string | null = null;

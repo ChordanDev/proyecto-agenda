@@ -6,7 +6,7 @@ import { createElement } from 'react';
 // these tests to renderHook from @testing-library/react-native.
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
-import { actualizarRecordatorios } from '@/features/recordatorios/datos/sincronizarRecordatorios';
+import { actualizarRecordatorios } from '@/features/recordatorios/datos/actualizarRecordatorios';
 import { persistOptions } from '@/shared/queryClient';
 
 import { deleteOwnUsuario } from './deleteOwnUsuario';
@@ -21,7 +21,7 @@ jest.mock('@react-native-community/netinfo', () =>
 );
 jest.mock('./signOut', () => ({ signOut: jest.fn() }));
 jest.mock('./deleteOwnUsuario', () => ({ deleteOwnUsuario: jest.fn() }));
-jest.mock('@/features/recordatorios/datos/sincronizarRecordatorios', () => ({
+jest.mock('@/features/recordatorios/datos/actualizarRecordatorios', () => ({
   actualizarRecordatorios: jest.fn(),
 }));
 

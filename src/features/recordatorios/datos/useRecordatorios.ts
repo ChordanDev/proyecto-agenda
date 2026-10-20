@@ -5,11 +5,8 @@ import { AppState, Linking } from 'react-native';
 import { sesionQueryOptions } from '@/features/sesion/datos/sesionQuery';
 import { useSesion } from '@/features/sesion/datos/useSesion';
 
-import {
-  registroQueryKey,
-  sincronizarRecordatorios,
-  type CambioDeRegistro,
-} from './sincronizarRecordatorios';
+import { registroQueryKey } from './registroQueryKey';
+import { sincronizarRecordatorios, type CambioDeRegistro } from './sincronizarRecordatorios';
 import { getPermiso, pedirPermiso, type Permiso } from './telefono';
 
 const permisoQueryKey = ['recordatorios', 'permiso'] as const;
