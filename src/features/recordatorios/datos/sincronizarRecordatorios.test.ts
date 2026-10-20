@@ -227,10 +227,13 @@ describe('sincronizarRecordatorios', () => {
       const colgada = sincronizarRecordatorios(queryClient);
       const siguiente = sincronizarRecordatorios(queryClient);
       const fallo = expect(colgada).rejects.toThrow('Network request failed');
-      // The clock starts once the sync asks the phone for its token.
-      while (jest.mocked(Notifications.getExpoPushTokenAsync).mock.calls.length === 0) {
+      // The clock starts once the sync asks the phone for its token. A sync
+      // that never gets there fails here instead of hanging the run.
+      const pedidos = jest.mocked(Notifications.getExpoPushTokenAsync).mock.calls;
+      for (let vuelta = 0; vuelta < 100 && pedidos.length === 0; vuelta++) {
         await Promise.resolve();
       }
+      expect(pedidos).toHaveLength(1);
       await jest.advanceTimersByTimeAsync(TOKEN_TIMEOUT_MS);
 
       await fallo;

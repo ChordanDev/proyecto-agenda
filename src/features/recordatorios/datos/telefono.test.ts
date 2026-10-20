@@ -124,6 +124,15 @@ describe('getTokenDelTelefono', () => {
     expect(settled).toBe(false);
   });
 
+  it('passes on, as it is, a failure that comes before the time is up', async () => {
+    jest.useFakeTimers();
+    const sinPermiso = new Error('No permission to get a push token');
+    mocked.getExpoPushTokenAsync.mockRejectedValue(sinPermiso);
+
+    await expect(getTokenDelTelefono()).rejects.toBe(sinPermiso);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
   it('leaves no timer behind once the token came', async () => {
     jest.useFakeTimers();
     mocked.getExpoPushTokenAsync.mockResolvedValue({ type: 'expo', data: 'ExponentPushToken[t]' });
