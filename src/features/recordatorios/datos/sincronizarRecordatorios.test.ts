@@ -410,11 +410,21 @@ describe('actualizarRecordatorios', () => {
   it('waits for the connection when the failure is one of the connection', async () => {
     mockedGuardar.mockRejectedValueOnce(sinConexion()).mockResolvedValue(undefined);
     const subscribe = jest.spyOn(onlineManager, 'subscribe');
+    // Fake timers, so the wait of a phone that stays online is not left behind.
+    jest.useFakeTimers();
 
-    await actualizarRecordatorios(newClient());
+    try {
+      const actualizando = actualizarRecordatorios(newClient());
+      for (let vuelta = 0; vuelta < 20; vuelta++) {
+        await jest.advanceTimersByTimeAsync(0);
+      }
+      await actualizando;
 
-    expect(subscribe).toHaveBeenCalledTimes(1);
-    subscribe.mockRestore();
+      expect(subscribe).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+      subscribe.mockRestore();
+    }
   });
 
   it('tries again on its own when the token never came and the phone stays online', async () => {
@@ -452,18 +462,34 @@ describe('actualizarRecordatorios', () => {
     }
   });
 
-  it('stops trying on its own once every wait is used up', async () => {
+  it('waits 30 seconds, then 1, 2 and 4 minutes between tries, and stops', async () => {
     jest.useFakeTimers();
     mockedGuardar.mockRejectedValue(sinConexion());
+    // Runs what is due now, such as the notifications of the queries, without
+    // moving the clock.
+    const settle = async () => {
+      for (let vuelta = 0; vuelta < 20; vuelta++) {
+        await jest.advanceTimersByTimeAsync(0);
+      }
+    };
 
     try {
       await actualizarRecordatorios(newClient());
-      for (const delay of RETRY_DELAYS_MS) {
-        await jest.advanceTimersByTimeAsync(delay);
+      await settle();
+      let tries = 1;
+      for (const delay of [30_000, 60_000, 120_000, 240_000]) {
+        await jest.advanceTimersByTimeAsync(delay - 1);
+        await settle();
+        expect(mockedGuardar).toHaveBeenCalledTimes(tries);
+
+        await jest.advanceTimersByTimeAsync(1);
+        await settle();
+        tries += 1;
+        expect(mockedGuardar).toHaveBeenCalledTimes(tries);
       }
       await jest.runAllTimersAsync();
 
-      // The first try and one more per wait, and nothing after the last.
+      // Nothing after the last wait.
       expect(mockedGuardar).toHaveBeenCalledTimes(1 + RETRY_DELAYS_MS.length);
       expect(jest.getTimerCount()).toBe(0);
     } finally {
