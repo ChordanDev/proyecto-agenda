@@ -46,13 +46,18 @@ export const registroQueryKey = ['recordatorios', 'registro'] as const;
  * as the rest of the app.
  *
  * One runs at a time, in the order they were asked for, so the latest wins: a
- * sync started with a session cannot save after the one of signing out.
+ * sync started with a session cannot save after the one of signing out. A
+ * `cambio` belongs to the session there was when it was asked for: if another
+ * one is there by the time it runs, it is dropped and the phone just syncs.
  */
 export function sincronizarRecordatorios(
   queryClient: QueryClient,
   cambio?: CambioDeRegistro,
 ): Promise<EstadoDeRecordatorios> {
-  const sincronizacion = ultimaSincronizacion.then(() => sincronizar(queryClient, cambio));
+  const sesionDelCambio = queryClient.getQueryData<boolean>(sesionQueryOptions.queryKey);
+  const sincronizacion = ultimaSincronizacion.then(() =>
+    sincronizar(queryClient, cambio, sesionDelCambio),
+  );
   // A failed sync does not stop the next one.
   ultimaSincronizacion = sincronizacion.catch(() => undefined);
   return sincronizacion;
@@ -62,7 +67,9 @@ let ultimaSincronizacion: Promise<unknown> = Promise.resolve();
 
 async function sincronizar(
   queryClient: QueryClient,
-  cambio?: CambioDeRegistro,
+  cambio: CambioDeRegistro | undefined,
+  // Unknown when the session had not been read yet: there is nothing to compare.
+  sesionDelCambio: boolean | undefined,
 ): Promise<EstadoDeRecordatorios> {
   const token = await getTokenDelTelefono();
   const hasSesion = await queryClient.fetchQuery(sesionQueryOptions);
@@ -83,7 +90,8 @@ async function sincronizar(
   }
 
   const deseado = registroDeseado({ cargos, iglesiaElegidaId, guardado, iglesias });
-  const registro = cambio === undefined ? deseado : cambio(deseado);
+  const cambioVigente = sesionDelCambio === undefined || sesionDelCambio === hasSesion;
+  const registro = cambio === undefined || !cambioVigente ? deseado : cambio(deseado);
 
   if (
     guardado === null ||
