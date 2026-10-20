@@ -13,10 +13,11 @@ const ANDROID_CHANNEL_ID = 'recordatorios';
 
 /**
  * Reads the permiso without asking. It also creates the channel, which a phone
- * that granted the permiso without asking would otherwise never get.
+ * that granted the permiso without asking would otherwise never get. A failed
+ * channel does not hide the permiso: the next read tries again.
  */
 export async function getPermiso(): Promise<Permiso> {
-  await createAndroidChannel();
+  await createAndroidChannel().catch(() => undefined);
   return toPermiso(await Notifications.getPermissionsAsync());
 }
 

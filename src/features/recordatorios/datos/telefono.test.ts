@@ -44,6 +44,12 @@ describe('getPermiso', () => {
     );
   });
 
+  it('still returns the permiso when creating the channel fails', async () => {
+    mocked.setNotificationChannelAsync.mockRejectedValue(new Error('channel failed'));
+
+    await expect(getPermiso()).resolves.toBe('concedido');
+  });
+
   it('creates no channel outside Android', async () => {
     Platform.OS = 'ios';
 
