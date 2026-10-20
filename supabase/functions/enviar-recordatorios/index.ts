@@ -7,7 +7,8 @@
 // pg_cron calls it every hour (migration 20261022300000): the domain decides
 // which asociaciones are at their 20 h. Each run also reads the Expo receipts
 // of the avisos sent at least 15 minutes before, and turns off the phones they
-// report as uninstalled (issue #211). Only that call may run it: it carries
+// report as uninstalled (issue #211); a failure there keeps the answer of the
+// sending (ronda.ts). Only that call may run it: it carries
 // the value Vault keeps as `service_role_key`, which must be exactly the value
 // of SUPABASE_SERVICE_ROLE_KEY here: the legacy service_role key, a JWT that
 // starts with `eyJ`, never a new secret key (`sb_secret_...`), which gets a
@@ -31,6 +32,7 @@ import {
 import { esLlamadaDelCron } from './autorizacion.ts';
 import { crearConsultaDeRecibos, crearEnviador } from './expo.ts';
 import { crearPuertos } from './puertos.ts';
+import { correrRonda } from './ronda.ts';
 
 function responder(estado: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -72,17 +74,13 @@ Deno.serve(async (request) => {
       }),
     });
 
-    const resultado = await enviarRecordatorios(puertos);
+    // Only counts reach the logs, never a token or a text (ronda.ts).
+    const { estado, body } = await correrRonda({
+      enviar: () => enviarRecordatorios(puertos),
+      revisarRecibos: () => revisarRecibos(puertos),
+    });
 
-    // Only counts reach the logs, never a token or a text. The sending is
-    // logged before the receipts are read, so a failure there does not hide it.
-    console.log('enviar-recordatorios', resultado);
-
-    const recibos = await revisarRecibos(puertos);
-
-    console.log('enviar-recordatorios recibos', recibos);
-
-    return responder(resultado.fallidos > 0 ? 502 : 200, { ...resultado, recibos });
+    return responder(estado, body);
   } catch (error) {
     console.error('enviar-recordatorios failed', error instanceof Error ? error.message : error);
     return responder(500, { falla: 'error_servidor' });
