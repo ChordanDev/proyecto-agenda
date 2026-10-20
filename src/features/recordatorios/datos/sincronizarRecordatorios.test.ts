@@ -2,9 +2,10 @@ import { onlineManager, QueryClient } from '@tanstack/react-query';
 
 import { getCargosDelUsuario } from '@/features/sesion/datos/getCargosDelUsuario';
 
-import { elegirIglesias } from '../dominio/recordatorios';
+import { elegirIglesias, type RegistroGuardado } from '../dominio/recordatorios';
 import { guardarDispositivo, getDispositivo } from './dispositivo';
 import { actualizarRecordatorios, sincronizarRecordatorios } from './sincronizarRecordatorios';
+import { getTokenDelTelefono } from './telefono';
 
 jest.mock('./telefono', () => ({
   getPermiso: jest.fn(async () => 'concedido'),
@@ -36,6 +37,7 @@ jest.mock('@/features/sesion/datos/sesionQuery', () => ({
 const mockedGetDispositivo = jest.mocked(getDispositivo);
 const mockedGuardar = jest.mocked(guardarDispositivo);
 const mockedGetCargos = jest.mocked(getCargosDelUsuario);
+const mockedGetToken = jest.mocked(getTokenDelTelefono);
 
 // Without a garbage collection timer, the client does not keep Jest running.
 const newClient = () => new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
@@ -160,6 +162,118 @@ describe('sincronizarRecordatorios', () => {
     expect(estado.modo).toBe('eligiendo');
     expect(estado.opciones).toEqual(['i1', 'i2', 'i3']);
     expect(estado.conBuscador).toBe(true);
+  });
+
+  it('lets the sync of a sign-out win over one that started before it', async () => {
+    const queryClient = newClient();
+    signIn([{ nivel: 'distrito', distritoId: 'd1' }]);
+    // What the server holds for this phone: a pastor's, with none chosen yet.
+    let enServidor: RegistroGuardado | null = {
+      encendido: false,
+      iglesiaIds: [],
+      conUsuario: true,
+      delUsuario: true,
+    };
+    mockedGetDispositivo.mockImplementation(async () => enServidor);
+    // The pastor's save is slow to reach the server; the next one is not.
+    let releasePastor!: () => void;
+    const pastorReleased = new Promise<void>((resolve) => {
+      releasePastor = resolve;
+    });
+    mockedGuardar
+      .mockImplementationOnce(async (_token, registro) => {
+        await pastorReleased;
+        enServidor = { ...registro, conUsuario: true, delUsuario: true };
+      })
+      .mockImplementation(async (_token, registro) => {
+        enServidor = { ...registro, conUsuario: false, delUsuario: false };
+      });
+
+    const delPastor = sincronizarRecordatorios(queryClient, () => elegirIglesias(['i2']));
+    while (mockedGuardar.mock.calls.length === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    // The pastor signs out while their save is on its way.
+    mockHasSesion.current = false;
+    queryClient.setQueryData(['sesion'], false);
+    const delCierre = actualizarRecordatorios(queryClient);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    releasePastor();
+    await Promise.all([delPastor, delCierre]);
+
+    expect(enServidor).toEqual({
+      encendido: true,
+      iglesiaIds: ['i1'],
+      conUsuario: false,
+      delUsuario: false,
+    });
+  });
+
+  it('applies a change asked for under the session there still is', async () => {
+    const queryClient = newClient();
+    signIn([{ nivel: 'distrito', distritoId: 'd1' }]);
+    queryClient.setQueryData(['sesion'], true);
+    mockedGetDispositivo.mockResolvedValue({
+      encendido: false,
+      iglesiaIds: [],
+      conUsuario: true,
+      delUsuario: true,
+    });
+
+    const estado = await sincronizarRecordatorios(queryClient, () => elegirIglesias(['i2']));
+
+    expect(estado.registro).toEqual({ encendido: true, iglesiaIds: ['i2'] });
+    expect(mockedGuardar).toHaveBeenCalledWith('ExponentPushToken[telefono]', {
+      encendido: true,
+      iglesiaIds: ['i2'],
+    });
+  });
+
+  it('drops a change asked for under a session that is gone by the time it runs', async () => {
+    const queryClient = newClient();
+    signIn([{ nivel: 'distrito', distritoId: 'd1' }]);
+    queryClient.setQueryData(['sesion'], true);
+    // What the server holds for this phone: the pastor's, on i2.
+    let enServidor: RegistroGuardado | null = {
+      encendido: true,
+      iglesiaIds: ['i2'],
+      conUsuario: true,
+      delUsuario: true,
+    };
+    mockedGetDispositivo.mockImplementation(async () => enServidor);
+    mockedGuardar.mockImplementation(async (_token, registro) => {
+      const conUsuario = mockHasSesion.current;
+      enServidor = { ...registro, conUsuario, delUsuario: conUsuario };
+    });
+    // An earlier sync stays on its way while the pastor taps the switch.
+    let releaseToken!: () => void;
+    const tokenReleased = new Promise<void>((resolve) => {
+      releaseToken = resolve;
+    });
+    mockedGetToken.mockImplementationOnce(async () => {
+      await tokenReleased;
+      return 'ExponentPushToken[telefono]';
+    });
+
+    const anterior = sincronizarRecordatorios(queryClient);
+    const delInterruptor = sincronizarRecordatorios(queryClient, (actual) => ({
+      ...actual,
+      encendido: !actual.encendido,
+    }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    // The pastor signs out before the switch is applied.
+    mockHasSesion.current = false;
+    queryClient.setQueryData(['sesion'], false);
+    const delCierre = actualizarRecordatorios(queryClient);
+    releaseToken();
+    await Promise.all([anterior, delInterruptor, delCierre]);
+
+    expect(enServidor).toEqual({
+      encendido: true,
+      iglesiaIds: ['i1'],
+      conUsuario: false,
+      delUsuario: false,
+    });
   });
 
   it('offers a hermano nothing to choose', async () => {
