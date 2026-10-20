@@ -10,6 +10,7 @@ import { sesionQueryOptions } from '@/features/sesion/datos/sesionQuery';
 
 import {
   cambioQuienLoUsa,
+  esFallaDeConexion,
   iglesiaElegidaVigente,
   iglesiasQuePuedeSeguir,
   mismoRegistro,
@@ -88,9 +89,11 @@ export async function sincronizarRecordatorios(
 
 /**
  * Lets the phone follow whatever changed (the iglesia elegida, the session),
- * when it already has the permiso. Never asks for it. A failure, such as
- * signing out without a connection, tries again once the connection comes
- * back: until then the phone would keep the iglesias of whoever used it.
+ * when it already has the permiso. Never asks for it. A failure of the
+ * connection, such as signing out offline, tries again once the connection
+ * comes back: until then the phone would keep the iglesias of whoever used it.
+ * Any other failure (no EAS projectId, a policy that rejects the phone) is not
+ * fixed by the connection: Ajustes shows it when it reads the registro again.
  */
 export async function actualizarRecordatorios(queryClient: QueryClient): Promise<void> {
   // Only the latest change is worth trying again.
@@ -101,8 +104,10 @@ export async function actualizarRecordatorios(queryClient: QueryClient): Promise
     if ((await getPermiso()) === 'concedido') {
       await sincronizarRecordatorios(queryClient);
     }
-  } catch {
-    waitForConnection(queryClient);
+  } catch (error) {
+    if (esFallaDeConexion(error)) {
+      waitForConnection(queryClient);
+    }
   }
   await queryClient.invalidateQueries({ queryKey: registroQueryKey });
 }

@@ -163,6 +163,20 @@ export function mismoRegistro(a: Registro, b: Registro): boolean {
   );
 }
 
+// What fetch says when the request never reached the server: PostgREST and
+// fetchWithTimeout pass it on in their message, and supabase-js Functions say
+// it with their own words.
+const SIN_CONEXION_PATTERN =
+  /network request failed|failed to fetch|network error|failed to send a request/i;
+
+/**
+ * Whether bringing the recordatorios up to date failed for lack of connection,
+ * the only failure that trying again once the connection comes back can fix.
+ */
+export function esFallaDeConexion(error: unknown): boolean {
+  return error instanceof Error && SIN_CONEXION_PATTERN.test(error.message);
+}
+
 function siguiendoIglesiaElegida(iglesiaElegidaId: string | null): string[] {
   return iglesiaElegidaId === null ? [] : [iglesiaElegidaId];
 }
