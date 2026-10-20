@@ -1,4 +1,5 @@
 import { onlineManager, QueryClient } from '@tanstack/react-query';
+import * as Notifications from 'expo-notifications';
 
 import { getCargosDelUsuario } from '@/features/sesion/datos/getCargosDelUsuario';
 
@@ -12,6 +13,9 @@ jest.mock('./telefono', () => ({
   getPermiso: jest.fn(async () => 'concedido'),
   getTokenDelTelefono: jest.fn(async () => 'ExponentPushToken[telefono]'),
 }));
+// Only for the real getTokenDelTelefono, which a test borrows.
+jest.mock('expo-notifications', () => ({ getExpoPushTokenAsync: jest.fn() }));
+jest.mock('expo-constants', () => ({ easConfig: { projectId: 'proyecto' } }));
 jest.mock('./dispositivo', () => ({
   getDispositivo: jest.fn(),
   guardarDispositivo: jest.fn(),
@@ -208,6 +212,40 @@ describe('sincronizarRecordatorios', () => {
       conUsuario: false,
       delUsuario: false,
     });
+  });
+
+  it('does not let a phone that never gives its token block the next sync', async () => {
+    jest.useFakeTimers();
+    const queryClient = newClient();
+    // The phone never answers the first time it is asked for its token.
+    jest.mocked(Notifications.getExpoPushTokenAsync).mockReturnValueOnce(new Promise(() => {}));
+    const { getTokenDelTelefono: realGetToken, TOKEN_TIMEOUT_MS } =
+      jest.requireActual<typeof import('./telefono')>('./telefono');
+    mockedGetToken.mockImplementationOnce(realGetToken);
+
+    try {
+      const colgada = sincronizarRecordatorios(queryClient);
+      const siguiente = sincronizarRecordatorios(queryClient);
+      const fallo = expect(colgada).rejects.toThrow('Network request failed');
+      // The clock starts once the sync asks the phone for its token. A sync
+      // that never gets there fails here instead of hanging the run.
+      const pedidos = jest.mocked(Notifications.getExpoPushTokenAsync).mock.calls;
+      for (let vuelta = 0; vuelta < 100 && pedidos.length === 0; vuelta++) {
+        await Promise.resolve();
+      }
+      expect(pedidos).toHaveLength(1);
+      await jest.advanceTimersByTimeAsync(TOKEN_TIMEOUT_MS);
+
+      await fallo;
+      // The queries of the next sync notify through timers too.
+      await jest.runAllTimersAsync();
+      await expect(siguiente).resolves.toMatchObject({ modo: 'iglesia-elegida' });
+      // Only the next sync had a token to save the phone with.
+      expect(mockedGuardar).toHaveBeenCalledTimes(1);
+      expect(mockedGuardar).toHaveBeenCalledWith('ExponentPushToken[telefono]', expect.anything());
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('applies a change asked for under the session there still is', async () => {
