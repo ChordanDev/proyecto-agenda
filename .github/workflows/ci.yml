@@ -2,10 +2,13 @@ name: CI
 
 # The four checks below are required to merge a pull request into main.
 # Their names are referenced by the branch protection rule: do not rename them.
-# They run on every pull request, whatever its base, so stacked pull requests
-# get checked before their parent is merged.
+# They run only on pull requests to main, the integration branch: pull requests
+# into a feature branch are not checked, the feature's pull request to main is.
+# Draft pull requests are skipped until they are marked ready for review.
 on:
   pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
   group: ci-${{ github.event.pull_request.number }}
@@ -17,6 +20,7 @@ permissions:
 jobs:
   types:
     name: Types
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,6 +52,7 @@ jobs:
 
   style:
     name: Style
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -61,6 +66,7 @@ jobs:
 
   domain-tests:
     name: Domain tests
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -73,6 +79,7 @@ jobs:
 
   permission-tests:
     name: Permission tests
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
