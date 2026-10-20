@@ -1,6 +1,7 @@
 import {
   cambioQuienLoUsa,
   elegirIglesias,
+  esFallaDeConexion,
   iglesiaElegidaVigente,
   iglesiasQuePuedeSeguir,
   mismoRegistro,
@@ -257,5 +258,42 @@ describe('iglesiaElegidaVigente', () => {
 
   it('keeps nothing when none was chosen', () => {
     expect(iglesiaElegidaVigente(null, conBaja)).toBeNull();
+  });
+});
+
+describe('esFallaDeConexion', () => {
+  it('takes a request that never reached the server as a connection failure', () => {
+    // What the queries throw when PostgREST could not fetch.
+    expect(
+      esFallaDeConexion(new Error('Could not save the phone: TypeError: Network request failed')),
+    ).toBe(true);
+    // What fetchWithTimeout rejects with when the request gets no answer.
+    expect(
+      esFallaDeConexion(new TypeError('Network request failed: no answer in 15 seconds')),
+    ).toBe(true);
+    expect(esFallaDeConexion(new TypeError('Failed to fetch'))).toBe(true);
+    // A FunctionsFetchError of supabase-js.
+    expect(esFallaDeConexion(new Error('Failed to send a request to the Edge Function'))).toBe(
+      true,
+    );
+  });
+
+  it('does not take what a connection cannot fix as a connection failure', () => {
+    expect(
+      esFallaDeConexion(
+        new Error('The app has no EAS projectId: run `eas init` to get a push token.'),
+      ),
+    ).toBe(false);
+    // A 42501 of the base.
+    expect(
+      esFallaDeConexion(
+        new Error('Could not save the phone: permission denied for function guardar_dispositivo'),
+      ),
+    ).toBe(false);
+  });
+
+  it('does not take a value that is not an error as a connection failure', () => {
+    expect(esFallaDeConexion('Network request failed')).toBe(false);
+    expect(esFallaDeConexion(undefined)).toBe(false);
   });
 });

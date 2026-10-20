@@ -56,6 +56,9 @@ beforeEach(() => {
   });
 });
 
+/** What saving the phone throws when the request never reached the server. */
+const sinConexion = () => new Error('Could not save the phone: TypeError: Network request failed');
+
 /** Signs in a usuario with these cargos. */
 function signIn(cargos: Awaited<ReturnType<typeof getCargosDelUsuario>>) {
   mockHasSesion.current = true;
@@ -196,7 +199,7 @@ describe('actualizarRecordatorios', () => {
   });
 
   it('tries again when the connection comes back, if saving failed', async () => {
-    mockedGuardar.mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined);
+    mockedGuardar.mockRejectedValueOnce(sinConexion()).mockResolvedValue(undefined);
 
     await actualizarRecordatorios(newClient());
     expect(mockedGuardar).toHaveBeenCalledTimes(1);
@@ -213,7 +216,7 @@ describe('actualizarRecordatorios', () => {
   });
 
   it('tries again only once, however many times the connection comes back', async () => {
-    mockedGuardar.mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined);
+    mockedGuardar.mockRejectedValueOnce(sinConexion()).mockResolvedValue(undefined);
 
     await actualizarRecordatorios(newClient());
     onlineManager.setOnline(false);
@@ -231,5 +234,43 @@ describe('actualizarRecordatorios', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(mockedGuardar).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not try again a failure the connection cannot fix', async () => {
+    mockedGuardar
+      .mockRejectedValueOnce(
+        new Error('Could not save the phone: permission denied for function guardar_dispositivo'),
+      )
+      .mockResolvedValue(undefined);
+    const subscribe = jest.spyOn(onlineManager, 'subscribe');
+
+    await actualizarRecordatorios(newClient());
+    onlineManager.setOnline(false);
+    onlineManager.setOnline(true);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(subscribe).not.toHaveBeenCalled();
+    expect(mockedGuardar).toHaveBeenCalledTimes(1);
+    subscribe.mockRestore();
+  });
+
+  it('waits for the connection when the failure is one of the connection', async () => {
+    mockedGuardar.mockRejectedValueOnce(sinConexion()).mockResolvedValue(undefined);
+    const subscribe = jest.spyOn(onlineManager, 'subscribe');
+
+    await actualizarRecordatorios(newClient());
+
+    expect(subscribe).toHaveBeenCalledTimes(1);
+    subscribe.mockRestore();
+  });
+
+  it('lets Ajustes read the registro again, whatever the failure', async () => {
+    mockedGuardar.mockRejectedValueOnce(new Error('The app has no EAS projectId'));
+    const queryClient = newClient();
+    const invalidate = jest.spyOn(queryClient, 'invalidateQueries');
+
+    await expect(actualizarRecordatorios(queryClient)).resolves.toBeUndefined();
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['recordatorios', 'registro'] });
   });
 });
