@@ -60,6 +60,8 @@ describe('leerPropuesta', () => {
       error: expect.stringContaining('de quién es el evento'),
       falta: 'duenio',
     });
+    // The list of duenios is in the instructions of the model: it is not repeated.
+    expect('error' in resultado && resultado.error).not.toContain('i2:');
   });
 
   it('uses the duenio the model names when the cargos cover it', () => {
@@ -74,6 +76,16 @@ describe('leerPropuesta', () => {
   it('never gives a duenio the cargos do not cover', () => {
     expect(leer({ duenio: 'i2' })).toEqual({ error: expect.stringContaining('dueño') });
     expect(leer({ duenio: 'd1' })).toEqual({ error: expect.stringContaining('dueño') });
+  });
+
+  it('points the model to its only duenio, or to the list, without repeating the list', () => {
+    const unico = leer({ duenio: 'i2' });
+    const varios = leer({ duenio: 'otra' }, PASTOR);
+
+    expect('error' in unico && unico.error).toMatch(/null/);
+    expect('error' in unico && unico.error).toContain('Iglesia Central');
+    expect('error' in varios && varios.error).toMatch(/lista/);
+    expect('error' in varios && varios.error).not.toContain('i1:');
   });
 
   it('asks for the enfasis when the mensaje does not say it', () => {

@@ -94,7 +94,10 @@ export type EventoDeChat = {
  * - `tipo`: `repregunta` when the pregunta has to be narrowed (too many
  *   coincidencias) or an evento cannot be proposed until the person says
  *   whose it is or its enfasis; `respuesta` otherwise.
- * - `eventos`: the coincidencias to draw, at most three; empty on a repregunta.
+ * - `eventos`: the coincidencias to draw, at most three; empty when the
+ *   pregunta has to be narrowed. A repregunta for a dato of the propuesta
+ *   keeps them: "¿Qué hay el sábado? Y cargame…" shows the sábado while it
+ *   asks for the enfasis.
  * - `aviso`: "Te quedan 3 consultas por hoy", when few are left.
  * - `borrador`: the evento the asistente proposes, for the app to draw its
  *   card; nothing is saved until the person taps Confirmar. Null when none.
@@ -280,8 +283,29 @@ function describirDia(dia: string): string {
   return `${DIAS[date.getUTCDay()]} ${date.getUTCDate()} de ${MESES[date.getUTCMonth()]} de ${date.getUTCFullYear()}`;
 }
 
-/** What the model is told about proposing eventos, with the duenios it can use. */
-function getInstruccionesDeCarga(duenios: ReturnType<typeof getDueniosDelUsuario>): string[] {
+type Duenios = ReturnType<typeof getDueniosDelUsuario>;
+
+/**
+ * The duenios the model can use: with one, its nombre; with several, the list
+ * of ids. The list goes only when the model has to choose, since an admin can
+ * have hundreds of duenios.
+ */
+function describirDueniosPosibles(duenios: Duenios): string {
+  return duenios.length === 1
+    ? `Los eventos que proponga son de ${duenios[0].nombre}: dejá "duenio" en null.`
+    : `Dueños que puede usar (id: nombre):\n${describirDuenios(duenios)}`;
+}
+
+/**
+ * What the model is told about proposing eventos, with the duenios it can use.
+ * Null duenios means the cargos could not be read: loading waits, not the cargo.
+ */
+function getInstruccionesDeCarga(duenios: Duenios | null): string[] {
+  if (duenios === null) {
+    return [
+      'Ahora no se pueden cargar eventos por el chat: si lo pide, decile que lo intente de nuevo en un rato.',
+    ];
+  }
   if (duenios.length === 0) {
     return ['Esta persona no puede crear eventos: si lo pide, decile que su cargo no lo permite.'];
   }
@@ -290,15 +314,11 @@ function getInstruccionesDeCarga(duenios: ReturnType<typeof getDueniosDelUsuario
     'Antes de proponer, preguntá lo que falte y no lo inventes: el énfasis (Identidad, Liderazgo, Nuevas Generaciones, Discipulado o actividad regular) y, si hay más de un dueño posible y la persona no lo dijo, de quién es el evento.',
     'Proponé un evento por mensaje. Si la persona pide varios, proponé el primero y decile que los demás los pida en otro mensaje.',
     'Por el chat solo se crean eventos. Para editar o borrar uno, indicá que lo haga desde el detalle del evento.',
-    `Dueños que puede usar (id: nombre):\n${describirDuenios(duenios)}`,
+    describirDueniosPosibles(duenios),
   ];
 }
 
-function getInstrucciones(
-  hoy: string,
-  zonaHoraria: string,
-  duenios: ReturnType<typeof getDueniosDelUsuario>,
-): string {
+function getInstrucciones(hoy: string, zonaHoraria: string, duenios: Duenios | null): string {
   return [
     'Sos el asistente del calendario de la iglesia. Respondés en español, breve y claro: te leen personas de todas las edades.',
     'Solo hablás del calendario. Ante cualquier otra cosa respondé que solo podés ayudar con el calendario.',
@@ -445,13 +465,18 @@ function getCausa(error: unknown): string {
 }
 
 /**
- * The evento the model proposed: the last valid propuesta, and whether the
- * last one it tried lacks a dato the person has to give.
+ * The evento the model proposed: the valid propuesta, and whether any
+ * propuesta of the mensaje lacked a dato the person has to give. A later
+ * propuesta that fails for another reason does not hide it.
  */
 type Propuesta = { borrador: BorradorDeEvento | null; faltaDato: boolean };
 
-/** What a consulta needs to check a propuesta. */
-type ContextoDePropuesta = { cargos: CargosDelUsuario; hoy: string; puedeProponer: boolean };
+/** What a consulta needs to check a propuesta. Null cargos could not be read. */
+type ContextoDePropuesta = {
+  cargos: CargosDelUsuario | null;
+  hoy: string;
+  puedeProponer: boolean;
+};
 
 /**
  * Checks a propuesta of the model and returns what it reads back from it. A
@@ -462,25 +487,29 @@ function sumarPropuesta(
   argumentos: unknown,
   contexto: ContextoDePropuesta,
 ): string {
-  if (!contexto.puedeProponer) {
+  if (!contexto.puedeProponer || contexto.cargos === null) {
     return JSON.stringify({ error: 'Esta persona no puede crear eventos.' });
   }
-  // The respuesta carries one borrador: a second one would be lost unseen.
+  // The respuesta carries one borrador: a second one, even a fix of the first,
+  // would be lost unseen.
   if (propuesta.borrador !== null) {
     return JSON.stringify({
       error:
-        'Ya propusiste un evento: se propone un evento por mensaje. Decile a la persona que los demás los pida en otro mensaje.',
+        'Ya propusiste un evento: se propone un evento por mensaje y el primero queda en la tarjeta tal como lo propusiste. ' +
+        'Si había que corregirlo, decile a la persona que lo corrija en la tarjeta con Editar o que lo pida de nuevo en otro mensaje. ' +
+        'Los demás eventos, que los pida en otro mensaje.',
     });
   }
 
   const resultado = leerPropuesta(argumentos, contexto.cargos, contexto.hoy);
   if ('error' in resultado) {
-    propuesta.faltaDato = resultado.falta !== undefined;
+    if (resultado.falta !== undefined) {
+      propuesta.faltaDato = true;
+    }
     return JSON.stringify({ error: resultado.error });
   }
 
   propuesta.borrador = resultado.borrador;
-  propuesta.faltaDato = false;
   return JSON.stringify({
     estado: 'propuesto',
     indicacion:
@@ -564,6 +593,20 @@ async function conversar(
 }
 
 /**
+ * The cargos of the usuario, or null when they cannot be read: a consulta
+ * answers without offering proponer_evento rather than failing, since most
+ * consultas load nothing.
+ */
+async function leerCargos(puertos: PuertosDeConsulta): Promise<CargosDelUsuario | null> {
+  try {
+    return await puertos.leerCargos();
+  } catch (error) {
+    puertos.informarError(`Answering without proponer_evento: ${getCausa(error)}`);
+    return null;
+  }
+}
+
+/**
  * Answers a consulta of the chat. `usuarioId` is null when the call has no
  * valid sesion. The order matters: nothing reaches the model before the limits
  * allow it and the consulta is reserved, and a reserva whose respuesta fails is
@@ -606,8 +649,8 @@ export async function responderConsulta(
     }
 
     try {
-      const cargos = await puertos.leerCargos();
-      const duenios = getDueniosDelUsuario(cargos);
+      const cargos = await leerCargos(puertos);
+      const duenios = cargos === null ? null : getDueniosDelUsuario(cargos);
       const { texto, costoUsd, coincidencias, propuesta } = await conversar(
         [
           { rol: 'sistema', texto: getInstrucciones(dia, estado.zonaHoraria, duenios) },
@@ -615,7 +658,7 @@ export async function responderConsulta(
           { rol: 'usuario', texto: pedido.mensaje },
         ],
         puertos,
-        { cargos, hoy: dia, puedeProponer: duenios.length > 0 },
+        { cargos, hoy: dia, puedeProponer: duenios !== null && duenios.length > 0 },
       );
       const { consultasDelDia } = await puertos.confirmarConsulta({
         usuarioId,
@@ -632,8 +675,9 @@ export async function responderConsulta(
         respuesta: {
           tipo: repreguntar ? 'repregunta' : 'respuesta',
           texto,
-          // A repregunta lists no eventos, whatever made it one.
-          eventos: repreguntar ? [] : getEventosDeRespuesta(coincidencias),
+          // Only a pregunta to narrow lists no eventos: one that asks for a
+          // dato of the propuesta keeps the ones found (CD-C, issue #197).
+          eventos: getEventosDeRespuesta(coincidencias),
           aviso: getAvisoDeConsultasRestantes(consultasDelDia),
           borrador: propuesta.borrador,
         },
