@@ -1,7 +1,10 @@
 import { onlineManager, QueryClient } from '@tanstack/react-query';
 
+import { getCargosDelUsuario } from '@/features/sesion/datos/getCargosDelUsuario';
+
+import { elegirIglesias } from '../dominio/recordatorios';
 import { guardarDispositivo, getDispositivo } from './dispositivo';
-import { actualizarRecordatorios } from './sincronizarRecordatorios';
+import { actualizarRecordatorios, sincronizarRecordatorios } from './sincronizarRecordatorios';
 
 jest.mock('./telefono', () => ({
   getPermiso: jest.fn(async () => 'concedido'),
@@ -18,18 +21,21 @@ jest.mock('@/features/calendario/datos/getIglesiasEnEstructura', () => ({
   getIglesiasEnEstructura: jest.fn(async () => [
     { id: 'i1', nombre: 'Iglesia 1', distritoId: 'd1', asociacionId: 'a1', distrito: 'D1' },
     { id: 'i2', nombre: 'Iglesia 2', distritoId: 'd1', asociacionId: 'a1', distrito: 'D1' },
+    { id: 'i3', nombre: 'Iglesia 3', distritoId: 'd2', asociacionId: 'a1', distrito: 'D2' },
   ]),
 }));
 jest.mock('@/features/sesion/datos/getCargosDelUsuario', () => ({
   getCargosDelUsuario: jest.fn(async () => []),
 }));
-// Signed out: there is no session.
+// Whether there is a session, under the control of each test.
+const mockHasSesion = { current: false };
 jest.mock('@/features/sesion/datos/sesionQuery', () => ({
-  sesionQueryOptions: { queryKey: ['sesion'], queryFn: async () => false },
+  sesionQueryOptions: { queryKey: ['sesion'], queryFn: async () => mockHasSesion.current },
 }));
 
 const mockedGetDispositivo = jest.mocked(getDispositivo);
 const mockedGuardar = jest.mocked(guardarDispositivo);
+const mockedGetCargos = jest.mocked(getCargosDelUsuario);
 
 // Without a garbage collection timer, the client does not keep Jest running.
 const newClient = () => new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
@@ -37,12 +43,130 @@ const newClient = () => new QueryClient({ defaultOptions: { queries: { gcTime: I
 beforeEach(() => {
   jest.clearAllMocks();
   onlineManager.setOnline(true);
+  // Signed out: there is no session.
+  mockHasSesion.current = false;
+  mockedGetCargos.mockResolvedValue([]);
+  mockedGuardar.mockResolvedValue(undefined);
   // The phone of a pastor who has just signed out.
   mockedGetDispositivo.mockResolvedValue({
     encendido: false,
     iglesiaIds: ['i2'],
     conUsuario: true,
     delUsuario: false,
+  });
+});
+
+/** Signs in a usuario with these cargos. */
+function signIn(cargos: Awaited<ReturnType<typeof getCargosDelUsuario>>) {
+  mockHasSesion.current = true;
+  mockedGetCargos.mockResolvedValue(cargos);
+}
+
+describe('sincronizarRecordatorios', () => {
+  it('applies the change to the registro and saves it', async () => {
+    // The phone of a hermano, on.
+    mockedGetDispositivo.mockResolvedValue({
+      encendido: true,
+      iglesiaIds: ['i1'],
+      conUsuario: false,
+      delUsuario: false,
+    });
+
+    const estado = await sincronizarRecordatorios(newClient(), (actual) => ({
+      ...actual,
+      encendido: false,
+    }));
+
+    expect(estado.registro).toEqual({ encendido: false, iglesiaIds: ['i1'] });
+    expect(mockedGuardar).toHaveBeenCalledTimes(1);
+    expect(mockedGuardar).toHaveBeenCalledWith('ExponentPushToken[telefono]', {
+      encendido: false,
+      iglesiaIds: ['i1'],
+    });
+  });
+
+  it('saves the iglesias a pastor chose', async () => {
+    signIn([{ nivel: 'distrito', distritoId: 'd1' }]);
+    // A pastor starts with none chosen.
+    mockedGetDispositivo.mockResolvedValue({
+      encendido: false,
+      iglesiaIds: [],
+      conUsuario: true,
+      delUsuario: true,
+    });
+
+    const estado = await sincronizarRecordatorios(newClient(), () => elegirIglesias(['i2']));
+
+    expect(estado.registro).toEqual({ encendido: true, iglesiaIds: ['i2'] });
+    expect(mockedGuardar).toHaveBeenCalledWith('ExponentPushToken[telefono]', {
+      encendido: true,
+      iglesiaIds: ['i2'],
+    });
+  });
+
+  it('does not save when the phone already has the registro and is of whoever uses it', async () => {
+    mockedGetDispositivo.mockResolvedValue({
+      encendido: true,
+      iglesiaIds: ['i1'],
+      conUsuario: false,
+      delUsuario: false,
+    });
+
+    const estado = await sincronizarRecordatorios(newClient());
+
+    expect(estado.registro).toEqual({ encendido: true, iglesiaIds: ['i1'] });
+    expect(mockedGuardar).not.toHaveBeenCalled();
+  });
+
+  it('saves the same registro again when another usuario saved it', async () => {
+    // An encargado of i1 signs in on a phone another usuario saved on i1.
+    signIn([{ nivel: 'iglesia', iglesiaId: 'i1' }]);
+    mockedGetDispositivo.mockResolvedValue({
+      encendido: true,
+      iglesiaIds: ['i1'],
+      conUsuario: true,
+      delUsuario: false,
+    });
+
+    await sincronizarRecordatorios(newClient());
+
+    expect(mockedGuardar).toHaveBeenCalledTimes(1);
+    expect(mockedGuardar).toHaveBeenCalledWith('ExponentPushToken[telefono]', {
+      encendido: true,
+      iglesiaIds: ['i1'],
+    });
+  });
+
+  it('offers a pastor the iglesias of their distrito, without a buscador', async () => {
+    signIn([{ nivel: 'distrito', distritoId: 'd1' }]);
+    mockedGetDispositivo.mockResolvedValue(null);
+
+    const estado = await sincronizarRecordatorios(newClient());
+
+    expect(estado.modo).toBe('eligiendo');
+    expect(estado.opciones).toEqual(['i1', 'i2']);
+    expect(estado.conBuscador).toBe(false);
+  });
+
+  it('offers an admin every iglesia of the asociacion, with a buscador', async () => {
+    signIn([{ nivel: 'asociacion', asociacionId: 'a1' }]);
+    mockedGetDispositivo.mockResolvedValue(null);
+
+    const estado = await sincronizarRecordatorios(newClient());
+
+    expect(estado.modo).toBe('eligiendo');
+    expect(estado.opciones).toEqual(['i1', 'i2', 'i3']);
+    expect(estado.conBuscador).toBe(true);
+  });
+
+  it('offers a hermano nothing to choose', async () => {
+    mockedGetDispositivo.mockResolvedValue(null);
+
+    const estado = await sincronizarRecordatorios(newClient());
+
+    expect(estado.modo).toBe('iglesia-elegida');
+    expect(estado.opciones).toEqual([]);
+    expect(estado.conBuscador).toBe(false);
   });
 });
 

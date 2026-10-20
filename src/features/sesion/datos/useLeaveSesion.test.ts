@@ -1,10 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { QueryClient, type QueryKey } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, type QueryKey } from '@tanstack/react-query';
 import { persistQueryClientSubscribe } from '@tanstack/react-query-persist-client';
+import { createElement } from 'react';
+// react-test-renderer is deprecated in React 19; when React is upgraded, move
+// these tests to renderHook from @testing-library/react-native.
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
+import { actualizarRecordatorios } from '@/features/recordatorios/datos/sincronizarRecordatorios';
 import { persistOptions } from '@/shared/queryClient';
 
-import { forgetSesion } from './useLeaveSesion';
+import { deleteOwnUsuario } from './deleteOwnUsuario';
+import { signOut } from './signOut';
+import { forgetSesion, useDeleteOwnUsuario, useSignOut } from './useLeaveSesion';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
@@ -18,8 +25,34 @@ jest.mock('@/features/recordatorios/datos/sincronizarRecordatorios', () => ({
   actualizarRecordatorios: jest.fn(),
 }));
 
+const mockedSignOut = jest.mocked(signOut);
+const mockedDeleteOwnUsuario = jest.mocked(deleteOwnUsuario);
+const mockedActualizar = jest.mocked(actualizarRecordatorios);
+
 // Without a garbage collection timer, the clients do not keep Jest running.
-const newClient = () => new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
+const newClient = () =>
+  new QueryClient({
+    defaultOptions: { queries: { gcTime: Infinity }, mutations: { gcTime: Infinity } },
+  });
+
+const renderers: ReactTestRenderer[] = [];
+
+function renderHook<T>(queryClient: QueryClient, useHook: () => T) {
+  const latest: { current: T | null } = { current: null };
+
+  function Probe() {
+    latest.current = useHook();
+    return null;
+  }
+
+  act(() => {
+    renderers.push(
+      create(createElement(QueryClientProvider, { client: queryClient }, createElement(Probe))),
+    );
+  });
+
+  return () => latest.current!;
+}
 
 /** What the calendario of the hermano and that of a usuario leave in the cache. */
 const IGLESIA = ['calendario', 'iglesia-1'];
@@ -42,7 +75,12 @@ async function persistedKeys(): Promise<QueryKey[]> {
 }
 
 beforeEach(async () => {
+  jest.clearAllMocks();
   await AsyncStorage.clear();
+});
+
+afterEach(() => {
+  act(() => renderers.splice(0).forEach((renderer) => renderer.unmount()));
 });
 
 describe('forgetSesion', () => {
@@ -106,5 +144,42 @@ describe('forgetSesion', () => {
       unsubscribe();
       jest.useRealTimers();
     }
+  });
+});
+
+describe.each([
+  ['useSignOut', useSignOut, mockedSignOut],
+  ['useDeleteOwnUsuario', useDeleteOwnUsuario, mockedDeleteOwnUsuario],
+] as const)('%s', (_, useLeave, mockedLeave) => {
+  it('lets the recordatorios follow the phone once the session is gone', async () => {
+    const queryClient = newClient();
+    queryClient.setQueryData(['sesion'], true);
+    mockedLeave.mockResolvedValue(undefined);
+    let sesionAlActualizar: unknown;
+    mockedActualizar.mockImplementation(async (client) => {
+      sesionAlActualizar = client.getQueryData(['sesion']);
+    });
+    const leave = renderHook(queryClient, useLeave);
+
+    await act(async () => {
+      await leave().mutateAsync();
+    });
+
+    expect(mockedActualizar).toHaveBeenCalledTimes(1);
+    expect(mockedActualizar).toHaveBeenCalledWith(queryClient);
+    // The recordatorios are read without the session.
+    expect(sesionAlActualizar).toBe(false);
+  });
+
+  it('leaves the recordatorios as they are when the session could not be closed', async () => {
+    const queryClient = newClient();
+    mockedLeave.mockRejectedValue(new Error('offline'));
+    const leave = renderHook(queryClient, useLeave);
+
+    await act(async () => {
+      await expect(leave().mutateAsync()).rejects.toThrow('offline');
+    });
+
+    expect(mockedActualizar).not.toHaveBeenCalled();
   });
 });

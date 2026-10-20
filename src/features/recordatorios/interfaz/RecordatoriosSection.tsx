@@ -179,7 +179,12 @@ export function RecordatoriosSection() {
             onSuccess: () => setEligiendo(false),
           })
         }
-        onClose={() => setEligiendo(false)}
+        onClose={() => {
+          setEligiendo(false);
+          // Closing gives up the choice: its failure is no longer news. A
+          // save still running is left to finish and tell how it went.
+          if (guardar.isError) guardar.reset();
+        }}
       />
     </Card>
   );
