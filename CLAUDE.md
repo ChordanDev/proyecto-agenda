@@ -38,12 +38,15 @@ Resumen de lo decidido en el issue #15.
 - Pantallas: sin pruebas automáticas en la v1; se verifican a mano contra el diseño aprobado.
 
 ### Ramas
-- Una rama corta por ticket, con pull request a `main`, fusionado en un solo commit. No hay revisión obligatoria: se fusiona cuando las verificaciones automáticas pasan.
+- Una rama por funcionalidad, creada desde `main`. Cada ticket de esa funcionalidad va en su propia rama, con pull request a la rama de la funcionalidad. Recién cuando la funcionalidad está terminada, su rama se fusiona a `main` con un pull request.
+- Un ticket que no forma parte de una funcionalidad más grande va en una rama corta con pull request directo a `main`.
+- Los pull requests a `main` se fusionan en un solo commit. No hay revisión obligatoria: se fusionan cuando las verificaciones automáticas pasan.
 - `main` es la rama por defecto y la única permanente. La documentación va directo a `main`.
 - Una versión es una etiqueta sobre un commit de `main` (`v1.0.0`).
 - Arreglos urgentes: son un pull request más a `main` y se publican etiquetando `main`.
 
 ### Integración continua
+- Las verificaciones corren solo en los pull requests a `main` que no son borrador; los pull requests hacia una rama de funcionalidad no las corren, para ahorrar minutos de GitHub Actions.
 - En cada pull request a `main` corren cuatro verificaciones, todas obligatorias: tipos (`tsc`), estilo (ESLint y Prettier), pruebas del dominio y pruebas de permisos sobre un Supabase local con las migraciones aplicadas desde cero.
 - Las migraciones se aplican solas al Supabase de desarrollo al fusionar a `main`. A producción se aplican a mano, como paso de la publicación de cada versión.
 - Los secretos van en GitHub y en EAS, nunca en un archivo versionado.
