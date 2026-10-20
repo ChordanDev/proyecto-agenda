@@ -5,7 +5,9 @@
 // this file wires to the database (puertos.ts) and to Expo Push (expo.ts).
 //
 // pg_cron calls it every hour (migration 20261022300000): the domain decides
-// which asociaciones are at their 20 h. Only that call may run it: it carries
+// which asociaciones are at their 20 h. Each run also reads the Expo receipts
+// of the avisos sent at least 15 minutes before, and turns off the phones they
+// report as uninstalled (issue #211). Only that call may run it: it carries
 // the value Vault keeps as `service_role_key`, which must be exactly the value
 // of SUPABASE_SERVICE_ROLE_KEY here: the legacy service_role key, a JWT that
 // starts with `eyJ`, never a new secret key (`sb_secret_...`), which gets a
@@ -16,14 +18,18 @@
 // Deploy: `supabase functions deploy enviar-recordatorios`. SUPABASE_URL and
 // SUPABASE_SERVICE_ROLE_KEY are set by Supabase. EXPO_ACCESS_TOKEN is only
 // needed when the Expo project has "Enhanced push security" on. EXPO_PUSH_URL
-// replaces the Expo endpoint with a double, only for local tests.
+// and EXPO_RECEIPTS_URL replace the Expo endpoints with a double, only for
+// local tests.
 
 import { createClient } from '@supabase/supabase-js';
 
 import type { Database } from '../../../src/shared/database.types.ts';
-import { enviarRecordatorios } from '../../../src/features/recordatorios/dominio/envio.ts';
+import {
+  enviarRecordatorios,
+  revisarRecibos,
+} from '../../../src/features/recordatorios/dominio/envio.ts';
 import { esLlamadaDelCron } from './autorizacion.ts';
-import { crearEnviador } from './expo.ts';
+import { crearConsultaDeRecibos, crearEnviador } from './expo.ts';
 import { crearPuertos } from './puertos.ts';
 
 function responder(estado: number, body: unknown): Response {
@@ -56,17 +62,27 @@ Deno.serve(async (request) => {
     const servidor = createClient<Database>(getEnv('SUPABASE_URL'), clave, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const enviar = crearEnviador({
-      url: Deno.env.get('EXPO_PUSH_URL') || undefined,
-      accessToken: Deno.env.get('EXPO_ACCESS_TOKEN') || undefined,
+    const accessToken = Deno.env.get('EXPO_ACCESS_TOKEN') || undefined;
+    const puertos = crearPuertos({
+      servidor,
+      enviar: crearEnviador({ url: Deno.env.get('EXPO_PUSH_URL') || undefined, accessToken }),
+      consultarRecibos: crearConsultaDeRecibos({
+        url: Deno.env.get('EXPO_RECEIPTS_URL') || undefined,
+        accessToken,
+      }),
     });
 
-    const resultado = await enviarRecordatorios(crearPuertos({ servidor, enviar }));
+    const resultado = await enviarRecordatorios(puertos);
 
-    // Only counts reach the logs, never a token or a text.
+    // Only counts reach the logs, never a token or a text. The sending is
+    // logged before the receipts are read, so a failure there does not hide it.
     console.log('enviar-recordatorios', resultado);
 
-    return responder(resultado.fallidos > 0 ? 502 : 200, resultado);
+    const recibos = await revisarRecibos(puertos);
+
+    console.log('enviar-recordatorios recibos', recibos);
+
+    return responder(resultado.fallidos > 0 ? 502 : 200, { ...resultado, recibos });
   } catch (error) {
     console.error('enviar-recordatorios failed', error instanceof Error ? error.message : error);
     return responder(500, { falla: 'error_servidor' });

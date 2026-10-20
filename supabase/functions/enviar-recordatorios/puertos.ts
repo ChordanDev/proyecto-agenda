@@ -1,7 +1,7 @@
 // The database side of the daily sending: the ports of the domain, bound to a
-// service_role client. dispositivos and dispositivos_iglesias are closed to
-// the API roles (#162), and the sending reads every phone and every evento of
-// tomorrow, so only the server can do it.
+// service_role client. dispositivos, dispositivos_iglesias and
+// recibos_pendientes are closed to the API roles (#162, #211), and the sending
+// reads every phone and every evento of tomorrow, so only the server can do it.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -14,6 +14,8 @@ import type { Duenio } from '../../../src/features/eventos/dominio/evento.ts';
 import type {
   DispositivoDelEnvio,
   PuertosDeEnvio,
+  PuertosDeRecibos,
+  ReciboPendiente,
 } from '../../../src/features/recordatorios/dominio/envio.ts';
 
 type Cliente = SupabaseClient<Database>;
@@ -24,8 +26,11 @@ type Cliente = SupabaseClient<Database>;
  */
 const PAGE_SIZE = 1000;
 
-/** Tokens per update: they travel in the URL of the request. */
+/** Tokens or tickets per update or delete: they travel in the URL of the request. */
 const TOKENS_POR_PEDIDO = 100;
+
+/** The Postgres error of a foreign key that points to no row. */
+const SIN_FILA_REFERIDA = '23503';
 
 /** What `leerDispositivos` reads of a phone. */
 type DispositivoLeido = {
@@ -115,15 +120,47 @@ function toDuenio(
 export function crearPuertos({
   servidor,
   enviar,
+  consultarRecibos,
   ahora = () => new Date(),
 }: {
   servidor: Cliente;
   enviar: PuertosDeEnvio['enviar'];
+  consultarRecibos: PuertosDeRecibos['consultarRecibos'];
   ahora?: () => Date;
-}): PuertosDeEnvio {
+}): PuertosDeEnvio & PuertosDeRecibos {
+  async function insertarRecibos(recibos: ReciboPendiente[]) {
+    return await servidor
+      .from('recibos_pendientes')
+      .insert(recibos.map(({ ticket, token }) => ({ ticket, token })));
+  }
+
+  /** The tickets whose token is still a phone. */
+  async function soloDeTelefonos(recibos: ReciboPendiente[]) {
+    const existentes = new Set<string>();
+
+    for (let desde = 0; desde < recibos.length; desde += TOKENS_POR_PEDIDO) {
+      const { data, error } = await servidor
+        .from('dispositivos')
+        .select('token')
+        .in(
+          'token',
+          recibos.slice(desde, desde + TOKENS_POR_PEDIDO).map(({ token }) => token),
+        );
+
+      if (error) {
+        throw new Error(`Could not read the dispositivos: ${error.message}`);
+      }
+
+      data.forEach(({ token }) => existentes.add(token));
+    }
+
+    return recibos.filter(({ token }) => existentes.has(token));
+  }
+
   return {
     ahora,
     enviar,
+    consultarRecibos,
 
     async leerAsociaciones() {
       const { data, error } = await servidor.from('asociaciones').select('id, zona_horaria');
@@ -193,6 +230,59 @@ export function crearPuertos({
 
         if (error) {
           throw new Error(`Could not turn off the dispositivos: ${error.message}`);
+        }
+      }
+    },
+
+    async guardarRecibos(recibos) {
+      const { error } = await insertarRecibos(recibos);
+
+      if (!error) {
+        return;
+      }
+      if (error.code !== SIN_FILA_REFERIDA) {
+        throw new Error(`Could not keep the tickets: ${error.message}`);
+      }
+
+      // A phone deleted while its aviso was sent has no ticket to keep: the
+      // others are kept without it.
+      const deTelefonos = await soloDeTelefonos(recibos);
+      const { error: otroError } =
+        deTelefonos.length > 0 ? await insertarRecibos(deTelefonos) : { error: null };
+
+      if (otroError) {
+        throw new Error(`Could not keep the tickets: ${otroError.message}`);
+      }
+    },
+
+    async leerRecibos(hasta) {
+      const filas = await leerTodo(
+        (desde, hastaFila) =>
+          servidor
+            .from('recibos_pendientes')
+            .select('ticket, token, enviado_at')
+            .lte('enviado_at', hasta.toISOString())
+            .order('ticket')
+            .range(desde, hastaFila),
+        'tickets',
+      );
+
+      return filas.map((fila) => ({
+        ticket: fila.ticket,
+        token: fila.token,
+        enviadoAt: new Date(fila.enviado_at),
+      }));
+    },
+
+    async borrarRecibos(tickets) {
+      for (let desde = 0; desde < tickets.length; desde += TOKENS_POR_PEDIDO) {
+        const { error } = await servidor
+          .from('recibos_pendientes')
+          .delete()
+          .in('ticket', tickets.slice(desde, desde + TOKENS_POR_PEDIDO));
+
+        if (error) {
+          throw new Error(`Could not forget the tickets: ${error.message}`);
         }
       }
     },
