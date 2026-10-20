@@ -74,6 +74,11 @@ jobs:
   permission-tests:
     name: Permission tests
     runs-on: [self-hosted, linux]
+    # The self-hosted runners share one Docker host: never start two CI
+    # Supabase stacks at once.
+    concurrency:
+      group: supabase-local-ci
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       # Only to run the script that generates a test: it needs no dependency.
@@ -84,6 +89,16 @@ jobs:
         with:
           # Keep in sync with the `supabase` dev dependency in package.json.
           version: 2.120.0
+      # The Docker host is a developer machine that may run its own local
+      # stack: give CI its own container names and ports (543xx -> 553xx).
+      - name: Isolate the CI Supabase stack
+        run: |
+          sed -i -E \
+            -e 's/^project_id = .*/project_id = "agenda-de-iglesia-ci"/' \
+            -e 's/^(\s*[a-z_]*port) = 543([0-9]{2})$/\1 = 553\2/' \
+            supabase/config.toml
+          # A stack left by a cancelled run would skip the fresh start below.
+          supabase stop --no-backup || true
       # Starts an empty local database and applies every migration from scratch.
       - run: supabase db start
       - run: supabase test db
@@ -106,3 +121,7 @@ jobs:
             echo "::error file=supabase/tests/cargos_regla.test.sql::The generated test is out of date with src/features/sesion/dominio/cargosAbarcanDuenio.casos.json. Run 'npm run db:casos-cargos' and commit the result."
             exit 1
           fi
+      # Free the shared Docker host for the next run and the developer's stack.
+      - name: Stop the CI Supabase stack
+        if: always()
+        run: supabase stop --no-backup || true
