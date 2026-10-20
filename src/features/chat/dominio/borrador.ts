@@ -163,7 +163,12 @@ export function describirDuenios(duenios: readonly OpcionDeDuenio[]): string {
   return duenios.map(({ duenio, nombre }) => `- ${getDuenioId(duenio)}: ${nombre}`).join('\n');
 }
 
-/** The duenio of the propuesta, or what the model has to ask or fix. */
+/**
+ * The duenio of the propuesta, or what the model has to ask or fix. The list
+ * of duenios is in the instructions of the model when there is more than one
+ * (consulta.ts): the errores point to it instead of repeating it, since an
+ * admin can have hundreds.
+ */
 function resolverDuenio(
   pedido: unknown,
   opciones: OpcionesDeDuenio,
@@ -178,8 +183,7 @@ function resolverDuenio(
     return inicial === null
       ? {
           error:
-            'Preguntá de quién es el evento antes de proponerlo. Puede ser de:\n' +
-            describirDuenios(todas),
+            'Preguntá de quién es el evento antes de proponerlo: puede ser de cualquiera de los dueños de la lista de las instrucciones.',
           falta: 'duenio',
         }
       : (getOpcionDeDuenio(opciones, inicial) as OpcionDeDuenio);
@@ -187,13 +191,15 @@ function resolverDuenio(
 
   // A cargo covers its duenio or not: an id outside the list is never used.
   const elegida = todas.find(({ duenio }) => getDuenioId(duenio) === pedido);
-  return (
-    elegida ?? {
-      error:
-        'Ese dueño no está entre los que la persona puede usar. Puede ser de:\n' +
-        describirDuenios(todas),
-    }
-  );
+  if (elegida !== undefined) {
+    return elegida;
+  }
+  return {
+    error:
+      todas.length === 1
+        ? `Ese dueño no está entre los que la persona puede usar: el evento es de ${todas[0].nombre}, así que dejá "duenio" en null.`
+        : 'Ese dueño no está entre los que la persona puede usar: elegí el id de uno de la lista de dueños de las instrucciones.',
+  };
 }
 
 /**
