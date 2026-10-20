@@ -1002,9 +1002,12 @@ describe('responderConsulta', () => {
         (mensaje) => mensaje.rol === 'busqueda' && mensaje.llamadaId === 'propuesta-b',
       );
       expect(segunda).toBeDefined();
-      expect(JSON.parse((segunda as { contenido: string }).contenido).error).toMatch(
-        /un evento por mensaje/,
-      );
+      const error = JSON.parse((segunda as { contenido: string }).contenido).error;
+      expect(error).toMatch(/un evento por mensaje/);
+      // The model cannot fix its propuesta in the same mensaje: the first one stays.
+      expect(error).toMatch(/queda en la tarjeta/);
+      expect(error).toMatch(/Editar/);
+      expect(error).toMatch(/otro mensaje/);
       const [instrucciones] = f.llamadasAlProveedor[0].mensajes;
       expect(instrucciones).toHaveProperty(
         'texto',
@@ -1029,20 +1032,41 @@ describe('responderConsulta', () => {
       expect(resultadoDePropuesta(f, 2).error).toMatch(/un evento por mensaje/);
     });
 
-    it('shows no eventos on a repregunta for a dato of the propuesta', async () => {
+    it('keeps the eventos found on a repregunta for the enfasis of a mixed mensaje', async () => {
       const f = fake({
         respuestas: [
           busqueda(BUSQUEDA_VALIDA),
           propuesta({ enfasis: null }),
-          texto('¿De qué énfasis es?'),
+          texto('El sábado hay un culto joven. ¿De qué énfasis es el evento que querés cargar?'),
         ],
         eventos: [evento(1)],
       });
 
-      const resultado = await responderConsulta(pedido(CARGA), USUARIO, f.puertos);
+      const resultado = await responderConsulta(
+        pedido('¿Qué hay el sábado? Y cargame un culto joven a las 19'),
+        USUARIO,
+        f.puertos,
+      );
 
       expect(resultado).toMatchObject({
-        respuesta: { tipo: 'repregunta', eventos: [], borrador: null },
+        respuesta: { tipo: 'repregunta', eventos: [evento(1)], borrador: null },
+      });
+    });
+
+    it('keeps asking for a dato the model lacked even when a later propuesta fails otherwise', async () => {
+      const f = fake({
+        respuestas: [
+          propuesta({ enfasis: null }),
+          propuesta({ hora: 19 }),
+          texto('¿De qué énfasis es?'),
+        ],
+      });
+
+      const resultado = await responderConsulta(pedido(CARGA), USUARIO, f.puertos);
+
+      expect(resultadoDePropuesta(f, 2).error).toMatch(/formato/);
+      expect(resultado).toMatchObject({
+        respuesta: { tipo: 'repregunta', borrador: null },
       });
     });
 
@@ -1068,6 +1092,22 @@ describe('responderConsulta', () => {
       const [instrucciones] = conCargos.llamadasAlProveedor[0].mensajes;
       expect(instrucciones).toHaveProperty('texto', expect.stringContaining('i2: Iglesia Norte'));
       expect(instrucciones).toHaveProperty('texto', expect.stringContaining('d1: Distrito Centro'));
+    });
+
+    it('names the only duenio instead of listing it, and keeps the list out of the errores', async () => {
+      const encargado = fake({ respuestas: [texto('Hola')] });
+      const pastor = fake({
+        cargos: PASTOR,
+        respuestas: [propuesta({}), texto('¿De quién es?')],
+      });
+
+      await responderConsulta(pedido('Hola'), USUARIO, encargado.puertos);
+      await responderConsulta(pedido(CARGA), USUARIO, pastor.puertos);
+
+      const [instrucciones] = encargado.llamadasAlProveedor[0].mensajes;
+      expect(instrucciones).toHaveProperty('texto', expect.stringContaining('Iglesia Central'));
+      expect(instrucciones).not.toHaveProperty('texto', expect.stringContaining('i1:'));
+      expect(resultadoDePropuesta(pastor, 1).error).not.toContain('i2: Iglesia Norte');
     });
 
     it(`stops offering the propuesta after ${MAX_BUSQUEDAS} rounds`, async () => {
@@ -1098,17 +1138,29 @@ describe('responderConsulta', () => {
       expect(resultadoDePropuesta(f, 1)).toHaveProperty('error');
     });
 
-    it('fails as error_servidor and frees the reserva when the cargos cannot be read', async () => {
-      const f = fake();
+    it('answers without offering the propuesta when the cargos cannot be read', async () => {
+      const f = fake({
+        respuestas: [busqueda(BUSQUEDA_VALIDA), texto('El sábado hay un culto joven.')],
+        eventos: [evento(1)],
+      });
       f.puertos.leerCargos = async () => {
         throw new Error('database down');
       };
 
-      expect(await responderConsulta(pedido(CARGA), USUARIO, f.puertos)).toEqual({
-        ok: false,
-        falla: 'error_servidor',
+      const resultado = await responderConsulta(pedido('¿Qué hay el sábado?'), USUARIO, f.puertos);
+
+      expect(resultado).toMatchObject({
+        ok: true,
+        respuesta: { tipo: 'respuesta', eventos: [evento(1)], borrador: null },
       });
-      expect(f.liberaciones).toHaveLength(1);
+      expect(f.llamadasAlProveedor.map((llamada) => llamada.conPropuesta)).toEqual([false, false]);
+      // The model does not blame the cargo of the person: it just cannot load now.
+      const [instrucciones] = f.llamadasAlProveedor[0].mensajes;
+      expect(instrucciones).toHaveProperty('texto', expect.stringContaining('en un rato'));
+      expect(instrucciones).not.toHaveProperty('texto', expect.stringContaining('su cargo'));
+      expect(f.registros).toHaveLength(1);
+      expect(f.liberaciones).toEqual([]);
+      expect(f.errores).toEqual([expect.stringContaining('database down')]);
     });
   });
 

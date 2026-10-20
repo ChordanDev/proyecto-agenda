@@ -1,4 +1,6 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
+
+import { actualizarRecordatorios } from '@/features/recordatorios/datos/sincronizarRecordatorios';
 
 import { sendSignInCode, verifySignInCode } from './codeSignIn';
 import { rememberSesion } from './rememberSesion';
@@ -10,6 +12,16 @@ export function useSendSignInCode() {
   return useMutation({ mutationFn: sendSignInCode, networkMode: 'always' });
 }
 
+/**
+ * Once the session is known, the phone follows the iglesias of the usuario
+ * instead of the iglesia elegida. In the background: entering must not wait
+ * for the connection.
+ */
+async function enterSesion(queryClient: QueryClient) {
+  await rememberSesion(queryClient);
+  void actualizarRecordatorios(queryClient);
+}
+
 /** Checks the code; on success the app knows there is a session. */
 export function useVerifySignInCode() {
   const queryClient = useQueryClient();
@@ -17,6 +29,6 @@ export function useVerifySignInCode() {
   return useMutation({
     mutationFn: verifySignInCode,
     networkMode: 'always',
-    onSuccess: () => rememberSesion(queryClient),
+    onSuccess: () => enterSesion(queryClient),
   });
 }

@@ -27,7 +27,38 @@ import {
 /** The default of asociaciones.zona_horaria, for a usuario without cargos. */
 const ZONA_HORARIA_POR_DEFECTO = 'America/Argentina/Buenos_Aires';
 
+/**
+ * Rows a read of the structure asks for at once: below the max_rows of the API
+ * (1000, supabase/config.toml), so a page is never cut and a short one is the
+ * last.
+ */
+const FILAS_POR_PAGINA = 500;
+
 type Cliente = SupabaseClient<Database>;
+
+type Lectura<Fila> = PromiseLike<{ data: Fila[] | null; error: { message: string } | null }>;
+
+/**
+ * Every row of a read, page by page: the API would cut a single read at
+ * max_rows without saying so. `pagina` reads the rows from `desde` to `hasta`,
+ * both included, in a stable order.
+ */
+async function leerTodas<Fila>(
+  pagina: (desde: number, hasta: number) => Lectura<Fila>,
+): Promise<Fila[]> {
+  const filas: Fila[] = [];
+
+  for (let desde = 0; ; desde += FILAS_POR_PAGINA) {
+    const { data, error } = await pagina(desde, desde + FILAS_POR_PAGINA - 1);
+    if (error) {
+      throw new Error(`Could not read the cargos: ${error.message}`);
+    }
+    filas.push(...(data ?? []));
+    if ((data ?? []).length < FILAS_POR_PAGINA) {
+      return filas;
+    }
+  }
+}
 
 export function crearPuertos({
   usuarioId,
@@ -84,26 +115,40 @@ export function crearPuertos({
       };
     },
 
+    // The whole structure the usuario can read, page by page: an admin needs
+    // every distrito and iglesia of their asociacion, which can pass max_rows.
     async leerCargos() {
       const [cargos, asociaciones, distritos, iglesias] = await Promise.all([
         // A gestor also reads the cargos they oversee: only their own count here.
-        usuario
-          .from('cargos')
-          .select('id, iglesia_id, distrito_id, asociacion_id')
-          .eq('usuario_id', usuarioId),
-        usuario.from('asociaciones').select('id, nombre'),
-        usuario.from('distritos').select('id, nombre, asociacion_id'),
-        usuario.from('iglesias').select('id, nombre, distrito_id'),
+        leerTodas((desde, hasta) =>
+          usuario
+            .from('cargos')
+            .select('id, iglesia_id, distrito_id, asociacion_id')
+            .eq('usuario_id', usuarioId)
+            .order('id')
+            .range(desde, hasta),
+        ),
+        leerTodas((desde, hasta) =>
+          usuario.from('asociaciones').select('id, nombre').order('id').range(desde, hasta),
+        ),
+        leerTodas((desde, hasta) =>
+          usuario
+            .from('distritos')
+            .select('id, nombre, asociacion_id')
+            .order('id')
+            .range(desde, hasta),
+        ),
+        leerTodas((desde, hasta) =>
+          usuario
+            .from('iglesias')
+            .select('id, nombre, distrito_id')
+            .order('id')
+            .range(desde, hasta),
+        ),
       ]);
 
-      for (const { error } of [cargos, asociaciones, distritos, iglesias]) {
-        if (error) {
-          throw new Error(`Could not read the cargos: ${error.message}`);
-        }
-      }
-
       return {
-        cargos: (cargos.data ?? []).map((fila): Cargo => {
+        cargos: cargos.map((fila): Cargo => {
           // The database guarantees exactly one level per cargo (constraint
           // cargos_exactly_one_nivel), but the generated types cannot know it.
           if (fila.iglesia_id) {
@@ -118,13 +163,13 @@ export function crearPuertos({
           throw new Error(`Cargo ${fila.id} has no nivel`);
         }),
         estructura: {
-          asociaciones: asociaciones.data ?? [],
-          distritos: (distritos.data ?? []).map((distrito) => ({
+          asociaciones,
+          distritos: distritos.map((distrito) => ({
             id: distrito.id,
             nombre: distrito.nombre,
             asociacionId: distrito.asociacion_id,
           })),
-          iglesias: (iglesias.data ?? []).map((iglesia) => ({
+          iglesias: iglesias.map((iglesia) => ({
             id: iglesia.id,
             nombre: iglesia.nombre,
             distritoId: iglesia.distrito_id,

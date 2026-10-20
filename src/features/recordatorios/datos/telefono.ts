@@ -11,19 +11,29 @@ export type Permiso = 'concedido' | 'sin-preguntar' | 'denegado';
 // Android 13 only asks for the permiso once a channel exists.
 const ANDROID_CHANNEL_ID = 'recordatorios';
 
+/**
+ * Reads the permiso without asking. It also creates the channel, which a phone
+ * that granted the permiso without asking would otherwise never get. A failed
+ * channel does not hide the permiso: the next read tries again.
+ */
 export async function getPermiso(): Promise<Permiso> {
+  await createAndroidChannel().catch(() => undefined);
   return toPermiso(await Notifications.getPermissionsAsync());
 }
 
 /** Asks the phone for the permiso; it only shows the question while it can still be asked. */
 export async function pedirPermiso(): Promise<Permiso> {
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
-      name: 'Recordatorios',
-      importance: Notifications.AndroidImportance.DEFAULT,
-    });
-  }
+  await createAndroidChannel();
   return toPermiso(await Notifications.requestPermissionsAsync());
+}
+
+// Creating a channel that already exists keeps what the user set on it, so it is safe to repeat.
+async function createAndroidChannel(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
+    name: 'Recordatorios',
+    importance: Notifications.AndroidImportance.DEFAULT,
+  });
 }
 
 function toPermiso({ granted, canAskAgain }: { granted: boolean; canAskAgain: boolean }): Permiso {
