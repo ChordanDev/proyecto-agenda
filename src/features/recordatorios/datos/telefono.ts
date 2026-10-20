@@ -52,7 +52,8 @@ export const TOKEN_TIMEOUT_MS = 30_000;
  * The Expo push token of this phone, which identifies it and works as its
  * secret. It needs the permiso and the EAS project of the app. A token that
  * never comes fails as a lost connection does, so the syncs waiting behind
- * this one can run and the phone tries again once the connection comes back.
+ * this one can run. actualizarRecordatorios then tries again after a wait,
+ * since a phone that stays online never sees its connection come back.
  */
 export async function getTokenDelTelefono(): Promise<string> {
   const projectId: unknown =

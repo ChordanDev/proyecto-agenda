@@ -5,7 +5,7 @@ import { getCargosDelUsuario } from '@/features/sesion/datos/getCargosDelUsuario
 
 import { elegirIglesias, type RegistroGuardado } from '../dominio/recordatorios';
 import { guardarDispositivo, getDispositivo } from './dispositivo';
-import { actualizarRecordatorios } from './actualizarRecordatorios';
+import { actualizarRecordatorios, RETRY_DELAYS_MS } from './actualizarRecordatorios';
 import { sincronizarRecordatorios } from './sincronizarRecordatorios';
 import { getTokenDelTelefono } from './telefono';
 
@@ -410,11 +410,115 @@ describe('actualizarRecordatorios', () => {
   it('waits for the connection when the failure is one of the connection', async () => {
     mockedGuardar.mockRejectedValueOnce(sinConexion()).mockResolvedValue(undefined);
     const subscribe = jest.spyOn(onlineManager, 'subscribe');
+    // Fake timers, so the wait of a phone that stays online is not left behind.
+    jest.useFakeTimers();
 
-    await actualizarRecordatorios(newClient());
+    try {
+      const actualizando = actualizarRecordatorios(newClient());
+      for (let vuelta = 0; vuelta < 20; vuelta++) {
+        await jest.advanceTimersByTimeAsync(0);
+      }
+      await actualizando;
 
-    expect(subscribe).toHaveBeenCalledTimes(1);
-    subscribe.mockRestore();
+      expect(subscribe).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+      subscribe.mockRestore();
+    }
+  });
+
+  it('tries again on its own when the token never came and the phone stays online', async () => {
+    jest.useFakeTimers();
+    const queryClient = newClient();
+    // The phone never answers the first time it is asked for its token.
+    jest.mocked(Notifications.getExpoPushTokenAsync).mockReturnValueOnce(new Promise(() => {}));
+    const { getTokenDelTelefono: realGetToken, TOKEN_TIMEOUT_MS } =
+      jest.requireActual<typeof import('./telefono')>('./telefono');
+    mockedGetToken.mockImplementationOnce(realGetToken);
+
+    try {
+      const primera = actualizarRecordatorios(queryClient);
+      const pedidos = jest.mocked(Notifications.getExpoPushTokenAsync).mock.calls;
+      for (let vuelta = 0; vuelta < 100 && pedidos.length === 0; vuelta++) {
+        await Promise.resolve();
+      }
+      expect(pedidos).toHaveLength(1);
+      await jest.advanceTimersByTimeAsync(TOKEN_TIMEOUT_MS);
+      await primera;
+      expect(mockedGuardar).not.toHaveBeenCalled();
+
+      // The connection never changes: only waiting brings the second sync.
+      await jest.advanceTimersByTimeAsync(RETRY_DELAYS_MS[0]);
+      await jest.runAllTimersAsync();
+
+      expect(mockedGetToken).toHaveBeenCalledTimes(2);
+      expect(mockedGuardar).toHaveBeenCalledTimes(1);
+      expect(mockedGuardar).toHaveBeenCalledWith('ExponentPushToken[telefono]', {
+        encendido: true,
+        iglesiaIds: ['i1'],
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('waits 30 seconds, then 1, 2 and 4 minutes between tries, and stops', async () => {
+    jest.useFakeTimers();
+    mockedGuardar.mockRejectedValue(sinConexion());
+    // Runs what is due now, such as the notifications of the queries, without
+    // moving the clock.
+    const settle = async () => {
+      for (let vuelta = 0; vuelta < 20; vuelta++) {
+        await jest.advanceTimersByTimeAsync(0);
+      }
+    };
+
+    try {
+      await actualizarRecordatorios(newClient());
+      await settle();
+      let tries = 1;
+      for (const delay of [30_000, 60_000, 120_000, 240_000]) {
+        await jest.advanceTimersByTimeAsync(delay - 1);
+        await settle();
+        expect(mockedGuardar).toHaveBeenCalledTimes(tries);
+
+        await jest.advanceTimersByTimeAsync(1);
+        await settle();
+        tries += 1;
+        expect(mockedGuardar).toHaveBeenCalledTimes(tries);
+      }
+      await jest.runAllTimersAsync();
+
+      // Nothing after the last wait.
+      expect(mockedGuardar).toHaveBeenCalledTimes(1 + RETRY_DELAYS_MS.length);
+      expect(jest.getTimerCount()).toBe(0);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('tries again only the latest of two changes that failed together', async () => {
+    jest.useFakeTimers();
+    mockedGuardar
+      .mockRejectedValueOnce(sinConexion())
+      .mockRejectedValueOnce(sinConexion())
+      .mockResolvedValue(undefined);
+
+    try {
+      const queryClient = newClient();
+      // The second change comes while the first is still saving.
+      await Promise.all([
+        actualizarRecordatorios(queryClient),
+        actualizarRecordatorios(queryClient),
+      ]);
+      expect(mockedGuardar).toHaveBeenCalledTimes(2);
+      await jest.advanceTimersByTimeAsync(RETRY_DELAYS_MS[0]);
+      await jest.runAllTimersAsync();
+
+      expect(mockedGuardar).toHaveBeenCalledTimes(3);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('lets Ajustes read the registro again, whatever the failure', async () => {
