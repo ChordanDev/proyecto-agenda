@@ -94,7 +94,13 @@ export async function enviarRecordatorios(puertos: PuertosDeEnvio): Promise<Resu
     });
 
     if (recibos.length > 0) {
-      await puertos.guardarRecibos(recibos);
+      // The avisos already went out: losing their tickets only delays turning
+      // off the uninstalled phones, so it does not stop the sending.
+      try {
+        await puertos.guardarRecibos(recibos);
+      } catch (error) {
+        console.error('Could not keep the tickets', error instanceof Error ? error.message : error);
+      }
     }
 
     resultado.enviados += resultados.filter((r) => r.estado === 'enviado').length;
@@ -126,8 +132,12 @@ export type PuertosDeRecibos = {
   leerRecibos(hasta: Date): Promise<ReciboGuardado[]>;
   /** The receipts the push service has of these tickets; a ticket without one yet is missing. */
   consultarRecibos(tickets: string[]): Promise<Map<string, EstadoDeRecibo>>;
-  /** Turns off the phones of these tokens. */
-  desactivar(tokens: string[]): Promise<void>;
+  /**
+   * Turns off the phones of these tokens, unless a phone was saved again after
+   * `enviadoAt` (reinstalled with the same token): its receipt is older than
+   * that. Answers how many it turned off.
+   */
+  desactivarPorRecibos(invalidos: { token: string; enviadoAt: Date }[]): Promise<number>;
   /** Forgets these tickets. */
   borrarRecibos(tickets: string[]): Promise<void>;
 };
@@ -137,7 +147,7 @@ export type ResultadoDeRecibos = { revisados: number; desactivados: number };
 /**
  * Reads the receipts of the tickets kept at least 15 minutes ago. Apple and
  * Google report many uninstalls only there, so a DeviceNotRegistered receipt
- * turns its phone off. A ticket is forgotten once its receipt is read, or a
+ * turns its phone off, unless the phone was saved again after that aviso. A ticket is forgotten once its receipt is read, or a
  * day after it was kept if the receipt never came; until then each hourly run
  * asks again.
  */
@@ -150,17 +160,24 @@ export async function revisarRecibos(puertos: PuertosDeRecibos): Promise<Resulta
   }
 
   const estados = await puertos.consultarRecibos(guardados.map(({ ticket }) => ticket));
-  const invalidos = [
-    ...new Set(
-      guardados
-        .filter(({ ticket }) => estados.get(ticket) === 'invalido')
-        .map(({ token }) => token),
-    ),
-  ];
 
-  if (invalidos.length > 0) {
-    await puertos.desactivar(invalidos);
+  // One per token, from its last aviso: a phone saved again after that one
+  // stays on.
+  const ultimoEnvio = new Map<string, Date>();
+  for (const { ticket, token, enviadoAt } of guardados) {
+    const anterior = ultimoEnvio.get(token);
+
+    if (estados.get(ticket) === 'invalido' && (!anterior || enviadoAt > anterior)) {
+      ultimoEnvio.set(token, enviadoAt);
+    }
   }
+
+  const desactivados =
+    ultimoEnvio.size > 0
+      ? await puertos.desactivarPorRecibos(
+          [...ultimoEnvio].map(([token, enviadoAt]) => ({ token, enviadoAt })),
+        )
+      : 0;
 
   const vencidoHasta = ahora - VIDA_DEL_RECIBO_MS;
   const olvidados = guardados
@@ -173,6 +190,6 @@ export async function revisarRecibos(puertos: PuertosDeRecibos): Promise<Resulta
 
   return {
     revisados: guardados.filter(({ ticket }) => estados.has(ticket)).length,
-    desactivados: invalidos.length,
+    desactivados,
   };
 }

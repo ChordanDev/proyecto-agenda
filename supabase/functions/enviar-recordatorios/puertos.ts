@@ -234,6 +234,39 @@ export function crearPuertos({
       }
     },
 
+    async desactivarPorRecibos(invalidos) {
+      // The tickets of one sending share their enviado_at: one update per
+      // sending and page of tokens. A phone saved again after its aviso, or
+      // already off, is left as it is.
+      const porEnvio = new Map<string, string[]>();
+      for (const { token, enviadoAt } of invalidos) {
+        const enviado = enviadoAt.toISOString();
+        porEnvio.set(enviado, [...(porEnvio.get(enviado) ?? []), token]);
+      }
+
+      let desactivados = 0;
+
+      for (const [enviado, tokens] of porEnvio) {
+        for (let desde = 0; desde < tokens.length; desde += TOKENS_POR_PEDIDO) {
+          const { data, error } = await servidor
+            .from('dispositivos')
+            .update({ encendido: false, actualizado_at: new Date().toISOString() })
+            .in('token', tokens.slice(desde, desde + TOKENS_POR_PEDIDO))
+            .eq('encendido', true)
+            .lte('actualizado_at', enviado)
+            .select('id');
+
+          if (error) {
+            throw new Error(`Could not turn off the dispositivos: ${error.message}`);
+          }
+
+          desactivados += data.length;
+        }
+      }
+
+      return desactivados;
+    },
+
     async guardarRecibos(recibos) {
       const { error } = await insertarRecibos(recibos);
 

@@ -34,6 +34,9 @@ const token = (nombre: string) => `ExponentPushToken[envio-${nombre}-${sufijo}]`
 /** 21:00 in Tokyo on 23 October: an hour after the sending. */
 const A_LAS_21 = new Date('2026-10-23T12:00:00Z');
 
+/** When the phones of the receipts test were saved: the day before the sending. */
+const ANTES_DEL_ENVIO = new Date(A_LAS_20.getTime() - 24 * 60 * 60 * 1000);
+
 /** The ticket the double of Expo Push gives the aviso of a token. */
 const ticketDe = (t: string) => `ticket-${t}`;
 
@@ -233,11 +236,19 @@ Deno.test({
 
     try {
       sinError(
-        await db.from('dispositivos').insert([
-          { token: token('desinstalado'), encendido: true },
-          { token: token('instalado'), encendido: true },
-          { token: token('reciente'), encendido: true },
-        ]),
+        await db.from('dispositivos').insert(
+          [
+            { token: token('desinstalado'), guardado: ANTES_DEL_ENVIO },
+            { token: token('instalado'), guardado: ANTES_DEL_ENVIO },
+            { token: token('reciente'), guardado: ANTES_DEL_ENVIO },
+            // Reinstalled with the same token and saved again after the aviso of 20 h.
+            { token: token('reinstalado'), guardado: new Date(A_LAS_20.getTime() + 60_000) },
+          ].map(({ token, guardado }) => ({
+            token,
+            encendido: true,
+            actualizado_at: guardado.toISOString(),
+          })),
+        ),
       );
       // The tickets of the sending at 20 h, and one of a minute ago.
       sinError(
@@ -250,6 +261,11 @@ Deno.test({
           {
             ticket: ticketDe(token('instalado')),
             token: token('instalado'),
+            enviado_at: A_LAS_20.toISOString(),
+          },
+          {
+            ticket: ticketDe(token('reinstalado')),
+            token: token('reinstalado'),
             enviado_at: A_LAS_20.toISOString(),
           },
           {
@@ -270,7 +286,7 @@ Deno.test({
             data: Object.fromEntries(
               ids.map((id) => [
                 id,
-                id === ticketDe(token('desinstalado'))
+                [ticketDe(token('desinstalado')), ticketDe(token('reinstalado'))].includes(id)
                   ? { status: 'error', details: { error: 'DeviceNotRegistered' } }
                   : { status: 'ok' },
               ]),
@@ -293,8 +309,9 @@ Deno.test({
       assert.deepEqual(preguntados.sort(), [
         ticketDe(token('desinstalado')),
         ticketDe(token('instalado')),
+        ticketDe(token('reinstalado')),
       ]);
-      assert.ok(resultado.desactivados >= 1);
+      assert.equal(resultado.desactivados, 1);
 
       const telefonos = await db
         .from('dispositivos')
@@ -307,6 +324,7 @@ Deno.test({
           [token('desinstalado')]: false,
           [token('instalado')]: true,
           [token('reciente')]: true,
+          [token('reinstalado')]: true,
         },
       );
 

@@ -206,6 +206,42 @@ describe('enviarRecordatorios', () => {
 
     expect(guardarRecibos).not.toHaveBeenCalled();
   });
+
+  it('goes on sending when the tickets of an asociacion cannot be kept', async () => {
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const leerDispositivos = jest.fn(async (asociacionId: string) => [
+      { token: `ExponentPushToken[${asociacionId}]`, iglesias: [central] },
+    ]);
+    const guardarRecibos = jest
+      .fn<Promise<void>, [ReciboPendiente[]]>()
+      .mockRejectedValueOnce(new Error('the database is down'))
+      .mockResolvedValue();
+    const { puertos: p, enviados } = puertos({
+      leerAsociaciones: async () => [
+        { id: 'asociacion-central', zonaHoraria: 'America/Argentina/Buenos_Aires' },
+        { id: 'asociacion-litoral', zonaHoraria: 'America/Argentina/Cordoba' },
+      ],
+      leerDispositivos,
+      guardarRecibos,
+    });
+
+    const resultado = await enviarRecordatorios(p);
+
+    expect(enviados.map(({ token }) => token)).toEqual([
+      'ExponentPushToken[asociacion-central]',
+      'ExponentPushToken[asociacion-litoral]',
+    ]);
+    expect(guardarRecibos).toHaveBeenLastCalledWith([
+      {
+        ticket: 'ticket-ExponentPushToken[asociacion-litoral]',
+        token: 'ExponentPushToken[asociacion-litoral]',
+      },
+    ]);
+    expect(resultado).toEqual({ enviados: 2, desactivados: 0, fallidos: 0 });
+    // Neither a token nor a ticket reaches the logs.
+    expect(JSON.stringify(error.mock.calls)).not.toMatch(/ExponentPushToken|ticket-/);
+    error.mockRestore();
+  });
 });
 
 /** 21:00 in Buenos Aires on 23 October: an hour after the sending. */
@@ -220,7 +256,7 @@ function puertosDeRecibos(
   estados: Record<string, EstadoDeRecibo>,
   overrides: Partial<PuertosDeRecibos> = {},
 ) {
-  const desactivados: string[] = [];
+  const desactivados: { token: string; enviadoAt: Date }[] = [];
   const borrados: string[] = [];
   const leidosHasta: Date[] = [];
   const consultados: string[][] = [];
@@ -239,8 +275,9 @@ function puertosDeRecibos(
         ),
       );
     },
-    desactivar: async (tokens) => {
-      desactivados.push(...tokens);
+    desactivarPorRecibos: async (invalidos) => {
+      desactivados.push(...invalidos);
+      return invalidos.length;
     },
     borrarRecibos: async (tickets) => {
       borrados.push(...tickets);
@@ -271,37 +308,37 @@ describe('revisarRecibos', () => {
 
     const resultado = await revisarRecibos(p);
 
-    expect(desactivados).toEqual(['ExponentPushToken[viejo]']);
+    expect(desactivados).toEqual([{ token: 'ExponentPushToken[viejo]', enviadoAt: A_LAS_20 }]);
     expect(borrados).toEqual(['ticket-viejo']);
     expect(resultado).toEqual({ revisados: 1, desactivados: 1 });
   });
 
   it('turns nothing off for an ok receipt, and forgets its ticket', async () => {
-    const desactivar = jest.fn(async () => {});
+    const desactivarPorRecibos = jest.fn(async () => 0);
     const { puertos: p, borrados } = puertosDeRecibos(
       [guardado('ticket-ok', 'ExponentPushToken[ok]')],
       { 'ticket-ok': 'ok' },
-      { desactivar },
+      { desactivarPorRecibos },
     );
 
     const resultado = await revisarRecibos(p);
 
-    expect(desactivar).not.toHaveBeenCalled();
+    expect(desactivarPorRecibos).not.toHaveBeenCalled();
     expect(borrados).toEqual(['ticket-ok']);
     expect(resultado).toEqual({ revisados: 1, desactivados: 0 });
   });
 
   it('turns nothing off for a receipt with another error, and forgets its ticket', async () => {
-    const desactivar = jest.fn(async () => {});
+    const desactivarPorRecibos = jest.fn(async () => 0);
     const { puertos: p, borrados } = puertosDeRecibos(
       [guardado('ticket-limite', 'ExponentPushToken[limite]')],
       { 'ticket-limite': 'fallido' },
-      { desactivar },
+      { desactivarPorRecibos },
     );
 
     await revisarRecibos(p);
 
-    expect(desactivar).not.toHaveBeenCalled();
+    expect(desactivarPorRecibos).not.toHaveBeenCalled();
     expect(borrados).toEqual(['ticket-limite']);
   });
 
@@ -335,10 +372,11 @@ describe('revisarRecibos', () => {
     expect(borrados).toEqual(['ticket-de-ayer']);
   });
 
-  it('turns a phone off once when several of its receipts are DeviceNotRegistered', async () => {
+  it('turns a phone off once when several of its receipts are DeviceNotRegistered, from the last aviso', async () => {
+    const despues = new Date(A_LAS_20.getTime() + 60_000);
     const { puertos: p, desactivados } = puertosDeRecibos(
       [
-        guardado('ticket-1', 'ExponentPushToken[viejo]'),
+        guardado('ticket-1', 'ExponentPushToken[viejo]', despues),
         guardado('ticket-2', 'ExponentPushToken[viejo]'),
       ],
       { 'ticket-1': 'invalido', 'ticket-2': 'invalido' },
@@ -346,8 +384,21 @@ describe('revisarRecibos', () => {
 
     const resultado = await revisarRecibos(p);
 
-    expect(desactivados).toEqual(['ExponentPushToken[viejo]']);
+    expect(desactivados).toEqual([{ token: 'ExponentPushToken[viejo]', enviadoAt: despues }]);
     expect(resultado).toEqual({ revisados: 2, desactivados: 1 });
+  });
+
+  it('counts only the phones that were turned off, not those saved again after the aviso', async () => {
+    const { puertos: p, borrados } = puertosDeRecibos(
+      [guardado('ticket-viejo', 'ExponentPushToken[reinstalado]')],
+      { 'ticket-viejo': 'invalido' },
+      { desactivarPorRecibos: async () => 0 },
+    );
+
+    const resultado = await revisarRecibos(p);
+
+    expect(borrados).toEqual(['ticket-viejo']);
+    expect(resultado).toEqual({ revisados: 1, desactivados: 0 });
   });
 
   it('asks the push service nothing when no ticket is kept', async () => {
