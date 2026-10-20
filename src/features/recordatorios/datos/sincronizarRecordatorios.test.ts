@@ -2,7 +2,7 @@ import { onlineManager, QueryClient } from '@tanstack/react-query';
 
 import { getCargosDelUsuario } from '@/features/sesion/datos/getCargosDelUsuario';
 
-import { elegirIglesias } from '../dominio/recordatorios';
+import { elegirIglesias, type RegistroGuardado } from '../dominio/recordatorios';
 import { guardarDispositivo, getDispositivo } from './dispositivo';
 import { actualizarRecordatorios, sincronizarRecordatorios } from './sincronizarRecordatorios';
 
@@ -160,6 +160,51 @@ describe('sincronizarRecordatorios', () => {
     expect(estado.modo).toBe('eligiendo');
     expect(estado.opciones).toEqual(['i1', 'i2', 'i3']);
     expect(estado.conBuscador).toBe(true);
+  });
+
+  it('lets the sync of a sign-out win over one that started before it', async () => {
+    const queryClient = newClient();
+    signIn([{ nivel: 'distrito', distritoId: 'd1' }]);
+    // What the server holds for this phone: a pastor's, with none chosen yet.
+    let enServidor: RegistroGuardado | null = {
+      encendido: false,
+      iglesiaIds: [],
+      conUsuario: true,
+      delUsuario: true,
+    };
+    mockedGetDispositivo.mockImplementation(async () => enServidor);
+    // The pastor's save is slow to reach the server; the next one is not.
+    let releasePastor!: () => void;
+    const pastorReleased = new Promise<void>((resolve) => {
+      releasePastor = resolve;
+    });
+    mockedGuardar
+      .mockImplementationOnce(async (_token, registro) => {
+        await pastorReleased;
+        enServidor = { ...registro, conUsuario: true, delUsuario: true };
+      })
+      .mockImplementation(async (_token, registro) => {
+        enServidor = { ...registro, conUsuario: false, delUsuario: false };
+      });
+
+    const delPastor = sincronizarRecordatorios(queryClient, () => elegirIglesias(['i2']));
+    while (mockedGuardar.mock.calls.length === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    // The pastor signs out while their save is on its way.
+    mockHasSesion.current = false;
+    queryClient.setQueryData(['sesion'], false);
+    const delCierre = actualizarRecordatorios(queryClient);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    releasePastor();
+    await Promise.all([delPastor, delCierre]);
+
+    expect(enServidor).toEqual({
+      encendido: true,
+      iglesiaIds: ['i1'],
+      conUsuario: false,
+      delUsuario: false,
+    });
   });
 
   it('offers a hermano nothing to choose', async () => {

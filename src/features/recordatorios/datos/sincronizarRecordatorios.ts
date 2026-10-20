@@ -44,8 +44,23 @@ export const registroQueryKey = ['recordatorios', 'registro'] as const;
  * iglesia elegida, applies `cambio` if given, and saves it when it changed.
  * It reads the session, the cargos and the structure through the same queries
  * as the rest of the app.
+ *
+ * One runs at a time, in the order they were asked for, so the latest wins: a
+ * sync started with a session cannot save after the one of signing out.
  */
-export async function sincronizarRecordatorios(
+export function sincronizarRecordatorios(
+  queryClient: QueryClient,
+  cambio?: CambioDeRegistro,
+): Promise<EstadoDeRecordatorios> {
+  const sincronizacion = ultimaSincronizacion.then(() => sincronizar(queryClient, cambio));
+  // A failed sync does not stop the next one.
+  ultimaSincronizacion = sincronizacion.catch(() => undefined);
+  return sincronizacion;
+}
+
+let ultimaSincronizacion: Promise<unknown> = Promise.resolve();
+
+async function sincronizar(
   queryClient: QueryClient,
   cambio?: CambioDeRegistro,
 ): Promise<EstadoDeRecordatorios> {
