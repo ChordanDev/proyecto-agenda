@@ -4,11 +4,8 @@ import { createElement } from 'react';
 // this test to renderHook from @testing-library/react-native.
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
-import {
-  registroQueryKey,
-  sincronizarRecordatorios,
-  type EstadoDeRecordatorios,
-} from './sincronizarRecordatorios';
+import { registroQueryKey } from './registroQueryKey';
+import { sincronizarRecordatorios, type EstadoDeRecordatorios } from './sincronizarRecordatorios';
 import { useRecordatorios } from './useRecordatorios';
 
 jest.mock('./telefono', () => ({
@@ -16,7 +13,6 @@ jest.mock('./telefono', () => ({
   pedirPermiso: jest.fn(),
 }));
 jest.mock('./sincronizarRecordatorios', () => ({
-  registroQueryKey: ['recordatorios', 'registro'],
   sincronizarRecordatorios: jest.fn(),
 }));
 // Each test sets whether there is a session.

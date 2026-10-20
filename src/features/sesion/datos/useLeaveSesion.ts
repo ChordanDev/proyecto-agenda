@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
-import { actualizarRecordatorios } from '@/features/recordatorios/datos/sincronizarRecordatorios';
+import { actualizarRecordatorios } from '@/features/recordatorios/datos/actualizarRecordatorios';
 
 import { deleteOwnUsuario } from './deleteOwnUsuario';
 import { signOut } from './signOut';

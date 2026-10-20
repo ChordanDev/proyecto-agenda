@@ -4,7 +4,8 @@ import { getCargosDelUsuario } from '@/features/sesion/datos/getCargosDelUsuario
 
 import { elegirIglesias, type RegistroGuardado } from '../dominio/recordatorios';
 import { guardarDispositivo, getDispositivo } from './dispositivo';
-import { actualizarRecordatorios, sincronizarRecordatorios } from './sincronizarRecordatorios';
+import { actualizarRecordatorios } from './actualizarRecordatorios';
+import { sincronizarRecordatorios } from './sincronizarRecordatorios';
 import { getTokenDelTelefono } from './telefono';
 
 jest.mock('./telefono', () => ({

@@ -1,4 +1,4 @@
-import { onlineManager, type QueryClient } from '@tanstack/react-query';
+import { type QueryClient } from '@tanstack/react-query';
 
 import {
   getIglesiasEnEstructura,
@@ -10,7 +10,6 @@ import { sesionQueryOptions } from '@/features/sesion/datos/sesionQuery';
 
 import {
   cambioQuienLoUsa,
-  esFallaDeConexion,
   iglesiaElegidaVigente,
   iglesiasQuePuedeSeguir,
   mismoRegistro,
@@ -20,7 +19,7 @@ import {
   type Registro,
 } from '../dominio/recordatorios';
 import { getDispositivo, guardarDispositivo } from './dispositivo';
-import { getPermiso, getTokenDelTelefono } from './telefono';
+import { getTokenDelTelefono } from './telefono';
 
 /** The recordatorios of this phone as Ajustes shows them. */
 export type EstadoDeRecordatorios = {
@@ -36,8 +35,6 @@ export type EstadoDeRecordatorios = {
 
 /** A change the person makes in Ajustes, applied to the registro the phone should have. */
 export type CambioDeRegistro = (actual: Registro) => Registro;
-
-export const registroQueryKey = ['recordatorios', 'registro'] as const;
 
 /**
  * Brings the registro of this phone up to date with whoever uses it and their
@@ -108,41 +105,4 @@ async function sincronizar(
     opciones: cargos === null ? [] : iglesiasQuePuedeSeguir(cargos, iglesias),
     conBuscador: cargos?.some((cargo) => cargo.nivel === 'asociacion') ?? false,
   };
-}
-
-/**
- * Lets the phone follow whatever changed (the iglesia elegida, the session),
- * when it already has the permiso. Never asks for it. A failure of the
- * connection, such as signing out offline, tries again once the connection
- * comes back: until then the phone would keep the iglesias of whoever used it.
- * Any other failure (no EAS projectId, a policy that rejects the phone) is not
- * fixed by the connection: Ajustes shows it when it reads the registro again.
- */
-export async function actualizarRecordatorios(queryClient: QueryClient): Promise<void> {
-  // Only the latest change is worth trying again.
-  stopWaitingForConnection?.();
-  stopWaitingForConnection = null;
-
-  try {
-    if ((await getPermiso()) === 'concedido') {
-      await sincronizarRecordatorios(queryClient);
-    }
-  } catch (error) {
-    if (esFallaDeConexion(error)) {
-      waitForConnection(queryClient);
-    }
-  }
-  await queryClient.invalidateQueries({ queryKey: registroQueryKey });
-}
-
-let stopWaitingForConnection: (() => void) | null = null;
-
-function waitForConnection(queryClient: QueryClient) {
-  const unsubscribe = onlineManager.subscribe((online) => {
-    if (!online) return;
-    unsubscribe();
-    stopWaitingForConnection = null;
-    void actualizarRecordatorios(queryClient);
-  });
-  stopWaitingForConnection = unsubscribe;
 }

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { actualizarRecordatorios } from '@/features/recordatorios/datos/sincronizarRecordatorios';
+import { actualizarRecordatorios } from '@/features/recordatorios/datos/actualizarRecordatorios';
 
 import { setIglesiaElegida } from './iglesiaElegida';
 
