@@ -342,6 +342,85 @@ Deno.test({
 });
 
 Deno.test({
+  name: 'a phone already turned off is not counted nor touched by its DeviceNotRegistered receipt',
+  ignore: !url || !clave,
+  sanitizeOps: false,
+  sanitizeResources: false,
+  async fn() {
+    const db = createClient<Database>(url!, clave!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const sinError = (r: { error: { message: string } | null }) => {
+      if (r.error) throw new Error(r.error.message);
+    };
+
+    try {
+      sinError(
+        await db.from('dispositivos').insert([
+          {
+            token: token('ya-apagado'),
+            encendido: false,
+            actualizado_at: ANTES_DEL_ENVIO.toISOString(),
+          },
+          {
+            token: token('prendido'),
+            encendido: true,
+            actualizado_at: ANTES_DEL_ENVIO.toISOString(),
+          },
+        ]),
+      );
+      sinError(
+        await db.from('recibos_pendientes').insert(
+          [token('ya-apagado'), token('prendido')].map((t) => ({
+            ticket: ticketDe(t),
+            token: t,
+            enviado_at: A_LAS_20.toISOString(),
+          })),
+        ),
+      );
+
+      // Apple reported both phones as uninstalled.
+      const recibosDoble = (async (_url: string | URL | Request, init?: RequestInit) => {
+        const { ids } = JSON.parse(String(init?.body)) as { ids: string[] };
+        return new Response(
+          JSON.stringify({
+            data: Object.fromEntries(
+              ids.map((id) => [id, { status: 'error', details: { error: 'DeviceNotRegistered' } }]),
+            ),
+          }),
+        );
+      }) as typeof fetch;
+
+      const resultado = await revisarRecibos(
+        crearPuertos({
+          servidor: db,
+          enviar: crearEnviador({ fetch: sinExpo }),
+          consultarRecibos: crearConsultaDeRecibos({ fetch: recibosDoble }),
+          ahora: () => A_LAS_21,
+        }),
+      );
+
+      assert.equal(resultado.desactivados, 1);
+
+      const telefonos = await db
+        .from('dispositivos')
+        .select('token, encendido, actualizado_at')
+        .like('token', `%-${sufijo}]`);
+      sinError(telefonos);
+      const porToken = new Map((telefonos.data ?? []).map((fila) => [fila.token, fila]));
+      assert.equal(porToken.get(token('prendido'))?.encendido, false);
+      assert.equal(porToken.get(token('ya-apagado'))?.encendido, false);
+      assert.equal(
+        new Date(porToken.get(token('ya-apagado'))!.actualizado_at).getTime(),
+        ANTES_DEL_ENVIO.getTime(),
+      );
+    } finally {
+      await db.from('dispositivos').delete().like('token', `%-${sufijo}]`);
+    }
+  },
+});
+
+Deno.test({
   name: 'the tickets of a phone deleted during the sending are not kept, the others are',
   ignore: !url || !clave,
   sanitizeOps: false,

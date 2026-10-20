@@ -236,8 +236,8 @@ export function crearPuertos({
 
     async desactivarPorRecibos(invalidos) {
       // The tickets of one sending share their enviado_at: one update per
-      // sending and page of tokens. A phone saved again after its aviso is
-      // left as it is.
+      // sending and page of tokens. A phone saved again after its aviso, or
+      // already turned off, is left as it is and not counted.
       const porEnvio = new Map<string, string[]>();
       for (const { token, enviadoAt } of invalidos) {
         const enviado = enviadoAt.toISOString();
@@ -252,6 +252,7 @@ export function crearPuertos({
             .from('dispositivos')
             .update({ encendido: false, actualizado_at: new Date().toISOString() })
             .in('token', tokens.slice(desde, desde + TOKENS_POR_PEDIDO))
+            .eq('encendido', true)
             .lte('actualizado_at', enviado)
             .select('id');
 
