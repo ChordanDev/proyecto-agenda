@@ -109,6 +109,8 @@ En cada pull request a `main` corren cuatro verificaciones (`.github/workflows/c
 
 Al fusionar a `main`, las migraciones nuevas se aplican solas al Supabase de desarrollo (`.github/workflows/deploy-migrations.yml`). El mismo workflow se puede lanzar a mano desde la pestaña Actions, solo sobre `main`. A producción se aplican a mano, como paso de la publicación de cada versión.
 
+Lo mismo pasa con las funciones de servidor (`supabase/functions/`): al fusionar a `main` un cambio en ellas, en `supabase/config.toml` o en el código de `src/` que incluyen (las carpetas `dominio` y `src/shared`), se publican las cuatro en el Supabase de desarrollo (`.github/workflows/deploy-functions.yml`), respetando el `verify_jwt` de cada una. También se puede lanzar a mano desde Actions, solo sobre `main`. A producción se publican a mano. Los secretos de las funciones (claves de OpenAI y Resend, entre otros) se cargan a mano con `supabase secrets set`; el workflow no los toca.
+
 ## Configuración que debe hacer una persona
 
 Estos pasos requieren acceso a las cuentas y no están automatizados.
@@ -119,8 +121,15 @@ Estos pasos requieren acceso a las cuentas y no están automatizados.
    | Secreto | Valor |
    | --- | --- |
    | `SUPABASE_DB_URL` | Cadena de conexión del **Session pooler** del proyecto de desarrollo (Connect › Session pooler), con la contraseña de la base en lugar de `[YOUR-PASSWORD]`. |
+   | `SUPABASE_ACCESS_TOKEN` | Token de acceso personal de una cuenta con acceso al proyecto de desarrollo (Account › Access Tokens). Lo usa la publicación de funciones. |
 
    Se usa el Session pooler porque los servidores de GitHub no tienen IPv6 y la dirección directa de la base solo responde por IPv6.
+
+   Y una **variable** del repositorio (misma pantalla, pestaña Variables), que no es secreta porque forma parte de la URL del proyecto:
+
+   | Variable | Valor |
+   | --- | --- |
+   | `SUPABASE_PROJECT_REF` | Identificador del proyecto de desarrollo (Project Settings › General › Reference ID). |
 
 3. **Protección de la rama `main`:** marcar como obligatorias las verificaciones `Types`, `Style`, `Domain tests` y `Permission tests`.
 

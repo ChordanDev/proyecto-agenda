@@ -48,7 +48,7 @@ Resumen de lo decidido en el issue #15.
 ### Integración continua
 - Las verificaciones corren en todo pull request que no es borrador, sea cual sea su rama de destino.
 - En cada pull request corren cuatro verificaciones, todas obligatorias: tipos (`tsc`), estilo (ESLint y Prettier), pruebas del dominio y pruebas de permisos sobre un Supabase local con las migraciones aplicadas desde cero.
-- Las migraciones se aplican solas al Supabase de desarrollo al fusionar a `main`. A producción se aplican a mano, como paso de la publicación de cada versión.
+- Las migraciones y las funciones de servidor se publican solas en el Supabase de desarrollo al fusionar a `main`. A producción se publican a mano, como paso de la publicación de cada versión.
 - Los secretos van en GitHub y en EAS, nunca en un archivo versionado.
 
 ### Tickets
