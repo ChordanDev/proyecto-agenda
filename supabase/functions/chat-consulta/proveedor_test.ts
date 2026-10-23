@@ -6,6 +6,7 @@ import { crearProveedor } from './proveedor.ts';
 type Cuerpo = {
   messages: { role: string; tool_calls?: { function: { name: string } }[] }[];
   tools?: { function: { name: string } }[];
+  reasoning_effort?: string;
 };
 
 /**
@@ -148,5 +149,20 @@ Deno.test('OpenAI gets only the herramientas of the round', async () => {
   assert.deepEqual(
     cuerpos.map((cuerpo) => cuerpo.tools?.map((herramienta) => herramienta.function.name)),
     [['buscar_eventos', 'proponer_evento'], ['buscar_eventos'], undefined],
+  );
+});
+
+Deno.test('OpenAI gets the reasoning turned off, which its herramientas need', async () => {
+  const proveedor = crearProveedor('clave');
+  const texto = { choices: [{ message: { content: 'Hola' } }] };
+
+  const cuerpos = await conOpenAI(texto, async () => {
+    await proveedor.responder(MENSAJES, AMBAS);
+    await proveedor.responder(MENSAJES, { conBusqueda: false, conPropuesta: false });
+  });
+
+  assert.deepEqual(
+    cuerpos.map((cuerpo) => cuerpo.reasoning_effort),
+    ['none', 'none'],
   );
 });
