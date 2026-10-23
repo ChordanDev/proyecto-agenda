@@ -1,0 +1,51 @@
+name: Deploy functions
+
+# Deploys every Edge Function to the DEVELOPMENT Supabase project when they
+# reach main. Production functions are deployed by hand on each release.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      # verify_jwt for each function lives here.
+      - 'supabase/config.toml'
+      # The functions bundle domain rules and the database types from src/.
+      # The whole of dominio/ and shared/ is watched so a new import is never
+      # missed; an extra deploy of unchanged code is harmless.
+      - 'src/features/*/dominio/**'
+      - 'src/shared/**'
+      - '!**/*.test.ts'
+  # Manual run, for the first deploy or to retry a failed one.
+  workflow_dispatch:
+
+# Never run two deploys against the same project at once.
+concurrency:
+  group: deploy-functions-main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy functions to development
+    runs-on: ubuntu-latest
+    # A manual run from another branch must not deploy its functions.
+    if: github.ref == 'refs/heads/main'
+    env:
+      # A personal access token of an account with access to the project
+      # (dashboard > Account > Access Tokens).
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      # The reference ID of the development project (dashboard > Project
+      # Settings > General). Not a secret: it is part of the project URL.
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          # Keep in sync with the `supabase` dev dependency in package.json.
+          version: 2.120.0
+      # --use-api bundles on Supabase's servers, so the runner needs no Docker.
+      # Function secrets (OpenAI key, Resend key...) are set by hand with
+      # `supabase secrets set`; this workflow does not touch them.
+      - run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_REF" --use-api
