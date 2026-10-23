@@ -86,6 +86,9 @@ export function crearProveedor(apiKey: string): Proveedor {
         signal: AbortSignal.timeout(TIEMPO_MAXIMO_MS),
         body: JSON.stringify({
           model: MODELO,
+          // gpt-6-luna takes function tools in /v1/chat/completions only with
+          // the reasoning off: otherwise every round with herramientas is a 400.
+          reasoning_effort: 'none',
           messages: mensajes.map(toMensajeDeOpenAI),
           ...(herramientas.length > 0
             ? {
